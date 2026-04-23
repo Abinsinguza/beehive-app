@@ -1,5 +1,5 @@
 import { Link } from '@inertiajs/react';
-import { LayoutGrid, Package, Users } from 'lucide-react';
+import { Bell, BrainCircuit, LayoutGrid, MessageSquareWarningIcon, Package, SlidersHorizontal, Users } from 'lucide-react';
 import AppLogo from '@/components/app-logo';
 import { NavMain } from '@/components/nav-main';
 import { NavUser } from '@/components/nav-user';
@@ -30,6 +30,26 @@ const mainNavItems: NavItem[] = [
         title: 'Beehives',
         href: '/beehives',
         icon: Package,
+    },
+    {
+        title: 'Advisory',
+        href: '/advisories',
+        icon: MessageSquareWarningIcon,
+    },
+    {
+        title: 'ML Inferences',
+        href: '/inferences',
+        icon: BrainCircuit,
+    },
+    {
+        title: 'Alerts',
+        href: '/alerts',
+        icon: Bell,
+    },
+    {
+        title: 'System Config',
+        href: '/system-config',
+        icon: SlidersHorizontal,
     },
 ];
 
