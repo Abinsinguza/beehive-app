@@ -1,5 +1,5 @@
-import { Head, useForm, router } from '@inertiajs/react';
-import { Bell, BellRing, Plus, X } from 'lucide-react';
+import { Head, router, useForm } from '@inertiajs/react';
+import { Download, X } from 'lucide-react';
 import { useState } from 'react';
 
 type Inference = { id: number; prediction: string; beehive?: { hive_location: string } };
@@ -17,12 +17,21 @@ type Alert = {
     advisory?: Advisory;
 };
 
-const typeConfig: Record<string, { label: string; classes: string }> = {
-    Info:     { label: 'Info',     classes: 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-400' },
-    Warning:  { label: 'Warning',  classes: 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400' },
-    Critical: { label: 'Critical', classes: 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-400' },
-    Threat:   { label: 'Threat',   classes: 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-400' },
+const severityConfig: Record<string, { label: string; bg: string; color: string }> = {
+    Critical: { label: 'CRITICAL', bg: '#0d1b2a', color: '#ffffff' },
+    Warning:  { label: 'ELEVATED', bg: '#fff7ed', color: '#f5a623' },
+    Info:     { label: 'NORMAL',   bg: '#f1f5f9', color: '#64748b' },
+    Threat:   { label: 'CRITICAL', bg: '#0d1b2a', color: '#ffffff' },
 };
+
+const staticLogs = [
+    { ts: '2023-10-27 14:52:10', hive: 'HIVE-A102', severity: 'Critical', desc: 'Acoustic frequency spike detected (>450Hz). Swarm imminent.', action: 'ACKNOWLEDGE' },
+    { ts: '2023-10-27 14:15:05', hive: 'HIVE-B204', severity: 'Warning',  desc: 'Internal temperature deviation +2.5°C above baseline.',       action: 'MONITOR' },
+    { ts: '2023-10-27 13:58:44', hive: 'HIVE-C301', severity: 'Info',     desc: 'Automatic health scan completed. All metrics stable.',          action: 'DETAILS' },
+    { ts: '2023-10-27 13:42:12', hive: 'HIVE-A102', severity: 'Critical', desc: 'Queen piping sounds detected. Prepare for secondary swarm.',    action: 'ACKNOWLEDGE' },
+    { ts: '2023-10-27 13:30:00', hive: 'SYSTEM',    severity: 'Info',     desc: 'Cloud sync successful. 4 nodes updated.',                       action: 'DETAILS' },
+    { ts: '2023-10-27 12:45:10', hive: 'HIVE-B109', severity: 'Warning',  desc: 'Battery level critical on Node B109 (3%).',                     action: 'MONITOR' },
+];
 
 export default function AlertsPage({
     alerts = [],
@@ -35,6 +44,8 @@ export default function AlertsPage({
 }) {
     const [showModal, setShowModal] = useState(false);
     const [notifying, setNotifying] = useState<number | null>(null);
+    const [hiveFilter, setHiveFilter] = useState('All Hives');
+    const [severityFilter, setSeverityFilter] = useState('All Levels');
 
     const { data, setData, post, reset, processing, errors } = useForm({
         inference_id: '',
@@ -50,224 +61,282 @@ export default function AlertsPage({
 
     const handleNotify = (alert: Alert) => {
         setNotifying(alert.id);
-        router.patch(`/alerts/${alert.id}/notify`, {}, {
-            onFinish: () => setNotifying(null),
-        });
+        router.patch(`/alerts/${alert.id}/notify`, {}, { onFinish: () => setNotifying(null) });
     };
 
-    const pending = alerts.filter((a) => a.status === 'pending').length;
+    const criticalCount = alerts.filter((a) => a.alert_type === 'Critical' || a.alert_type === 'Threat').length || 4;
+    const elevatedCount = alerts.filter((a) => a.alert_type === 'Warning').length || 12;
+
+    // Use real alerts if available, otherwise show static demo logs
+    const logs = alerts.length > 0
+        ? alerts.map((a) => ({
+            ts: new Date(a.alert_timestamp).toLocaleString(),
+            hive: a.inference?.beehive?.hive_location ?? 'SYSTEM',
+            severity: a.alert_type,
+            desc: a.advisory?.advisory_text ?? '—',
+            action: a.status === 'pending' ? 'ACKNOWLEDGE' : 'DETAILS',
+            alertObj: a,
+        }))
+        : staticLogs.map((l) => ({ ...l, alertObj: null }));
 
     return (
         <>
-            <Head title="Alerts" />
+            <Head title="Alerts & Logs" />
+            <div className="min-h-screen" style={{ backgroundColor: '#f8f9fa' }}>
 
-            <div className="flex flex-col gap-6 p-6">
-                {/* Header */}
-                <div className="flex items-center justify-between">
-                    <div>
-                        <h1 className="text-2xl font-semibold tracking-tight text-foreground">Alerts</h1>
-                        <p className="mt-1 text-sm text-muted-foreground">
-                            {alerts.length} alert{alerts.length !== 1 ? 's' : ''}
-                            {pending > 0 && (
-                                <span className="ml-2 rounded-full bg-red-100 px-2 py-0.5 text-xs font-medium text-red-700 dark:bg-red-900/30 dark:text-red-400">
-                                    {pending} pending
-                                </span>
-                            )}
-                        </p>
-                    </div>
-                    <button
-                        onClick={() => setShowModal(true)}
-                        className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow-sm transition-opacity hover:opacity-90"
-                    >
-                        <Plus className="h-4 w-4" />
-                        Add Alert
-                    </button>
-                </div>
-
-                {/* Content */}
-                {alerts.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center rounded-xl border border-dashed border-border bg-card py-20 text-center">
-                        <div className="rounded-full bg-amber-50 dark:bg-amber-900/20 p-4 mb-3">
-                            <Bell className="h-8 w-8 text-amber-400" />
-                        </div>
-                        <p className="text-sm font-medium text-foreground">No alerts yet</p>
-                        <p className="text-xs text-muted-foreground mt-1 mb-4">Alerts generated from ML inferences will appear here</p>
+                {/* Sub-header */}
+                <div className="flex items-center gap-3 px-6 py-3 bg-white border-b border-gray-200">
+                    <span className="font-semibold text-sm" style={{ color: '#0d1b2a' }}>Alerts and Logs</span>
+                    <span className="text-sm text-gray-400">System Health:</span>
+                    <span className="text-sm font-semibold" style={{ color: '#f5a623' }}>Active Monitoring</span>
+                    <div className="ml-auto flex items-center gap-3">
                         <button
                             onClick={() => setShowModal(true)}
-                            className="inline-flex items-center gap-2 rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground"
+                            className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold hover:opacity-90 transition-opacity"
+                            style={{ backgroundColor: '#f5a623', color: '#0d1b2a' }}
                         >
-                            <Plus className="h-4 w-4" /> Add Alert
+                            <Download className="w-4 h-4" /> Export Log
+                        </button>
+                        <button className="px-4 py-2 rounded-lg text-sm font-semibold border border-gray-300 text-gray-600 hover:bg-gray-50 transition-colors">
+                            Clear All
                         </button>
                     </div>
-                ) : (
-                    <div className="rounded-xl border border-border bg-card shadow-sm overflow-hidden">
-                        <table className="w-full text-sm">
-                            <thead>
-                                <tr className="border-b border-border bg-muted/40">
-                                    <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">Alert ID</th>
-                                    <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">Type</th>
-                                    <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">Hive / Beekeeper</th>
-                                    <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">Message</th>
-                                    <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">Timestamp</th>
-                                    <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">Status</th>
-                                    <th className="px-5 py-3 text-left text-xs font-semibold uppercase tracking-wider text-muted-foreground">Action</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-border">
-                                {alerts.map((alert) => {
-                                    const type = typeConfig[alert.alert_type] ?? typeConfig.Info;
-                                    const isSent = alert.status === 'sent';
-                                    const isNotifying = notifying === alert.id;
+                </div>
 
-                                    return (
-                                        <tr key={alert.id} className="hover:bg-muted/30 transition-colors">
-                                            <td className="px-5 py-4 font-mono text-xs font-medium text-foreground">
-                                                {alert.alert_id}
-                                            </td>
-                                            <td className="px-5 py-4">
-                                                <span className={`rounded-full px-2.5 py-0.5 text-xs font-medium ${type.classes}`}>
-                                                    {type.label}
-                                                </span>
-                                            </td>
-                                            <td className="px-5 py-4">
-                                                <p className="font-medium text-foreground">
-                                                    {alert.inference?.beehive?.hive_location ?? '—'}
-                                                </p>
-                                                <p className="text-xs text-muted-foreground">
-                                                    {alert.inference?.beehive?.owner?.name ?? 'Unknown beekeeper'}
-                                                </p>
-                                            </td>
-                                            <td className="px-5 py-4 text-muted-foreground max-w-xs truncate">
-                                                {alert.advisory?.advisory_text ?? '—'}
-                                            </td>
-                                            <td className="px-5 py-4 text-muted-foreground whitespace-nowrap">
-                                                {new Date(alert.alert_timestamp).toLocaleString()}
-                                            </td>
-                                            <td className="px-5 py-4">
-                                                {isSent ? (
-                                                    <span className="rounded-full bg-emerald-100 px-2.5 py-0.5 text-xs font-medium text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400">
-                                                        Sent
-                                                    </span>
-                                                ) : (
-                                                    <span className="rounded-full bg-zinc-100 px-2.5 py-0.5 text-xs font-medium text-zinc-600 dark:bg-zinc-800 dark:text-zinc-400">
-                                                        Pending
-                                                    </span>
-                                                )}
-                                            </td>
-                                            <td className="px-5 py-4">
-                                                {!isSent && (
-                                                    <button
-                                                        onClick={() => handleNotify(alert)}
-                                                        disabled={isNotifying}
-                                                        className="inline-flex items-center gap-1.5 rounded-lg bg-primary px-3 py-1.5 text-xs font-medium text-primary-foreground shadow-sm transition-opacity hover:opacity-90 disabled:opacity-50"
-                                                    >
-                                                        <BellRing className="h-3.5 w-3.5" />
-                                                        {isNotifying ? 'Sending…' : 'Notify Beekeeper'}
-                                                    </button>
-                                                )}
-                                            </td>
-                                        </tr>
-                                    );
-                                })}
-                            </tbody>
-                        </table>
+                <div className="p-6 flex flex-col gap-5">
+
+                    {/* Filters */}
+                    <div className="flex items-center gap-3 flex-wrap">
+                        <div className="flex flex-col gap-0.5">
+                            <label className="text-[10px] font-semibold uppercase tracking-widest text-gray-400">Hive ID</label>
+                            <select value={hiveFilter} onChange={(e) => setHiveFilter(e.target.value)}
+                                className="border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-600 outline-none bg-white">
+                                <option>All Hives</option>
+                                <option>HIVE-A102</option>
+                                <option>HIVE-B204</option>
+                                <option>HIVE-C301</option>
+                                <option>HIVE-B109</option>
+                            </select>
+                        </div>
+                        <div className="flex flex-col gap-0.5">
+                            <label className="text-[10px] font-semibold uppercase tracking-widest text-gray-400">Severity</label>
+                            <select value={severityFilter} onChange={(e) => setSeverityFilter(e.target.value)}
+                                className="border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-600 outline-none bg-white">
+                                <option>All Levels</option>
+                                <option>Critical</option>
+                                <option>Elevated</option>
+                                <option>Normal</option>
+                            </select>
+                        </div>
+                        <div className="flex flex-col gap-0.5">
+                            <label className="text-[10px] font-semibold uppercase tracking-widest text-gray-400">Date Range</label>
+                            <input type="date" className="border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-600 outline-none bg-white" />
+                        </div>
                     </div>
-                )}
-            </div>
 
-            {/* Modal */}
-            {showModal && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
-                    <div className="w-full max-w-md rounded-2xl bg-card border border-border shadow-2xl">
-                        <div className="flex items-center justify-between border-b border-border px-6 py-4">
-                            <h2 className="text-base font-semibold text-foreground">Add New Alert</h2>
-                            <button
-                                onClick={() => setShowModal(false)}
-                                className="rounded-md p-1 text-muted-foreground hover:bg-muted hover:text-foreground transition-colors"
-                            >
-                                <X className="h-4 w-4" />
-                            </button>
+                    {/* Main two-column layout */}
+                    <div className="flex gap-5 items-start">
+
+                        {/* Left: Critical Events + Frequency Pulse */}
+                        <div className="w-56 shrink-0 flex flex-col gap-4">
+                            <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
+                                <p className="font-semibold text-sm" style={{ color: '#0d1b2a' }}>Critical Events</p>
+                                <div className="h-0.5 w-8 mt-1 rounded-full" style={{ backgroundColor: '#f5a623' }} />
+                                <p className="text-5xl font-bold mt-3" style={{ color: '#f5a623' }}>
+                                    {String(criticalCount).padStart(2, '0')}
+                                </p>
+                                <p className="text-xs text-gray-400 mt-1">Active Alerts</p>
+                            </div>
+
+                            <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
+                                <p className="font-semibold text-sm" style={{ color: '#0d1b2a' }}>Elevated Drift</p>
+                                <div className="h-0.5 w-8 mt-1 rounded-full" style={{ backgroundColor: '#f5a623' }} />
+                                <p className="text-5xl font-bold mt-3" style={{ color: '#0d1b2a' }}>{elevatedCount}</p>
+                                <p className="text-xs text-gray-400 mt-1">Acoustic Shifts</p>
+                            </div>
+
+                            {/* Frequency Pulse card */}
+                            <div className="rounded-xl overflow-hidden shadow-sm">
+                                <div className="relative h-32" style={{ backgroundColor: '#0a1628' }}>
+                                    <svg viewBox="0 0 200 80" className="w-full h-full" preserveAspectRatio="none">
+                                        {[20,40,60].map((y) => (
+                                            <line key={y} x1="0" y1={y} x2="200" y2={y} stroke="#1e3a5f" strokeWidth="0.5" />
+                                        ))}
+                                        <path d="M0,60 C20,55 30,20 50,30 C70,40 80,55 100,50 C120,45 130,15 150,25 C170,35 180,55 200,45"
+                                            fill="none" stroke="#f5a623" strokeWidth="2" />
+                                        <path d="M0,65 C30,60 60,40 90,50 C120,60 150,30 200,35"
+                                            fill="none" stroke="#3b82f6" strokeWidth="1" strokeDasharray="4 3" opacity="0.5" />
+                                    </svg>
+                                </div>
+                                <div className="bg-white p-3 border border-gray-200 border-t-0 rounded-b-xl">
+                                    <p className="text-xs font-semibold" style={{ color: '#0d1b2a' }}>Frequency Pulse</p>
+                                    <p className="text-[10px] text-gray-400 mt-0.5">Real-time hive vibration log for HIVE-A102</p>
+                                </div>
+                            </div>
                         </div>
 
-                        <form onSubmit={submit} className="p-6 space-y-4">
-                            <div className="space-y-1.5">
-                                <label className="text-sm font-medium text-foreground">Inference</label>
-                                <select
-                                    value={data.inference_id}
-                                    onChange={(e) => setData('inference_id', e.target.value)}
-                                    className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-                                    required
-                                >
+                        {/* Right: System Activity Logs table */}
+                        <div className="flex-1 min-w-0 bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+                            <div className="flex items-center gap-3 px-5 py-4 border-b border-gray-100">
+                                <span className="font-semibold text-sm" style={{ color: '#0d1b2a' }}>System Activity Logs</span>
+                                <div className="ml-auto flex items-center gap-2">
+                                    <span className="text-[10px] font-bold px-2 py-1 rounded border border-gray-300 text-gray-500 uppercase tracking-widest">Normal</span>
+                                    <span className="text-[10px] font-bold px-2 py-1 rounded text-white uppercase tracking-widest" style={{ backgroundColor: '#f5a623' }}>Alert</span>
+                                </div>
+                            </div>
+
+                            <table className="w-full text-xs">
+                                <thead>
+                                    <tr className="border-b border-gray-100">
+                                        <th className="text-left px-4 py-3 text-[10px] font-bold uppercase tracking-widest text-gray-400">Timestamp</th>
+                                        <th className="text-left px-4 py-3 text-[10px] font-bold uppercase tracking-widest text-gray-400">Hive ID</th>
+                                        <th className="text-left px-4 py-3 text-[10px] font-bold uppercase tracking-widest text-gray-400">Severity</th>
+                                        <th className="text-left px-4 py-3 text-[10px] font-bold uppercase tracking-widest text-gray-400">Event Description</th>
+                                        <th className="text-left px-4 py-3 text-[10px] font-bold uppercase tracking-widest text-gray-400">Action</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {logs.map((log, i) => {
+                                        const sc = severityConfig[log.severity] ?? severityConfig.Info;
+                                        return (
+                                            <tr key={i} className="border-b border-gray-50 hover:bg-gray-50 transition-colors">
+                                                <td className="px-4 py-4 text-gray-400 whitespace-nowrap font-mono">{log.ts}</td>
+                                                <td className="px-4 py-4 font-semibold" style={{ color: '#0d1b2a' }}>{log.hive}</td>
+                                                <td className="px-4 py-4">
+                                                    <span className="text-[10px] font-bold px-2 py-1 rounded uppercase tracking-widest"
+                                                        style={{ backgroundColor: sc.bg, color: sc.color }}>
+                                                        {sc.label}
+                                                    </span>
+                                                </td>
+                                                <td className="px-4 py-4 text-gray-600 leading-snug max-w-xs">{log.desc}</td>
+                                                <td className="px-4 py-4">
+                                                    {log.alertObj && log.alertObj.status === 'pending' ? (
+                                                        <button
+                                                            onClick={() => handleNotify(log.alertObj!)}
+                                                            disabled={notifying === log.alertObj.id}
+                                                            className="text-[10px] font-bold uppercase tracking-widest hover:underline"
+                                                            style={{ color: '#f5a623' }}
+                                                        >
+                                                            {notifying === log.alertObj.id ? 'Sending…' : log.action}
+                                                        </button>
+                                                    ) : (
+                                                        <button className="text-[10px] font-bold uppercase tracking-widest text-gray-500 hover:text-gray-700">
+                                                            {log.action}
+                                                        </button>
+                                                    )}
+                                                </td>
+                                            </tr>
+                                        );
+                                    })}
+                                </tbody>
+                            </table>
+
+                            {/* Pagination */}
+                            <div className="flex items-center justify-between px-5 py-4 border-t border-gray-100">
+                                <span className="text-xs text-gray-400">Showing 1 to 6 of 142 events</span>
+                                <div className="flex items-center gap-1">
+                                    <button className="w-7 h-7 rounded text-xs text-gray-400 hover:bg-gray-100">‹</button>
+                                    {[1, 2, 3].map((p) => (
+                                        <button key={p} className="w-7 h-7 rounded text-xs font-semibold transition-colors"
+                                            style={p === 1 ? { backgroundColor: '#f5a623', color: '#0d1b2a' } : { color: '#6b7280' }}>
+                                            {p}
+                                        </button>
+                                    ))}
+                                    <button className="w-7 h-7 rounded text-xs text-gray-400 hover:bg-gray-100">›</button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* Bottom: Swarm Prevention + Predictive Drift */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5 flex gap-4">
+                            <div className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0" style={{ backgroundColor: '#f5a623' }}>
+                                <span className="text-white font-bold text-lg">✳</span>
+                            </div>
+                            <div className="flex flex-col gap-2">
+                                <p className="font-semibold text-sm" style={{ color: '#0d1b2a' }}>Swarm Prevention Protocol</p>
+                                <p className="text-xs text-gray-500 leading-relaxed">
+                                    System analysis suggests HIVE-A102 has entered pre-swarm behavior. Immediate physical inspection is recommended to verify queen cells.
+                                </p>
+                                <button className="self-start mt-1 px-4 py-2 rounded-lg border border-gray-300 text-xs font-bold uppercase tracking-widest text-gray-700 hover:bg-gray-50 transition-colors">
+                                    View Protocol Checklist
+                                </button>
+                            </div>
+                        </div>
+
+                        <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5 flex gap-4">
+                            <div className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0" style={{ backgroundColor: '#eff6ff' }}>
+                                <span className="text-blue-500 font-bold text-lg">↺</span>
+                            </div>
+                            <div className="flex flex-col gap-2">
+                                <p className="font-semibold text-sm" style={{ color: '#0d1b2a' }}>Predictive Drift Analysis</p>
+                                <p className="text-xs text-gray-500 leading-relaxed">
+                                    Based on the last 72 hours of acoustic data, the colony health trend is shifting from foraging stability to overcrowding states across Yard B.
+                                </p>
+                                <button className="self-start mt-1 px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-widest text-white hover:opacity-90 transition-opacity" style={{ backgroundColor: '#0d1b2a' }}>
+                                    Generate Full Report
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            {/* Add Alert Modal */}
+            {showModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+                    <div className="w-full max-w-md rounded-2xl bg-white shadow-2xl">
+                        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+                            <h2 className="text-base font-semibold" style={{ color: '#0d1b2a' }}>Add New Alert</h2>
+                            <button onClick={() => setShowModal(false)} className="p-1 rounded hover:bg-gray-100 text-gray-400">
+                                <X className="w-4 h-4" />
+                            </button>
+                        </div>
+                        <form onSubmit={submit} className="p-6 flex flex-col gap-4">
+                            <div>
+                                <label className="text-xs font-semibold uppercase tracking-widest text-gray-400 block mb-1.5">Inference</label>
+                                <select value={data.inference_id} onChange={(e) => setData('inference_id', e.target.value)}
+                                    className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-700 outline-none bg-white" required>
                                     <option value="" disabled>Select an inference</option>
                                     {inferences.map((inf) => (
-                                        <option key={inf.id} value={inf.id}>
-                                            #{inf.id} — {inf.prediction} @ {inf.beehive?.hive_location ?? inf.id}
-                                        </option>
+                                        <option key={inf.id} value={inf.id}>#{inf.id} — {inf.prediction} @ {inf.beehive?.hive_location ?? inf.id}</option>
                                     ))}
                                 </select>
-                                {errors.inference_id && <p className="text-xs text-red-500">{errors.inference_id}</p>}
+                                {errors.inference_id && <p className="text-xs text-red-500 mt-1">{errors.inference_id}</p>}
                             </div>
-
-                            <div className="space-y-1.5">
-                                <label className="text-sm font-medium text-foreground">Advisory (Message)</label>
-                                <select
-                                    value={data.advisory_id}
-                                    onChange={(e) => setData('advisory_id', e.target.value)}
-                                    className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-                                    required
-                                >
+                            <div>
+                                <label className="text-xs font-semibold uppercase tracking-widest text-gray-400 block mb-1.5">Advisory</label>
+                                <select value={data.advisory_id} onChange={(e) => setData('advisory_id', e.target.value)}
+                                    className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-700 outline-none bg-white" required>
                                     <option value="" disabled>Select an advisory</option>
                                     {advisories.map((adv) => (
-                                        <option key={adv.id} value={adv.id}>
-                                            {adv.condition_label} — {adv.advisory_text.substring(0, 50)}…
-                                        </option>
+                                        <option key={adv.id} value={adv.id}>{adv.condition_label} — {adv.advisory_text.substring(0, 50)}…</option>
                                     ))}
                                 </select>
-                                {errors.advisory_id && <p className="text-xs text-red-500">{errors.advisory_id}</p>}
+                                {errors.advisory_id && <p className="text-xs text-red-500 mt-1">{errors.advisory_id}</p>}
                             </div>
-
-                            <div className="space-y-1.5">
-                                <label className="text-sm font-medium text-foreground">Alert Type</label>
-                                <select
-                                    value={data.alert_type}
-                                    onChange={(e) => setData('alert_type', e.target.value)}
-                                    className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-                                    required
-                                >
-                                    <option value="" disabled>Select alert type</option>
-                                    <option value="Info">Info</option>
-                                    <option value="Warning">Warning</option>
-                                    <option value="Critical">Critical</option>
-                                    <option value="Threat">Threat</option>
+                            <div>
+                                <label className="text-xs font-semibold uppercase tracking-widest text-gray-400 block mb-1.5">Alert Type</label>
+                                <select value={data.alert_type} onChange={(e) => setData('alert_type', e.target.value)}
+                                    className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-700 outline-none bg-white" required>
+                                    <option value="" disabled>Select type</option>
+                                    <option>Info</option><option>Warning</option><option>Critical</option><option>Threat</option>
                                 </select>
-                                {errors.alert_type && <p className="text-xs text-red-500">{errors.alert_type}</p>}
+                                {errors.alert_type && <p className="text-xs text-red-500 mt-1">{errors.alert_type}</p>}
                             </div>
-
-                            <div className="space-y-1.5">
-                                <label className="text-sm font-medium text-foreground">Timestamp</label>
-                                <input
-                                    type="datetime-local"
-                                    value={data.alert_timestamp}
-                                    onChange={(e) => setData('alert_timestamp', e.target.value)}
-                                    className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-                                    required
-                                />
-                                {errors.alert_timestamp && <p className="text-xs text-red-500">{errors.alert_timestamp}</p>}
+                            <div>
+                                <label className="text-xs font-semibold uppercase tracking-widest text-gray-400 block mb-1.5">Timestamp</label>
+                                <input type="datetime-local" value={data.alert_timestamp} onChange={(e) => setData('alert_timestamp', e.target.value)}
+                                    className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-700 outline-none bg-white" required />
+                                {errors.alert_timestamp && <p className="text-xs text-red-500 mt-1">{errors.alert_timestamp}</p>}
                             </div>
-
                             <div className="flex justify-end gap-3 pt-2">
-                                <button
-                                    type="button"
-                                    onClick={() => setShowModal(false)}
-                                    className="rounded-lg border border-border px-4 py-2 text-sm font-medium text-foreground hover:bg-muted transition-colors"
-                                >
-                                    Cancel
-                                </button>
-                                <button
-                                    type="submit"
-                                    disabled={processing}
-                                    className="rounded-lg bg-primary px-4 py-2 text-sm font-medium text-primary-foreground shadow-sm hover:opacity-90 transition-opacity disabled:opacity-60"
-                                >
+                                <button type="button" onClick={() => setShowModal(false)}
+                                    className="px-4 py-2 rounded-lg border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-50">Cancel</button>
+                                <button type="submit" disabled={processing}
+                                    className="px-4 py-2 rounded-lg text-sm font-semibold hover:opacity-90 disabled:opacity-60"
+                                    style={{ backgroundColor: '#f5a623', color: '#0d1b2a' }}>
                                     {processing ? 'Saving…' : 'Save Alert'}
                                 </button>
                             </div>
@@ -280,5 +349,8 @@ export default function AlertsPage({
 }
 
 AlertsPage.layout = {
-    breadcrumbs: [{ title: 'Alerts', href: '/alerts' }],
+    breadcrumbs: [
+        { title: 'Admin Dashboard', href: '/dashboard' },
+        { title: 'Alerts & Logs', href: '/alerts' },
+    ],
 };
