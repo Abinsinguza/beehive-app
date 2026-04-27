@@ -1,6 +1,14 @@
-import { Head } from '@inertiajs/react';
-import { Eye, EyeOff, Link2, Mail, RefreshCw, Server, Smartphone, Wifi } from 'lucide-react';
+import { Head, useForm, usePage } from '@inertiajs/react';
+import { CheckCircle, Eye, EyeOff, Mail, RefreshCw, Server, Smartphone, Wifi } from 'lucide-react';
 import { useRef, useState } from 'react';
+
+type Settings = {
+    sms_server_url: string;
+    sms_username: string;
+    sms_api_key: string;
+    sms_sender_id: string;
+    sms_template: string;
+};
 
 const WILDCARDS = [
     { tag: '#beeHive',      desc: 'Hive ID' },
@@ -24,23 +32,31 @@ const PREVIEW_MAP: Record<string, string> = {
     '#confidence':   '96.2%',
 };
 
-export default function SystemConfig() {
-    const [showApiKey, setShowApiKey]   = useState(false);
+export default function SystemConfig({ settings }: { settings: Settings }) {
+    const { props } = usePage<{ flash?: { success?: string } }>();
+    const flash = props.flash;
+
+    const [showApiKey, setShowApiKey] = useState(false);
     const [emailAlerts, setEmailAlerts] = useState(true);
     const [smsAlerts, setSmsAlerts]     = useState(true);
     const [pushAlerts, setPushAlerts]   = useState(false);
-    const [smsTemplate, setSmsTemplate] = useState(
-        '🐝 BEEHIVE ALERT [#alertType]\nHive: #beeHive @ #hiveLocation\nBeekeeper: #beekeeper\nPrediction: #prediction (#confidence)\nMessage: #alertMessage\nTime: #timestamp'
-    );
     const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+    const { data, setData, post, processing, errors } = useForm({
+        sms_server_url: settings.sms_server_url,
+        sms_username:   settings.sms_username,
+        sms_api_key:    settings.sms_api_key,
+        sms_sender_id:  settings.sms_sender_id,
+        sms_template:   settings.sms_template,
+    });
 
     const insertWildcard = (tag: string) => {
         const el = textareaRef.current;
         if (!el) return;
-        const start = el.selectionStart ?? smsTemplate.length;
-        const end   = el.selectionEnd   ?? smsTemplate.length;
-        const next  = smsTemplate.slice(0, start) + tag + smsTemplate.slice(end);
-        setSmsTemplate(next);
+        const start = el.selectionStart ?? data.sms_template.length;
+        const end   = el.selectionEnd   ?? data.sms_template.length;
+        const next  = data.sms_template.slice(0, start) + tag + data.sms_template.slice(end);
+        setData('sms_template', next);
         requestAnimationFrame(() => {
             el.focus();
             el.setSelectionRange(start + tag.length, start + tag.length);
@@ -49,21 +65,34 @@ export default function SystemConfig() {
 
     const previewText = Object.entries(PREVIEW_MAP).reduce(
         (txt, [key, val]) => txt.replaceAll(key, val),
-        smsTemplate
+        data.sms_template
     );
+
+    const submit = (e: React.FormEvent) => {
+        e.preventDefault();
+        post('/system-config');
+    };
 
     return (
         <>
             <Head title="System Preferences" />
 
-            <div className="flex flex-col min-h-full">
+            <form onSubmit={submit} className="flex flex-col min-h-full">
                 <div className="flex flex-col gap-6 p-6 flex-1">
                     {/* Header */}
-                    <div>
-                        <h1 className="text-2xl font-semibold tracking-tight text-foreground">System Preferences</h1>
-                        <p className="mt-1 text-sm text-muted-foreground">
-                            Configure acoustic detection thresholds, notification channels, and global API parameters.
-                        </p>
+                    <div className="flex items-start justify-between">
+                        <div>
+                            <h1 className="text-2xl font-semibold tracking-tight text-foreground">System Preferences</h1>
+                            <p className="mt-1 text-sm text-muted-foreground">
+                                Configure notification channels, SMS credentials, and global API parameters.
+                            </p>
+                        </div>
+                        {flash?.success && (
+                            <div className="flex items-center gap-2 rounded-lg border border-emerald-200 bg-emerald-50 px-3 py-2 text-sm text-emerald-700 dark:border-emerald-900/40 dark:bg-emerald-900/10 dark:text-emerald-400">
+                                <CheckCircle className="h-4 w-4 shrink-0" />
+                                {flash.success}
+                            </div>
+                        )}
                     </div>
 
                     {/* 2-column grid */}
@@ -95,7 +124,10 @@ export default function SystemConfig() {
                                 </div>
                             </div>
 
-                            <button className="mt-auto inline-flex items-center justify-center gap-2 rounded-lg bg-emerald-800 px-4 py-2.5 text-sm font-semibold text-white hover:bg-emerald-700 transition-colors">
+                            <button
+                                type="button"
+                                className="mt-auto inline-flex items-center justify-center gap-2 rounded-lg bg-emerald-800 px-4 py-2.5 text-sm font-semibold text-white hover:bg-emerald-700 transition-colors"
+                            >
                                 <RefreshCw className="h-4 w-4" />
                                 Retrain Model
                             </button>
@@ -137,13 +169,14 @@ export default function SystemConfig() {
                                 </label>
                                 <textarea
                                     ref={textareaRef}
-                                    value={smsTemplate}
-                                    onChange={(e) => setSmsTemplate(e.target.value)}
+                                    value={data.sms_template}
+                                    onChange={(e) => setData('sms_template', e.target.value)}
                                     rows={6}
-                                    placeholder="Type your SMS template here and click wildcards above to insert them…"
+                                    placeholder="Type your SMS template here…"
                                     className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm font-mono text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring resize-none"
                                 />
-                                <p className="text-right text-xs text-muted-foreground">{smsTemplate.length} chars</p>
+                                {errors.sms_template && <p className="text-xs text-red-500">{errors.sms_template}</p>}
+                                <p className="text-right text-xs text-muted-foreground">{data.sms_template.length} chars</p>
                             </div>
 
                             {/* Live preview */}
@@ -162,39 +195,18 @@ export default function SystemConfig() {
                             </h2>
 
                             {[
-                                {
-                                    icon: <Mail className="h-5 w-5 text-muted-foreground" />,
-                                    label: 'Email Reports',
-                                    sub: 'Daily digest & critical alerts',
-                                    value: emailAlerts,
-                                    set: setEmailAlerts,
-                                },
-                                {
-                                    icon: <Smartphone className="h-5 w-5 text-muted-foreground" />,
-                                    label: 'SMS Alerts',
-                                    sub: 'Immediate swarm warnings',
-                                    value: smsAlerts,
-                                    set: setSmsAlerts,
-                                },
-                                {
-                                    icon: <Server className="h-5 w-5 text-muted-foreground" />,
-                                    label: 'Push Notifications',
-                                    sub: 'App-level notifications',
-                                    value: pushAlerts,
-                                    set: setPushAlerts,
-                                },
+                                { icon: <Mail className="h-5 w-5 text-muted-foreground" />,       label: 'Email Reports',      sub: 'Daily digest & critical alerts',  value: emailAlerts, set: setEmailAlerts },
+                                { icon: <Smartphone className="h-5 w-5 text-muted-foreground" />, label: 'SMS Alerts',         sub: 'Immediate swarm warnings',         value: smsAlerts,   set: setSmsAlerts },
+                                { icon: <Server className="h-5 w-5 text-muted-foreground" />,     label: 'Push Notifications', sub: 'App-level notifications',          value: pushAlerts,  set: setPushAlerts },
                             ].map(({ icon, label, sub, value, set }) => (
                                 <div key={label} className="flex items-center justify-between rounded-lg border border-border bg-muted/20 px-4 py-3">
                                     <div className="flex items-center gap-3">
-                                        <div className="flex h-9 w-9 items-center justify-center rounded-full bg-muted">
-                                            {icon}
-                                        </div>
+                                        <div className="flex h-9 w-9 items-center justify-center rounded-full bg-muted">{icon}</div>
                                         <div>
                                             <p className="text-sm font-medium text-foreground">{label}</p>
                                             <p className="text-xs text-muted-foreground">{sub}</p>
                                         </div>
                                     </div>
-                                    {/* Toggle */}
                                     <button
                                         type="button"
                                         role="switch"
@@ -202,9 +214,7 @@ export default function SystemConfig() {
                                         onClick={() => set(!value)}
                                         className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors focus:outline-none ${value ? 'bg-emerald-700' : 'bg-muted-foreground/30'}`}
                                     >
-                                        <span
-                                            className={`pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow transform transition-transform ${value ? 'translate-x-5' : 'translate-x-0'}`}
-                                        />
+                                        <span className={`pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow transform transition-transform ${value ? 'translate-x-5' : 'translate-x-0'}`} />
                                     </button>
                                 </div>
                             ))}
@@ -216,32 +226,37 @@ export default function SystemConfig() {
                                 <span className="text-lg">🔗</span> API & Network
                             </h2>
 
+                            {/* Server URL */}
                             <div className="flex flex-col gap-1.5">
                                 <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                                     Server URL
                                 </label>
-                                <div className="relative">
-                                    <input
-                                        type="text"
-                                        defaultValue="https://api.colonyguard-v4.io/v1"
-                                        className="w-full rounded-lg border border-input bg-background px-3 py-2 pr-10 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-                                        readOnly
-                                    />
-                                    <Link2 className="absolute right-3 top-2.5 h-4 w-4 text-muted-foreground" />
-                                </div>
+                                <input
+                                    type="url"
+                                    value={data.sms_server_url}
+                                    onChange={(e) => setData('sms_server_url', e.target.value)}
+                                    placeholder="https://comms-test.pahappa.net/api/v1/json/"
+                                    className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                                />
+                                {errors.sms_server_url && <p className="text-xs text-red-500">{errors.sms_server_url}</p>}
                             </div>
 
+                            {/* Username */}
                             <div className="flex flex-col gap-1.5">
                                 <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                                     Username
                                 </label>
                                 <input
                                     type="text"
-                                    defaultValue="colonyguard-admin"
-                                    className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                                    value={data.sms_username}
+                                    onChange={(e) => setData('sms_username', e.target.value)}
+                                    placeholder="your_pahappa_username"
+                                    className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
                                 />
+                                {errors.sms_username && <p className="text-xs text-red-500">{errors.sms_username}</p>}
                             </div>
 
+                            {/* API Key */}
                             <div className="flex flex-col gap-1.5">
                                 <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
                                     API Key
@@ -249,9 +264,10 @@ export default function SystemConfig() {
                                 <div className="relative">
                                     <input
                                         type={showApiKey ? 'text' : 'password'}
-                                        defaultValue="sk-colonyguard-prod-a8f2e1c9b3d7"
-                                        className="w-full rounded-lg border border-input bg-background px-3 py-2 pr-10 text-sm text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-                                        readOnly
+                                        value={data.sms_api_key}
+                                        onChange={(e) => setData('sms_api_key', e.target.value)}
+                                        placeholder="your_api_key"
+                                        className="w-full rounded-lg border border-input bg-background px-3 py-2 pr-10 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
                                     />
                                     <button
                                         type="button"
@@ -261,8 +277,25 @@ export default function SystemConfig() {
                                         {showApiKey ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                                     </button>
                                 </div>
+                                {errors.sms_api_key && <p className="text-xs text-red-500">{errors.sms_api_key}</p>}
                             </div>
 
+                            {/* Sender ID */}
+                            <div className="flex flex-col gap-1.5">
+                                <label className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                                    Sender ID
+                                </label>
+                                <input
+                                    type="text"
+                                    value={data.sms_sender_id}
+                                    onChange={(e) => setData('sms_sender_id', e.target.value)}
+                                    placeholder="BeeHive"
+                                    className="w-full rounded-lg border border-input bg-background px-3 py-2 text-sm text-foreground placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                                />
+                                {errors.sms_sender_id && <p className="text-xs text-red-500">{errors.sms_sender_id}</p>}
+                            </div>
+
+                            {/* Connection indicator */}
                             <div className="flex items-center justify-between rounded-lg border border-emerald-200 bg-emerald-50 dark:border-emerald-900/40 dark:bg-emerald-900/10 px-4 py-3">
                                 <div className="flex items-center gap-2">
                                     <span className="h-2.5 w-2.5 rounded-full bg-emerald-500 animate-pulse" />
@@ -280,12 +313,18 @@ export default function SystemConfig() {
 
                 {/* Footer bar */}
                 <div className="sticky bottom-0 flex items-center justify-between border-t border-border bg-card/80 backdrop-blur-sm px-6 py-3">
-                    <span className="text-xs text-muted-foreground">⏱ Last saved 4 minutes ago</span>
-                    <button className="inline-flex items-center gap-2 rounded-lg bg-emerald-800 px-5 py-2 text-sm font-semibold text-white hover:bg-emerald-700 transition-colors shadow-sm">
-                        Save Changes
+                    <span className="text-xs text-muted-foreground">
+                        {flash?.success ? `✓ ${flash.success}` : 'Unsaved changes will be lost on navigation'}
+                    </span>
+                    <button
+                        type="submit"
+                        disabled={processing}
+                        className="inline-flex items-center gap-2 rounded-lg bg-emerald-800 px-5 py-2 text-sm font-semibold text-white hover:bg-emerald-700 transition-colors shadow-sm disabled:opacity-60"
+                    >
+                        {processing ? 'Saving…' : 'Save Changes'}
                     </button>
                 </div>
-            </div>
+            </form>
         </>
     );
 }

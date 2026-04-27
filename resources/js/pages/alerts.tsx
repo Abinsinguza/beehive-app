@@ -1,5 +1,5 @@
-import { Head, useForm, router } from '@inertiajs/react';
-import { Bell, BellRing, Plus, X } from 'lucide-react';
+import { Head, useForm, router, usePage } from '@inertiajs/react';
+import { AlertCircle, Bell, BellRing, CheckCircle, Plus, X } from 'lucide-react';
 import { useState } from 'react';
 
 type Inference = { id: number; prediction: string; beehive?: { hive_location: string } };
@@ -33,6 +33,9 @@ export default function AlertsPage({
     inferences?: Inference[];
     advisories?: Advisory[];
 }) {
+    const { props } = usePage<{ flash?: { success?: string; error?: string } }>();
+    const flash = props.flash;
+
     const [showModal, setShowModal] = useState(false);
     const [notifying, setNotifying] = useState<number | null>(null);
 
@@ -62,6 +65,20 @@ export default function AlertsPage({
             <Head title="Alerts" />
 
             <div className="flex flex-col gap-6 p-6">
+                {/* Flash messages */}
+                {flash?.success && (
+                    <div className="flex items-center gap-3 rounded-lg border border-emerald-200 bg-emerald-50 px-4 py-3 text-sm text-emerald-700 dark:border-emerald-900/40 dark:bg-emerald-900/10 dark:text-emerald-400">
+                        <CheckCircle className="h-4 w-4 shrink-0" />
+                        {flash.success}
+                    </div>
+                )}
+                {flash?.error && (
+                    <div className="flex items-center gap-3 rounded-lg border border-red-200 bg-red-50 px-4 py-3 text-sm text-red-700 dark:border-red-900/40 dark:bg-red-900/10 dark:text-red-400">
+                        <AlertCircle className="h-4 w-4 shrink-0" />
+                        {flash.error}
+                    </div>
+                )}
+
                 {/* Header */}
                 <div className="flex items-center justify-between">
                     <div>

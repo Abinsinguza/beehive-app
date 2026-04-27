@@ -7,6 +7,7 @@ use Laravel\Fortify\Features;
 use App\Http\Controllers\AdvisoryController;
 use App\Http\Controllers\AlertsController;
 use App\Http\Controllers\InferenceController;
+use App\Http\Controllers\SystemConfigController;
 
 Route::inertia('/', 'welcome', [
     'canRegister' => Features::enabled(Features::registration()),
@@ -22,7 +23,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::resource('inferences', InferenceController::class)->only(['index', 'store']);
     Route::resource('alerts', AlertsController::class)->only(['index', 'store']);
     Route::patch('alerts/{alert}/notify', [AlertsController::class, 'notify'])->name('alerts.notify');
-    Route::inertia('system-config', 'system-config')->name('system-config');
+    Route::get('system-config', [SystemConfigController::class, 'index'])->name('system-config');
+    Route::post('system-config', [SystemConfigController::class, 'update'])->name('system-config.update');
 });
 
 require __DIR__.'/settings.php';
