@@ -1,4 +1,4 @@
-import { Head, router, useForm } from '@inertiajs/react';
+import { Head, Link, router, useForm } from '@inertiajs/react';
 import { Eye, Pencil, Plus, Trash2, X } from 'lucide-react';
 import { useState } from 'react';
 
@@ -303,9 +303,9 @@ export default function Beehives({ beehives = [], owners = [], search: initialSe
                                 </div>
                             ))}
                         </div>
-                        <button className="w-full py-2.5 rounded-lg border border-slate-600 text-xs font-bold uppercase tracking-widest text-slate-300 hover:border-slate-400 transition-colors mt-auto">
+                        <Link href="/alerts" className="w-full py-2.5 rounded-lg border border-slate-600 text-xs font-bold uppercase tracking-widest text-slate-300 hover:border-slate-400 transition-colors mt-auto text-center block">
                             View Full Audit Log
-                        </button>
+                        </Link>
                     </div>
                 </div>
             </div>

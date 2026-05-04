@@ -46,6 +46,7 @@ export default function AlertsPage({
     const [notifying, setNotifying] = useState<number | null>(null);
     const [hiveFilter, setHiveFilter] = useState('All Hives');
     const [severityFilter, setSeverityFilter] = useState('All Levels');
+    const [dateFrom, setDateFrom] = useState('');
 
     const { data, setData, post, reset, processing, errors } = useForm({
         inference_id: '',
@@ -79,6 +80,31 @@ export default function AlertsPage({
         }))
         : staticLogs.map((l) => ({ ...l, alertObj: null }));
 
+    // Filter logs by selected date (matches the whole day, using local time)
+    const filteredLogs = logs.filter((log) => {
+        if (!dateFrom) return true;
+        // Parse "YYYY-MM-DD HH:MM:SS" or any date string — extract just the date part
+        const datePart = log.ts.slice(0, 10); // works for "2023-10-27 14:52:10" and ISO strings
+        return datePart === dateFrom;
+    });
+
+    const exportLog = () => {
+        const headers = ['Timestamp', 'Hive ID', 'Severity', 'Event Description', 'Action'];
+        const escape  = (v: string) => `"${String(v).replace(/"/g, '""')}"`;
+        const rows    = filteredLogs.map((l) => {
+            const sc = severityConfig[l.severity] ?? severityConfig.Info;
+            return [l.ts, l.hive, sc.label, l.desc, l.action];
+        });
+        const csv  = [headers, ...rows].map((r) => r.map(escape).join(',')).join('\r\n');
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        const url  = URL.createObjectURL(blob);
+        const a    = document.createElement('a');
+        a.href     = url;
+        a.download = `alerts-log${dateFrom ? `-${dateFrom}` : ''}.csv`;
+        a.click();
+        URL.revokeObjectURL(url);
+    };
+
     return (
         <>
             <Head title="Alerts & Logs" />
@@ -91,13 +117,20 @@ export default function AlertsPage({
                     <span className="text-sm font-semibold" style={{ color: '#f5a623' }}>Active Monitoring</span>
                     <div className="ml-auto flex items-center gap-3">
                         <button
-                            onClick={() => setShowModal(true)}
+                            onClick={exportLog}
                             className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold hover:opacity-90 transition-opacity"
                             style={{ backgroundColor: '#f5a623', color: '#0d1b2a' }}
                         >
                             <Download className="w-4 h-4" /> Export Log
                         </button>
-                        <button className="px-4 py-2 rounded-lg text-sm font-semibold border border-gray-300 text-gray-600 hover:bg-gray-50 transition-colors">
+                        <button
+                            onClick={() => {
+                                setHiveFilter('All Hives');
+                                setSeverityFilter('All Levels');
+                                setDateFrom('');
+                            }}
+                            className="px-4 py-2 rounded-lg text-sm font-semibold border border-gray-300 text-gray-600 hover:bg-gray-50 transition-colors"
+                        >
                             Clear All
                         </button>
                     </div>
@@ -130,7 +163,22 @@ export default function AlertsPage({
                         </div>
                         <div className="flex flex-col gap-0.5">
                             <label className="text-[10px] font-semibold uppercase tracking-widest text-gray-400">Date Range</label>
-                            <input type="date" className="border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-600 outline-none bg-white" />
+                            <div className="relative">
+                                <input
+                                    type="date"
+                                    value={dateFrom}
+                                    onChange={(e) => setDateFrom(e.target.value)}
+                                    className="border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-700 outline-none bg-white cursor-pointer hover:border-gray-400 transition-colors"
+                                    style={{ minWidth: '160px' }}
+                                />
+                                {dateFrom && (
+                                    <button
+                                        onClick={() => setDateFrom('')}
+                                        className="absolute right-8 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 text-xs font-bold"
+                                        title="Clear"
+                                    >✕</button>
+                                )}
+                            </div>
                         </div>
                     </div>
 
@@ -196,7 +244,7 @@ export default function AlertsPage({
                                     </tr>
                                 </thead>
                                 <tbody>
-                                    {logs.map((log, i) => {
+                                    {filteredLogs.map((log, i) => {
                                         const sc = severityConfig[log.severity] ?? severityConfig.Info;
                                         return (
                                             <tr key={i} className="border-b border-gray-50 hover:bg-gray-50 transition-colors">
@@ -274,7 +322,72 @@ export default function AlertsPage({
                                 <p className="text-xs text-gray-500 leading-relaxed">
                                     Based on the last 72 hours of acoustic data, the colony health trend is shifting from foraging stability to overcrowding states across Yard B.
                                 </p>
-                                <button className="self-start mt-1 px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-widest text-white hover:opacity-90 transition-opacity" style={{ backgroundColor: '#0d1b2a' }}>
+                                <button
+                                    onClick={() => {
+                                        const sc = (sev: string) => (severityConfig[sev] ?? severityConfig.Info).label;
+                                        const rows = filteredLogs.map((l) =>
+                                            `<tr>
+                                                <td>${l.ts}</td>
+                                                <td>${l.hive}</td>
+                                                <td><strong>${sc(l.severity)}</strong></td>
+                                                <td>${l.desc}</td>
+                                                <td>${l.action}</td>
+                                            </tr>`
+                                        ).join('');
+
+                                        const html = `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="utf-8"/>
+  <title>SwarmIntel – Full Alert Report</title>
+  <style>
+    body { font-family: Arial, sans-serif; color: #0d1b2a; padding: 32px; }
+    h1 { font-size: 22px; margin-bottom: 4px; }
+    .meta { font-size: 12px; color: #64748b; margin-bottom: 24px; }
+    .summary { display: flex; gap: 24px; margin-bottom: 24px; }
+    .stat { background: #f8f9fa; border: 1px solid #e5e7eb; border-radius: 8px; padding: 12px 20px; }
+    .stat-val { font-size: 28px; font-weight: bold; color: #f5a623; }
+    .stat-lbl { font-size: 11px; color: #64748b; text-transform: uppercase; letter-spacing: 1px; }
+    table { width: 100%; border-collapse: collapse; font-size: 12px; }
+    th { background: #0d1b2a; color: white; text-align: left; padding: 8px 12px; font-size: 10px; text-transform: uppercase; letter-spacing: 1px; }
+    td { padding: 8px 12px; border-bottom: 1px solid #f1f5f9; vertical-align: top; }
+    tr:nth-child(even) td { background: #f8f9fa; }
+    .footer { margin-top: 32px; font-size: 11px; color: #94a3b8; border-top: 1px solid #e5e7eb; padding-top: 12px; }
+    @media print { body { padding: 16px; } }
+  </style>
+</head>
+<body>
+  <h1>SwarmIntel – Full Alert Report</h1>
+  <div class="meta">
+    Generated: ${new Date().toLocaleString()}
+    ${dateFrom ? ` &nbsp;|&nbsp; Date filter: ${dateFrom}` : ''}
+    ${hiveFilter !== 'All Hives' ? ` &nbsp;|&nbsp; Hive: ${hiveFilter}` : ''}
+    ${severityFilter !== 'All Levels' ? ` &nbsp;|&nbsp; Severity: ${severityFilter}` : ''}
+  </div>
+  <div class="summary">
+    <div class="stat"><div class="stat-val">${filteredLogs.length}</div><div class="stat-lbl">Total Events</div></div>
+    <div class="stat"><div class="stat-val">${filteredLogs.filter(l => l.severity === 'Critical' || l.severity === 'Threat').length}</div><div class="stat-lbl">Critical</div></div>
+    <div class="stat"><div class="stat-val">${filteredLogs.filter(l => l.severity === 'Warning').length}</div><div class="stat-lbl">Elevated</div></div>
+    <div class="stat"><div class="stat-val">${filteredLogs.filter(l => l.severity === 'Info').length}</div><div class="stat-lbl">Normal</div></div>
+  </div>
+  <table>
+    <thead><tr><th>Timestamp</th><th>Hive ID</th><th>Severity</th><th>Event Description</th><th>Action</th></tr></thead>
+    <tbody>${rows}</tbody>
+  </table>
+  <div class="actions" style="margin-top:24px; display:flex; gap:12px;">
+    <button onclick="window.print()" style="padding:10px 24px; background:#f5a623; color:#0d1b2a; border:none; border-radius:8px; font-weight:bold; font-size:13px; cursor:pointer;">🖨 Print / Save as PDF</button>
+    <button onclick="window.close()" style="padding:10px 24px; background:#0d1b2a; color:white; border:none; border-radius:8px; font-weight:bold; font-size:13px; cursor:pointer;">← Back to App</button>
+  </div>
+  <div class="footer">SwarmIntel Bee Monitoring Pro &nbsp;|&nbsp; System Health: Active Monitoring &nbsp;|&nbsp; Confidential</div>
+</body>
+</html>`;
+
+                                        const win = window.open('', '_blank');
+                                        if (win) { win.document.write(html); win.document.close(); }
+                                    }}
+                                    className="self-start mt-1 px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-widest text-white hover:opacity-90 transition-opacity"
+                                    style={{ backgroundColor: '#0d1b2a' }}
+                                >
                                     Generate Full Report
                                 </button>
                             </div>
