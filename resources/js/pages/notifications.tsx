@@ -23,7 +23,6 @@ const todayNotifications: NotificationItem[] = [
         time: '2 mins ago',
         actions: [
             { label: 'Dispatch Team', style: 'primary' },
-            { label: 'View Sensors', style: 'link' },
         ],
         borderColor: '#ef4444',
     },
@@ -43,8 +42,8 @@ const yesterdayNotifications: NotificationItem[] = [
     {
         id: 3,
         type: 'system',
-        title: 'System Update: Firmware v4.2',
-        body: 'Gateways 12-24 successfully updated to firmware v4.2.0. Expected battery life improvement: 12% across all sensor arrays.',
+        title: 'System Update: v4.2',
+        body: 'Gateways 12-24 successfully updated to v4.2.0. Expected performance improvement across all monitoring nodes.',
         time: '22 hours ago',
         tag: 'SYSTEM LOG',
         borderColor: '#94a3b8',
@@ -52,7 +51,7 @@ const yesterdayNotifications: NotificationItem[] = [
     {
         id: 4,
         type: 'battery',
-        title: 'Battery Alert: Sensor A-89',
+        title: 'Battery Alert: Hive Node A-89',
         body: 'Power level at 15%. Recommend replacement during the next scheduled maintenance cycle to prevent data loss.',
         time: 'Yesterday at 4:30 PM',
         actions: [{ label: 'Schedule Replacement', style: 'link' }],

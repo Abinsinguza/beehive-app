@@ -14,10 +14,18 @@ class BeekeeperController extends Controller
      */
     public function index()
     {
-         $beekeepers = Beekeeper::all();
-    return Inertia::render('beekeepers', [
-        'beekeepers' => $beekeepers,
-    ]);
+        $search = request('search', '');
+
+        $beekeepers = Beekeeper::when($search, function ($query, $search) {
+            $query->where('name', 'like', "%{$search}%")
+                  ->orWhere('email', 'like', "%{$search}%")
+                  ->orWhere('phone', 'like', "%{$search}%");
+        })->get();
+
+        return Inertia::render('beekeepers', [
+            'beekeepers' => $beekeepers,
+            'search'     => $search,
+        ]);
     }
 
     /**
@@ -51,7 +59,6 @@ class BeekeeperController extends Controller
             'email' => $request->email,
             'phone' => $request->phone,
             'address' => $request->address,
-            'password' => $request->password, // ⚠️ see note below
         ]);
 
         return redirect()->back()
@@ -79,7 +86,21 @@ class BeekeeperController extends Controller
      */
     public function update(UpdateBeekeeperRequest $request, Beekeeper $beekeeper)
     {
-        //
+        $data = $request->validate([
+            'name'     => 'required|string|max:255',
+            'phone'    => 'required|string|unique:beekeepers,phone,' . $beekeeper->id,
+            'email'    => 'nullable|email',
+            'address'  => 'nullable|string',
+            'password' => 'nullable|min:4',
+        ]);
+
+        if (empty($data['password'])) {
+            unset($data['password']);
+        }
+
+        $beekeeper->update($data);
+
+        return redirect()->back()->with('success', 'User updated successfully');
     }
 
     /**
@@ -87,6 +108,8 @@ class BeekeeperController extends Controller
      */
     public function destroy(Beekeeper $beekeeper)
     {
-        //
+        $beekeeper->delete();
+
+        return redirect()->back()->with('success', 'User deleted successfully');
     }
 }

@@ -15,13 +15,20 @@ class BeehiveController extends Controller
      */
     public function index()
     {
-        //
-        return inertia('beehives', [
-            // Load relationship
-            'beehives' => Beehive::with('owner')->get(),
+        $search = request('search', '');
 
-            // Pass beekeepers for dropdown
-            'owners' => Beekeeper::select('id', 'name')->get(),
+        $beehives = Beehive::with('owner')
+            ->when($search, function ($query, $search) {
+                $query->where('id', 'like', "%{$search}%")
+                      ->orWhere('hive_location', 'like', "%{$search}%")
+                      ->orWhere('hive_type', 'like', "%{$search}%");
+            })
+            ->get();
+
+        return inertia('beehives', [
+            'beehives' => $beehives,
+            'owners'   => Beekeeper::select('id', 'name')->get(),
+            'search'   => $search,
         ]);
     }
 
@@ -39,7 +46,6 @@ class BeehiveController extends Controller
      */
     public function store(StoreBeehiveRequest $request)
     {
-        //
         $last = Beehive::orderBy('id', 'desc')->first();
         if ($last) {
             $number = (int) substr($last->id, 2); // remove BH
@@ -50,14 +56,30 @@ class BeehiveController extends Controller
 
         $newId = 'BH' . str_pad($number, 4, '0', STR_PAD_LEFT);
 
+        // Resolve owner by name — find existing or create a new beekeeper record
+        $ownerName = trim($request->owner_name ?? '');
+        $owner = Beekeeper::where('name', $ownerName)->first();
+
+        if (!$owner) {
+            $lastBk = Beekeeper::orderBy('id', 'desc')->first();
+            $bkNum  = $lastBk ? ((int) substr($lastBk->id, 2)) + 1 : 1;
+            $owner  = Beekeeper::create([
+                'id'    => 'BK' . str_pad($bkNum, 4, '0', STR_PAD_LEFT),
+                'name'  => $ownerName,
+                'phone' => 'N/A-' . $bkNum, // placeholder to satisfy unique constraint
+            ]);
+        }
+
         Beehive::create([
-            'id' => $newId,
-            'owner_id' => $request->owner_id,
-            'hive_location' => $request->hive_location,
-            'hive_type' => $request->hive_type,
-            'installation_date' => $request->installation_date,
-            'current_state' => $request->current_state,
+            'id'                => $newId,
+            'owner_id'          => $owner->id,
+            'hive_location'     => $request->hive_location,
+            'hive_type'         => $request->hive_type,
+            'installation_date' => now()->toDateString(),
+            'current_state'     => $request->current_state,
         ]);
+
+        return redirect()->back()->with('success', 'Hive added successfully');
     }
 
     /**
@@ -81,14 +103,21 @@ class BeehiveController extends Controller
      */
     public function update(UpdateBeehiveRequest $request, Beehive $beehive)
     {
-        //
+        $beehive->update($request->validate([
+            'owner_id'          => 'required|string|exists:beekeepers,id',
+            'hive_location'     => 'required|string|max:255',
+            'hive_type'         => 'required|string|max:255',
+            'installation_date' => 'required|date',
+            'current_state'     => 'required|in:active,inactive,migrated,lost',
+        ]));
+
+        return redirect()->back()->with('success', 'Hive updated successfully');
     }
 
-    /**
-     * Remove the specified resource from storage.
-     */
     public function destroy(Beehive $beehive)
     {
-        //
+        $beehive->delete();
+
+        return redirect()->back()->with('success', 'Hive deleted successfully');
     }
 }

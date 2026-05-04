@@ -27,7 +27,6 @@ class StoreBeekeeperRequest extends FormRequest
             'phone' => 'required|string|unique:beekeepers,phone',
             'email' => 'nullable|email',
             'address' => 'nullable|string',
-            'password' => 'required|min:4',
         ];
     }
 }

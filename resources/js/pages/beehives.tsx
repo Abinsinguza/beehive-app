@@ -1,5 +1,5 @@
-import { Head, useForm } from '@inertiajs/react';
-import { MoreVertical, Plus, X } from 'lucide-react';
+import { Head, router, useForm } from '@inertiajs/react';
+import { Eye, Pencil, Plus, Trash2, X } from 'lucide-react';
 import { useState } from 'react';
 
 type Owner = { id: string; name: string };
@@ -29,18 +29,20 @@ const fakeBattery: Record<number, { pct: number; color: string }> = {
 };
 
 const deploymentLog = [
-    { color: '#f5a623', title: 'New Sensor Calibration',          sub: 'Hive HV-8812-B • 2h ago' },
+    { color: '#f5a623', title: 'Hive Inspection Completed',        sub: 'Hive HV-8812-B • 2h ago' },
     { color: '#94a3b8', title: 'Maintenance Complete',             sub: 'Hive HV-1002-K • 5h ago' },
     { color: '#f5a623', title: 'Swarm Alert Threshold Adjusted',   sub: 'System Global • 8h ago' },
 ];
 
-export default function Beehives({ beehives = [], owners = [] }: { beehives?: Beehive[]; owners?: Owner[] }) {
-    const [showModal, setShowModal] = useState(false);
+export default function Beehives({ beehives = [], owners = [], search: initialSearch = '' }: { beehives?: Beehive[]; owners?: Owner[]; search?: string }) {
+    const [showModal, setShowModal]     = useState(false);
+    const [viewTarget, setViewTarget]   = useState<Beehive | null>(null);
+    const [editTarget, setEditTarget]   = useState<Beehive | null>(null);
+
     const { data, setData, post, reset, processing } = useForm({
-        owner_id: '',
+        owner_name: '',
         hive_location: '',
         hive_type: '',
-        installation_date: '',
         current_state: '',
     });
 
@@ -49,14 +51,44 @@ export default function Beehives({ beehives = [], owners = [] }: { beehives?: Be
         post('/beehives', { onSuccess: () => { reset(); setShowModal(false); } });
     };
 
-    // Use real data or static demo rows
-    const rows = beehives.length > 0 ? beehives : [
+    // Static demo rows used only when no real data exists
+    const demoRows: Beehive[] = [
         { id: 'HV-9421-A', hive_location: 'North Orchard – Plot 4', hive_type: 'Langstroth 10-Frame', installation_date: '2 mins ago',  current_state: 'lost',     owner: { id: '1', name: 'Admin' } },
         { id: 'HV-8812-B', hive_location: 'East Valley Ridge',       hive_type: 'Flow Hive Classic',   installation_date: '14 mins ago', current_state: 'active',   owner: { id: '2', name: 'Admin' } },
         { id: 'HV-7701-C', hive_location: 'Riverside Apiary',        hive_type: 'Warre Hive',          installation_date: '42 mins ago', current_state: 'active',   owner: { id: '3', name: 'Admin' } },
         { id: 'HV-2234-D', hive_location: 'North Orchard – Plot 2',  hive_type: 'Top Bar Hive',        installation_date: '1 hr ago',    current_state: 'migrated', owner: { id: '4', name: 'Admin' } },
         { id: 'HV-1002-K', hive_location: 'South Meadow B',          hive_type: 'Langstroth 10-Frame', installation_date: '2 days ago',  current_state: 'inactive', owner: { id: '5', name: 'Admin' } },
-    ] as Beehive[];
+    ];
+
+    // Server already filters when search param is present; demo rows filtered client-side
+    const allRows: Beehive[] = beehives.length > 0 || initialSearch ? beehives : demoRows;
+    const filteredHives = allRows;
+
+    // Export CSV
+    const exportCSV = () => {
+        const headers = ['Hive ID', 'Location', 'Hive Type', 'Status', 'Last Activity', 'Owner'];
+        const escape  = (v: string) => `"${v.replace(/"/g, '""')}"`;
+        const csvRows = allRows.map((h, i) => {
+            const bat = fakeBattery[i] ?? { pct: 75, color: '#f5a623' };
+            const sc  = statusConfig[h.current_state] ?? statusConfig.active;
+            return [h.id, h.hive_location, h.hive_type, sc.label, h.installation_date, bat.pct === 0 ? 'Offline' : `${bat.pct}%`];
+        });
+        const csv  = [headers, ...csvRows].map((r) => r.map(escape).join(',')).join('\r\n');
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        const url  = URL.createObjectURL(blob);
+        const a    = document.createElement('a');
+        a.href     = url;
+        a.download = 'hives.csv';
+        a.click();
+        URL.revokeObjectURL(url);
+    };
+
+    // Delete with confirm
+    const handleDelete = (hive: Beehive) => {
+        if (window.confirm(`Are you sure you want to delete this hive?`)) {
+            router.delete(`/beehives/${hive.id}`);
+        }
+    };
 
     return (
         <>
@@ -67,7 +99,7 @@ export default function Beehives({ beehives = [], owners = [] }: { beehives?: Be
                 <div className="flex items-start justify-between gap-4">
                     <div>
                         <h1 className="text-2xl font-bold" style={{ color: '#0d1b2a' }}>Hive Inventory</h1>
-                        <p className="text-sm text-gray-500 mt-1">Manage and monitor active swarm sensors across all apiaries.</p>
+                        <p className="text-sm text-gray-500 mt-1">Manage and monitor active hives across all apiaries.</p>
                     </div>
                     <button
                         onClick={() => setShowModal(true)}
@@ -119,10 +151,13 @@ export default function Beehives({ beehives = [], owners = [] }: { beehives?: Be
                     <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
                         <h2 className="font-semibold text-sm" style={{ color: '#0d1b2a' }}>Active Monitoring Registry</h2>
                         <div className="flex items-center gap-2">
-                            <button className="px-4 py-2 rounded-lg border border-gray-300 text-xs font-bold uppercase tracking-widest text-gray-600 hover:bg-gray-50 transition-colors">
-                                Filter
-                            </button>
-                            <button className="px-4 py-2 rounded-lg border border-gray-300 text-xs font-bold uppercase tracking-widest text-gray-600 hover:bg-gray-50 transition-colors">
+                            <span className="text-xs text-gray-400">
+                                {initialSearch ? `Results for "${initialSearch}"` : `${filteredHives.length} hives`}
+                            </span>
+                            <button
+                                onClick={exportCSV}
+                                className="px-4 py-2 rounded-lg border border-gray-300 text-xs font-bold uppercase tracking-widest text-gray-600 hover:bg-gray-50 transition-colors"
+                            >
                                 Export CSV
                             </button>
                         </div>
@@ -140,9 +175,17 @@ export default function Beehives({ beehives = [], owners = [] }: { beehives?: Be
                             </tr>
                         </thead>
                         <tbody>
-                            {rows.slice(0, 10).map((hive, i) => {
+                            {filteredHives.length === 0 ? (
+                                <tr>
+                                    <td colSpan={6} className="px-5 py-12 text-center text-sm text-gray-400">
+                                        No hives found matching your search.
+                                    </td>
+                                </tr>
+                            ) : (
+                                filteredHives.map((hive) => {
                                 const sc = statusConfig[hive.current_state] ?? statusConfig.active;
-                                const bat = fakeBattery[i] ?? { pct: 75, color: '#f5a623' };
+                                const origIdx = allRows.findIndex((h) => h.id === hive.id);
+                                const bat = fakeBattery[origIdx] ?? { pct: 75, color: '#f5a623' };
                                 return (
                                     <tr key={hive.id} className="border-b border-gray-50 hover:bg-gray-50 transition-colors">
                                         <td className="px-5 py-4">
@@ -170,19 +213,39 @@ export default function Beehives({ beehives = [], owners = [] }: { beehives?: Be
                                         </td>
                                         <td className="px-5 py-4 text-xs text-gray-400">{hive.installation_date}</td>
                                         <td className="px-5 py-4">
-                                            <button className="p-1.5 rounded hover:bg-gray-100 text-gray-400 transition-colors">
-                                                <MoreVertical className="w-4 h-4" />
-                                            </button>
+                                            <div className="flex items-center gap-1.5">
+                                                <button
+                                                    onClick={() => setViewTarget(hive)}
+                                                    className="p-1.5 rounded hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors"
+                                                    title="View hive"
+                                                >
+                                                    <Eye className="w-3.5 h-3.5" />
+                                                </button>
+                                                <button
+                                                    onClick={() => setEditTarget(hive)}
+                                                    className="p-1.5 rounded hover:bg-blue-50 text-gray-400 hover:text-blue-500 transition-colors"
+                                                    title="Edit hive"
+                                                >
+                                                    <Pencil className="w-3.5 h-3.5" />
+                                                </button>
+                                                <button
+                                                    onClick={() => handleDelete(hive)}
+                                                    className="p-1.5 rounded hover:bg-red-50 text-gray-400 hover:text-red-500 transition-colors"
+                                                    title="Delete hive"
+                                                >
+                                                    <Trash2 className="w-3.5 h-3.5" />
+                                                </button>
+                                            </div>
                                         </td>
                                     </tr>
                                 );
-                            })}
+                            }))}
                         </tbody>
                     </table>
 
                     {/* Pagination */}
                     <div className="flex items-center justify-between px-5 py-4 border-t border-gray-100">
-                        <span className="text-xs text-gray-400">Showing 1 to 5 of {beehives.length || 124} Hives</span>
+                        <span className="text-xs text-gray-400">Showing 1 to {Math.min(10, filteredHives.length)} of {filteredHives.length} Hives</span>
                         <div className="flex items-center gap-1">
                             {[1, 2, 3, '...', 25].map((p, i) => (
                                 <button key={i} className="w-7 h-7 rounded text-xs font-semibold transition-colors"
@@ -260,11 +323,9 @@ export default function Beehives({ beehives = [], owners = [] }: { beehives?: Be
                         <form onSubmit={submit} className="p-6 flex flex-col gap-4">
                             <div>
                                 <label className="text-xs font-semibold uppercase tracking-widest text-gray-400 block mb-1.5">Owner</label>
-                                <select value={data.owner_id} onChange={(e) => setData('owner_id', e.target.value)}
-                                    className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-700 outline-none bg-white" required>
-                                    <option value="" disabled>Select a beekeeper</option>
-                                    {owners.map((o) => <option key={o.id} value={o.id}>{o.name}</option>)}
-                                </select>
+                                <input type="text" value={data.owner_name} onChange={(e) => setData('owner_name', e.target.value)}
+                                    placeholder="e.g. John Doe"
+                                    className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-700 outline-none placeholder-gray-300" required />
                             </div>
                             <div>
                                 <label className="text-xs font-semibold uppercase tracking-widest text-gray-400 block mb-1.5">Location</label>
@@ -277,11 +338,6 @@ export default function Beehives({ beehives = [], owners = [] }: { beehives?: Be
                                 <input type="text" value={data.hive_type} onChange={(e) => setData('hive_type', e.target.value)}
                                     placeholder="e.g. Langstroth, Top-bar"
                                     className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-700 outline-none placeholder-gray-300" required />
-                            </div>
-                            <div>
-                                <label className="text-xs font-semibold uppercase tracking-widest text-gray-400 block mb-1.5">Installation Date</label>
-                                <input type="date" value={data.installation_date} onChange={(e) => setData('installation_date', e.target.value)}
-                                    className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-700 outline-none" required />
                             </div>
                             <div>
                                 <label className="text-xs font-semibold uppercase tracking-widest text-gray-400 block mb-1.5">Current State</label>
@@ -307,7 +363,152 @@ export default function Beehives({ beehives = [], owners = [] }: { beehives?: Be
                     </div>
                 </div>
             )}
+
+            {/* View Hive Modal */}
+            {viewTarget && (() => {
+                const sc  = statusConfig[viewTarget.current_state] ?? statusConfig.active;
+                const idx = allRows.findIndex((h) => h.id === viewTarget.id);
+                const bat = fakeBattery[idx] ?? { pct: 75, color: '#f5a623' };
+                return (
+                    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+                        <div className="w-full max-w-md rounded-2xl bg-white shadow-2xl">
+                            <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+                                <h2 className="text-base font-semibold" style={{ color: '#0d1b2a' }}>Hive Details</h2>
+                                <button onClick={() => setViewTarget(null)} className="p-1 rounded hover:bg-gray-100 text-gray-400">
+                                    <X className="w-4 h-4" />
+                                </button>
+                            </div>
+                            <div className="p-6 flex flex-col gap-4">
+                                {[
+                                    { label: 'Hive ID',           value: viewTarget.id },
+                                    { label: 'Location',          value: viewTarget.hive_location },
+                                    { label: 'Hive Type',         value: viewTarget.hive_type },
+                                    { label: 'Installation Date', value: viewTarget.installation_date },
+                                    { label: 'Owner',             value: viewTarget.owner?.name ?? '—' },
+                                ].map((r) => (
+                                    <div key={r.label} className="flex flex-col gap-0.5">
+                                        <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400">{r.label}</span>
+                                        <span className="text-sm text-gray-700">{r.value}</span>
+                                    </div>
+                                ))}
+                                <div className="flex flex-col gap-0.5">
+                                    <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Status</span>
+                                    <span className="inline-flex">
+                                        <span className="text-[10px] font-bold px-2.5 py-1 rounded uppercase tracking-widest"
+                                            style={{ backgroundColor: sc.bg, color: sc.color }}>
+                                            {sc.label}
+                                        </span>
+                                    </span>
+                                </div>
+                                <div className="flex flex-col gap-0.5">
+                                    <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Battery</span>
+                                    {bat.pct === 0 ? (
+                                        <span className="text-sm text-gray-400">Offline</span>
+                                    ) : (
+                                        <div className="flex items-center gap-2">
+                                            <div className="w-24 h-1.5 rounded-full bg-gray-100">
+                                                <div className="h-1.5 rounded-full" style={{ width: `${bat.pct}%`, backgroundColor: bat.color }} />
+                                            </div>
+                                            <span className="text-xs text-gray-500">{bat.pct}%</span>
+                                        </div>
+                                    )}
+                                </div>
+                                <div className="flex justify-end pt-2">
+                                    <button onClick={() => setViewTarget(null)}
+                                        className="px-4 py-2 rounded-lg border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-50">
+                                        Close
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                );
+            })()}
+
+            {/* Edit Hive Modal */}
+            {editTarget && <EditHiveModal hive={editTarget} owners={owners} onClose={() => setEditTarget(null)} />}
         </>
+    );
+}
+
+// ── Edit Hive Modal ──────────────────────────────────────────────────────────
+function EditHiveModal({ hive, owners, onClose }: { hive: Beehive; owners: Owner[]; onClose: () => void }) {
+    const { data, setData, put, processing, errors } = useForm({
+        owner_id:          hive.owner?.id ?? '',
+        hive_location:     hive.hive_location,
+        hive_type:         hive.hive_type,
+        installation_date: hive.installation_date,
+        current_state:     hive.current_state,
+    });
+
+    const submit = (e: React.FormEvent) => {
+        e.preventDefault();
+        put(`/beehives/${hive.id}`, { onSuccess: () => onClose() });
+    };
+
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+            <div className="w-full max-w-md rounded-2xl bg-white shadow-2xl">
+                <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+                    <h2 className="text-base font-semibold" style={{ color: '#0d1b2a' }}>Edit Hive</h2>
+                    <button onClick={onClose} className="p-1 rounded hover:bg-gray-100 text-gray-400">
+                        <X className="w-4 h-4" />
+                    </button>
+                </div>
+                <form onSubmit={submit} className="p-6 flex flex-col gap-4">
+                    <div>
+                        <label className="text-xs font-semibold uppercase tracking-widest text-gray-400 block mb-1.5">Owner</label>
+                        <select value={data.owner_id} onChange={(e) => setData('owner_id', e.target.value)}
+                            className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-700 outline-none bg-white" required>
+                            <option value="" disabled>Select a beekeeper</option>
+                            {owners.map((o) => <option key={o.id} value={o.id}>{o.name}</option>)}
+                        </select>
+                        {errors.owner_id && <p className="text-xs text-red-500 mt-1">{errors.owner_id}</p>}
+                    </div>
+                    <div>
+                        <label className="text-xs font-semibold uppercase tracking-widest text-gray-400 block mb-1.5">Location</label>
+                        <input type="text" value={data.hive_location} onChange={(e) => setData('hive_location', e.target.value)}
+                            placeholder="e.g. North Field, Sector B"
+                            className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-700 outline-none placeholder-gray-300" required />
+                        {errors.hive_location && <p className="text-xs text-red-500 mt-1">{errors.hive_location}</p>}
+                    </div>
+                    <div>
+                        <label className="text-xs font-semibold uppercase tracking-widest text-gray-400 block mb-1.5">Hive Type</label>
+                        <input type="text" value={data.hive_type} onChange={(e) => setData('hive_type', e.target.value)}
+                            placeholder="e.g. Langstroth, Top-bar"
+                            className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-700 outline-none placeholder-gray-300" required />
+                        {errors.hive_type && <p className="text-xs text-red-500 mt-1">{errors.hive_type}</p>}
+                    </div>
+                    <div>
+                        <label className="text-xs font-semibold uppercase tracking-widest text-gray-400 block mb-1.5">Installation Date</label>
+                        <input type="date" value={data.installation_date} onChange={(e) => setData('installation_date', e.target.value)}
+                            className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-700 outline-none" required />
+                        {errors.installation_date && <p className="text-xs text-red-500 mt-1">{errors.installation_date}</p>}
+                    </div>
+                    <div>
+                        <label className="text-xs font-semibold uppercase tracking-widest text-gray-400 block mb-1.5">Current State</label>
+                        <select value={data.current_state} onChange={(e) => setData('current_state', e.target.value)}
+                            className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-700 outline-none bg-white" required>
+                            <option value="">Select state</option>
+                            <option value="active">Active / Stable</option>
+                            <option value="migrated">Temp Warning</option>
+                            <option value="lost">Swarm Likely</option>
+                            <option value="inactive">Maintenance</option>
+                        </select>
+                        {errors.current_state && <p className="text-xs text-red-500 mt-1">{errors.current_state}</p>}
+                    </div>
+                    <div className="flex justify-end gap-3 pt-2">
+                        <button type="button" onClick={onClose}
+                            className="px-4 py-2 rounded-lg border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-50">Cancel</button>
+                        <button type="submit" disabled={processing}
+                            className="px-4 py-2 rounded-lg text-sm font-semibold hover:opacity-90 disabled:opacity-60"
+                            style={{ backgroundColor: '#f5a623', color: '#0d1b2a' }}>
+                            {processing ? 'Saving…' : 'Update Hive'}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
     );
 }
 

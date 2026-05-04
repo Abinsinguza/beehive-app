@@ -36,9 +36,9 @@ const criticalAlerts = [
     {
         id: 2,
         color: '#94a3b8',
-        title: 'Sensor Node 04: Offline',
+        title: 'Hive Node 04: Offline',
         time: '14m ago',
-        desc: 'Low battery signal detected before connection timeout at Sector 4-B.',
+        desc: 'Low battery detected before connection timeout at Sector 4-B.',
         actions: [],
     },
     {
@@ -47,7 +47,7 @@ const criticalAlerts = [
         title: 'Hive-C08: Humidity Alert',
         time: '45m ago',
         desc: 'Relative humidity above 85%. Possible moisture accumulation in brood chamber.',
-        actions: ['CHECK SENSOR'],
+        actions: ['CHECK HIVE'],
     },
 ];
 
@@ -70,12 +70,6 @@ export default function Dashboard({ stats, recent_beehives = [] }: DashboardProp
                                 Real-time acoustic signatures and environmental telemetry.
                             </p>
                         </div>
-                        <button
-                            className="shrink-0 flex items-center gap-2 px-5 py-2.5 rounded-lg text-sm font-semibold hover:opacity-90 transition-opacity"
-                            style={{ backgroundColor: '#f5a623', color: '#0d1b2a' }}
-                        >
-                            + Deploy New Sensor
-                        </button>
                     </div>
 
                     {/* ── Stat cards ── */}

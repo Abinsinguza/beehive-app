@@ -13,8 +13,8 @@ const topics = [
         badge: 'TECHNICAL',
         icon: Settings2,
         title: 'Hardware Setup',
-        desc: 'Step-by-step assembly and installation for acoustic sensors and thermal probes.',
-        links: ['Sensor Node Installation', 'LoRaWAN Gateway Configuration', 'Battery Maintenance'],
+        desc: 'Step-by-step assembly and installation for hive monitoring equipment.',
+        links: ['Node Installation', 'Gateway Configuration', 'Battery Maintenance'],
     },
     {
         badge: 'ALGORITHMS',
@@ -36,12 +36,12 @@ export default function Help() {
                     <div className="rounded-xl px-8 py-10" style={{ backgroundColor: '#0d1b2a' }}>
                         <h1 className="text-2xl font-bold text-white">How can we help you today?</h1>
                         <p className="text-sm mt-2 max-w-xl leading-relaxed" style={{ color: '#94a3b8' }}>
-                            Access technical documentation, sensor setup guides, and swarm prediction troubleshooting from our comprehensive knowledge base.
+                            Access technical documentation, hive setup guides, and swarm prediction troubleshooting from our comprehensive knowledge base.
                         </p>
                         <div className="flex mt-6 max-w-xl">
                             <input
                                 type="text"
-                                placeholder="Search for 'Acoustic Calibration' or 'Gateway Se..."
+                                placeholder="Search for 'Swarm Detection' or 'Hive Maintenance..."
                                 className="flex-1 px-4 py-3 text-sm rounded-l-lg outline-none bg-white text-gray-700 placeholder-gray-400"
                             />
                             <button
@@ -130,7 +130,7 @@ export default function Help() {
                                         </span>
                                     </div>
                                     <h3 className="text-lg font-bold text-white leading-snug">
-                                        Calibrating Acoustic Sensors for Optimal Swarm Detection
+                                        Optimising Hive Monitoring for Accurate Swarm Detection
                                     </h3>
                                     <p className="text-xs mt-2 leading-relaxed" style={{ color: '#94a3b8' }}>
                                         A comprehensive guide on environmental noise filtering and frequency isolation for accurate colony acoustics.

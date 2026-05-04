@@ -180,7 +180,7 @@ export default function SystemConfig() {
                             <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5 flex items-center justify-between gap-4">
                                 <div>
                                     <p className="text-sm font-semibold" style={{ color: '#0d1b2a' }}>Reset Cluster Configuration</p>
-                                    <p className="text-xs text-gray-400 mt-0.5">This will revert all monitoring sensors to factory defaults.</p>
+                                    <p className="text-xs text-gray-400 mt-0.5">This will revert all monitoring configurations to factory defaults.</p>
                                 </div>
                                 <button className="shrink-0 px-5 py-2.5 rounded-lg text-sm font-bold border-2 border-red-500 text-red-500 hover:bg-red-50 transition-colors">
                                     Reset All

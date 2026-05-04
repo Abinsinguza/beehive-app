@@ -1,5 +1,6 @@
-import { Link, usePage } from '@inertiajs/react';
+import { Link, router, usePage } from '@inertiajs/react';
 import { Bell, Search, Settings, User } from 'lucide-react';
+import { useEffect, useState } from 'react';
 import {
     DropdownMenu,
     DropdownMenuContent,
@@ -13,8 +14,32 @@ type Props = {
     breadcrumbs?: BreadcrumbItem[];
 };
 
+// Map URL path segments to search config
+const searchConfig: Record<string, { placeholder: string; route: string }> = {
+    beekeepers: { placeholder: 'Search users…',      route: '/beekeepers' },
+    beehives:   { placeholder: 'Search hives…',      route: '/beehives'   },
+    advisories: { placeholder: 'Search advisories…', route: '/advisories' },
+    alerts:     { placeholder: 'Search alerts…',     route: '/alerts'     },
+};
+
 export function AppHeader({ breadcrumbs = [] }: Props) {
-    const { auth } = usePage().props;
+    const { auth, ziggy } = usePage().props as any;
+    const currentPath: string = (ziggy?.location ?? window.location.pathname).replace(/^https?:\/\/[^/]+/, '');
+    const segment = currentPath.split('/').filter(Boolean)[0] ?? '';
+    const config = searchConfig[segment] ?? { placeholder: 'Search…', route: `/${segment}` };
+
+    const [query, setQuery] = useState('');
+
+    // Reset search when navigating to a different page
+    useEffect(() => { setQuery(''); }, [segment]);
+
+    const handleSearch = (e: React.ChangeEvent<HTMLInputElement>) => {
+        const val = e.target.value;
+        setQuery(val);
+        if (searchConfig[segment]) {
+            router.get(config.route, { search: val }, { preserveState: true, replace: true });
+        }
+    };
 
     // Build breadcrumb display: first item is plain text, last item is orange
     const crumbs = breadcrumbs.length > 0 ? breadcrumbs : [{ title: 'Admin Dashboard', href: dashboard() }];
@@ -51,7 +76,9 @@ export function AppHeader({ breadcrumbs = [] }: Props) {
                     <Search className="w-3.5 h-3.5 text-gray-400 shrink-0" />
                     <input
                         type="text"
-                        placeholder="Search Hives..."
+                        value={query}
+                        onChange={handleSearch}
+                        placeholder={config.placeholder}
                         className="flex-1 text-xs bg-transparent outline-none text-gray-500 placeholder-gray-400"
                     />
                 </div>
