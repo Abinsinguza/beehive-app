@@ -15,7 +15,7 @@ import type { NavItem } from '@/types';
 
 const mainNavItems: NavItem[] = [
     { title: 'Dashboard',  href: dashboard(),      icon: LayoutGrid },
-    { title: 'Users',      href: '/beekeepers',    icon: Users },
+    { title: 'Beekeepers', href: '/beekeepers',    icon: Users },
     { title: 'Hives',      href: '/beehives',      icon: Hexagon },
     { title: 'Monitoring', href: '/monitoring', icon: Radio },
     { title: 'Alerts & Logs', href: '/alerts', icon: Bell },

@@ -25,12 +25,12 @@ const severityConfig: Record<string, { label: string; bg: string; color: string 
 };
 
 const staticLogs = [
-    { ts: '2023-10-27 14:52:10', hive: 'HIVE-A102', severity: 'Critical', desc: 'Acoustic frequency spike detected (>450Hz). Swarm imminent.', action: 'ACKNOWLEDGE' },
-    { ts: '2023-10-27 14:15:05', hive: 'HIVE-B204', severity: 'Warning',  desc: 'Internal temperature deviation +2.5°C above baseline.',       action: 'MONITOR' },
-    { ts: '2023-10-27 13:58:44', hive: 'HIVE-C301', severity: 'Info',     desc: 'Automatic health scan completed. All metrics stable.',          action: 'DETAILS' },
-    { ts: '2023-10-27 13:42:12', hive: 'HIVE-A102', severity: 'Critical', desc: 'Queen piping sounds detected. Prepare for secondary swarm.',    action: 'ACKNOWLEDGE' },
-    { ts: '2023-10-27 13:30:00', hive: 'SYSTEM',    severity: 'Info',     desc: 'Cloud sync successful. 4 nodes updated.',                       action: 'DETAILS' },
-    { ts: '2023-10-27 12:45:10', hive: 'HIVE-B109', severity: 'Warning',  desc: 'Battery level critical on Node B109 (3%).',                     action: 'MONITOR' },
+    { ts: '2026-10-27 14:52:10', hive: 'HIVE-A102', severity: 'Critical', desc: 'Acoustic frequency spike detected (>450Hz). Swarm imminent.', action: 'ACKNOWLEDGE' },
+    { ts: '2026-10-27 14:15:05', hive: 'HIVE-B204', severity: 'Warning',  desc: 'Internal temperature deviation +2.5°C above baseline.',       action: 'MONITOR' },
+    { ts: '2026-10-27 13:58:44', hive: 'HIVE-C301', severity: 'Info',     desc: 'Automatic health scan completed. All metrics stable.',          action: 'DETAILS' },
+    { ts: '2026-10-27 13:42:12', hive: 'HIVE-A102', severity: 'Critical', desc: 'Queen piping sounds detected. Prepare for secondary swarm.',    action: 'ACKNOWLEDGE' },
+    { ts: '2026-10-27 13:30:00', hive: 'SYSTEM',    severity: 'Info',     desc: 'Cloud sync successful. 4 nodes updated.',                       action: 'DETAILS' },
+    { ts: '2026-10-27 12:45:10', hive: 'HIVE-B109', severity: 'Warning',  desc: 'Battery level critical on Node B109 (3%).',                     action: 'MONITOR' },
 ];
 
 export default function AlertsPage({
@@ -47,6 +47,7 @@ export default function AlertsPage({
     const [hiveFilter, setHiveFilter] = useState('All Hives');
     const [severityFilter, setSeverityFilter] = useState('All Levels');
     const [dateFrom, setDateFrom] = useState('');
+    const [dateTo, setDateTo]     = useState('');
 
     const { data, setData, post, reset, processing, errors } = useForm({
         inference_id: '',
@@ -80,12 +81,12 @@ export default function AlertsPage({
         }))
         : staticLogs.map((l) => ({ ...l, alertObj: null }));
 
-    // Filter logs by selected date (matches the whole day, using local time)
+    // Filter logs by date range using local date string comparison
     const filteredLogs = logs.filter((log) => {
-        if (!dateFrom) return true;
-        // Parse "YYYY-MM-DD HH:MM:SS" or any date string — extract just the date part
-        const datePart = log.ts.slice(0, 10); // works for "2023-10-27 14:52:10" and ISO strings
-        return datePart === dateFrom;
+        const datePart = log.ts.slice(0, 10); // "YYYY-MM-DD"
+        if (dateFrom && datePart < dateFrom) return false;
+        if (dateTo   && datePart > dateTo)   return false;
+        return true;
     });
 
     const exportLog = () => {
@@ -100,7 +101,7 @@ export default function AlertsPage({
         const url  = URL.createObjectURL(blob);
         const a    = document.createElement('a');
         a.href     = url;
-        a.download = `alerts-log${dateFrom ? `-${dateFrom}` : ''}.csv`;
+        a.download = `alerts-log${dateFrom ? `-from-${dateFrom}` : ''}${dateTo ? `-to-${dateTo}` : ''}.csv`;
         a.click();
         URL.revokeObjectURL(url);
     };
@@ -128,6 +129,7 @@ export default function AlertsPage({
                                 setHiveFilter('All Hives');
                                 setSeverityFilter('All Levels');
                                 setDateFrom('');
+                                setDateTo('');
                             }}
                             className="px-4 py-2 rounded-lg text-sm font-semibold border border-gray-300 text-gray-600 hover:bg-gray-50 transition-colors"
                         >
@@ -163,68 +165,72 @@ export default function AlertsPage({
                         </div>
                         <div className="flex flex-col gap-0.5">
                             <label className="text-[10px] font-semibold uppercase tracking-widest text-gray-400">Date Range</label>
-                            <div className="relative">
-                                <input
-                                    type="date"
-                                    value={dateFrom}
-                                    onChange={(e) => setDateFrom(e.target.value)}
-                                    className="border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-700 outline-none bg-white cursor-pointer hover:border-gray-400 transition-colors"
-                                    style={{ minWidth: '160px' }}
-                                />
-                                {dateFrom && (
-                                    <button
-                                        onClick={() => setDateFrom('')}
-                                        className="absolute right-8 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 text-xs font-bold"
-                                        title="Clear"
-                                    >✕</button>
-                                )}
+                            <div className="flex items-center gap-2">
+                                <div className="flex flex-col gap-0.5">
+                                    <span className="text-[9px] font-semibold uppercase tracking-widest text-gray-300">From</span>
+                                    <input
+                                        type="date"
+                                        value={dateFrom}
+                                        onChange={(e) => setDateFrom(e.target.value)}
+                                        onClick={(e) => { try { (e.target as HTMLInputElement).showPicker(); } catch(err) {} }}
+                                        className="border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-700 outline-none bg-white cursor-pointer hover:border-gray-400 transition-colors"
+                                    />
+                                </div>
+                                <span className="text-xs text-gray-400 mt-4">—</span>
+                                <div className="flex flex-col gap-0.5">
+                                    <span className="text-[9px] font-semibold uppercase tracking-widest text-gray-300">To</span>
+                                    <input
+                                        type="date"
+                                        value={dateTo}
+                                        min={dateFrom}
+                                        onChange={(e) => setDateTo(e.target.value)}
+                                        onClick={(e) => { try { (e.target as HTMLInputElement).showPicker(); } catch(err) {} }}
+                                        className="border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-700 outline-none bg-white cursor-pointer hover:border-gray-400 transition-colors"
+                                    />
+                                </div>
                             </div>
                         </div>
                     </div>
 
-                    {/* Main two-column layout */}
-                    <div className="flex gap-5 items-start">
-
-                        {/* Left: Critical Events + Frequency Pulse */}
-                        <div className="w-56 shrink-0 flex flex-col gap-4">
-                            <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
-                                <p className="font-semibold text-sm" style={{ color: '#0d1b2a' }}>Critical Events</p>
-                                <div className="h-0.5 w-8 mt-1 rounded-full" style={{ backgroundColor: '#f5a623' }} />
-                                <p className="text-5xl font-bold mt-3" style={{ color: '#f5a623' }}>
-                                    {String(criticalCount).padStart(2, '0')}
-                                </p>
-                                <p className="text-xs text-gray-400 mt-1">Active Alerts</p>
-                            </div>
-
-                            <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
-                                <p className="font-semibold text-sm" style={{ color: '#0d1b2a' }}>Elevated Drift</p>
-                                <div className="h-0.5 w-8 mt-1 rounded-full" style={{ backgroundColor: '#f5a623' }} />
-                                <p className="text-5xl font-bold mt-3" style={{ color: '#0d1b2a' }}>{elevatedCount}</p>
-                                <p className="text-xs text-gray-400 mt-1">Acoustic Shifts</p>
-                            </div>
-
-                            {/* Frequency Pulse card */}
-                            <div className="rounded-xl overflow-hidden shadow-sm">
-                                <div className="relative h-32" style={{ backgroundColor: '#0a1628' }}>
-                                    <svg viewBox="0 0 200 80" className="w-full h-full" preserveAspectRatio="none">
-                                        {[20,40,60].map((y) => (
-                                            <line key={y} x1="0" y1={y} x2="200" y2={y} stroke="#1e3a5f" strokeWidth="0.5" />
-                                        ))}
-                                        <path d="M0,60 C20,55 30,20 50,30 C70,40 80,55 100,50 C120,45 130,15 150,25 C170,35 180,55 200,45"
-                                            fill="none" stroke="#f5a623" strokeWidth="2" />
-                                        <path d="M0,65 C30,60 60,40 90,50 C120,60 150,30 200,35"
-                                            fill="none" stroke="#3b82f6" strokeWidth="1" strokeDasharray="4 3" opacity="0.5" />
-                                    </svg>
-                                </div>
-                                <div className="bg-white p-3 border border-gray-200 border-t-0 rounded-b-xl">
-                                    <p className="text-xs font-semibold" style={{ color: '#0d1b2a' }}>Frequency Pulse</p>
-                                    <p className="text-[10px] text-gray-400 mt-0.5">Real-time hive vibration log for HIVE-A102</p>
-                                </div>
-                            </div>
+                    {/* Cards row */}
+                    <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                        <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
+                            <p className="font-semibold text-sm" style={{ color: '#0d1b2a' }}>Critical Events</p>
+                            <div className="h-0.5 w-8 mt-1 rounded-full" style={{ backgroundColor: '#f5a623' }} />
+                            <p className="text-5xl font-bold mt-3" style={{ color: '#f5a623' }}>
+                                {String(criticalCount).padStart(2, '0')}
+                            </p>
+                            <p className="text-xs text-gray-400 mt-1">Active Alerts</p>
                         </div>
 
-                        {/* Right: System Activity Logs table */}
-                        <div className="flex-1 min-w-0 bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+                        <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
+                            <p className="font-semibold text-sm" style={{ color: '#0d1b2a' }}>Elevated Drift</p>
+                            <div className="h-0.5 w-8 mt-1 rounded-full" style={{ backgroundColor: '#f5a623' }} />
+                            <p className="text-5xl font-bold mt-3" style={{ color: '#0d1b2a' }}>{elevatedCount}</p>
+                            <p className="text-xs text-gray-400 mt-1">Acoustic Shifts</p>
+                        </div>
+
+                        <div className="rounded-xl overflow-hidden shadow-sm border border-gray-200">
+                            <div className="relative h-32" style={{ backgroundColor: '#0a1628' }}>
+                                <svg viewBox="0 0 200 80" className="w-full h-full" preserveAspectRatio="none">
+                                    {[20, 40, 60].map((y) => (
+                                        <line key={y} x1="0" y1={y} x2="200" y2={y} stroke="#1e3a5f" strokeWidth="0.5" />
+                                    ))}
+                                    <path d="M0,60 C20,55 30,20 50,30 C70,40 80,55 100,50 C120,45 130,15 150,25 C170,35 180,55 200,45"
+                                        fill="none" stroke="#f5a623" strokeWidth="2" />
+                                    <path d="M0,65 C30,60 60,40 90,50 C120,60 150,30 200,35"
+                                        fill="none" stroke="#3b82f6" strokeWidth="1" strokeDasharray="4 3" opacity="0.5" />
+                                </svg>
+                            </div>
+                            <div className="bg-white p-3">
+                                <p className="text-xs font-semibold" style={{ color: '#0d1b2a' }}>Frequency Pulse</p>
+                                <p className="text-[10px] text-gray-400 mt-0.5">Real-time hive vibration log for HIVE-A102</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    {/* System Activity Logs table — full width */}
+                    <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
                             <div className="flex items-center gap-3 px-5 py-4 border-b border-gray-100">
                                 <span className="font-semibold text-sm" style={{ color: '#0d1b2a' }}>System Activity Logs</span>
                                 <div className="ml-auto flex items-center gap-2">
@@ -294,7 +300,6 @@ export default function AlertsPage({
                                 </div>
                             </div>
                         </div>
-                    </div>
 
                     {/* Bottom: Swarm Prevention + Predictive Drift */}
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

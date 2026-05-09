@@ -17,5 +17,11 @@ class Beekeeper extends Model
         'phone',
         'address',
         'password',
+        'status',
     ];
+
+    public function beehives()
+    {
+        return $this->hasMany(Beehive::class, 'owner_id');
+    }
 }

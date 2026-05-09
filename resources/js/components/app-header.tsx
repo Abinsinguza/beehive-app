@@ -16,7 +16,7 @@ type Props = {
 
 // Map URL path segments to search config
 const searchConfig: Record<string, { placeholder: string; route: string }> = {
-    beekeepers: { placeholder: 'Search users…',      route: '/beekeepers' },
+    beekeepers: { placeholder: 'Search beekeepers…',   route: '/beekeepers' },
     beehives:   { placeholder: 'Search hives…',      route: '/beehives'   },
     advisories: { placeholder: 'Search advisories…', route: '/advisories' },
     alerts:     { placeholder: 'Search alerts…',     route: '/alerts'     },

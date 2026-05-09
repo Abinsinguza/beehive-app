@@ -1,6 +1,6 @@
-import { Head, useForm } from '@inertiajs/react';
-import { Download, Edit2, Eye, Shield, Trash2, UserPlus, X, Zap } from 'lucide-react';
-import { useState } from 'react';
+﻿import { Head, router, useForm } from '@inertiajs/react';
+import { ChevronDown, Download, Edit2, Eye, UserPlus, X, Zap } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
 
 type Beekeeper = {
     id: string;
@@ -8,6 +8,9 @@ type Beekeeper = {
     phone: string;
     email?: string;
     address?: string;
+    status?: string;
+    beehives_count?: number;
+    created_at?: string;
 };
 
 const roleColors: Record<string, { bg: string; color: string }> = {
@@ -16,15 +19,16 @@ const roleColors: Record<string, { bg: string; color: string }> = {
 };
 
 const statusConfig: Record<string, { dot: string; label: string; labelColor: string }> = {
-    active:    { dot: '#22c55e', label: 'Active',           labelColor: '#16a34a' },
-    pending:   { dot: '#f59e0b', label: 'Pending Approval', labelColor: '#d97706' },
-    suspended: { dot: '#94a3b8', label: 'Suspended',        labelColor: '#94a3b8' },
+    active:    { dot: '#22c55e', label: 'Active',    labelColor: '#16a34a' },
+    pending:   { dot: '#f59e0b', label: 'Pending',   labelColor: '#d97706' },
+    revoked:   { dot: '#94a3b8', label: 'Revoked',   labelColor: '#94a3b8' },
+    suspended: { dot: '#94a3b8', label: 'Suspended', labelColor: '#94a3b8' },
 };
 
 const auditLog = [
-    { color: '#f5a623', text: "Arthur Denton modified hive permissions for User 'Elena Markov'", meta: 'October 24, 2023 at 14:22 PM • IP: 192.168.1.1' },
-    { color: '#3b82f6', text: 'New system audit: Access tokens refreshed for all Beekeeper roles', meta: 'October 24, 2023 at 09:15 AM • Automatic System Task' },
-    { color: '#ef4444', text: 'Security Alert: Failed login attempt from unrecognized device (User: LHuang)', meta: 'October 23, 2023 at 23:59 PM • Device: Android 12' },
+    { color: '#f5a623', text: "Arthur Denton modified hive permissions for User 'Elena Markov'", meta: 'October 24, 2023 at 14:22 PM â€¢ IP: 192.168.1.1' },
+    { color: '#3b82f6', text: 'New system audit: Access tokens refreshed for all Beekeeper roles', meta: 'October 24, 2023 at 09:15 AM â€¢ Automatic System Task' },
+    { color: '#ef4444', text: 'Security Alert: Failed login attempt from unrecognized device (User: LHuang)', meta: 'October 23, 2023 at 23:59 PM â€¢ Device: Android 12' },
 ];
 
 function getInitials(name: string) {
@@ -37,13 +41,13 @@ function getRole(bk: Beekeeper): string {
 }
 
 function getStatus(bk: Beekeeper): string {
-    if (!bk.email) return 'pending';
-    if (bk.address?.toLowerCase().includes('suspend')) return 'suspended';
-    return 'active';
+    if (bk.status) return bk.status;
+    if (bk.email) return 'active';
+    return 'pending';
 }
 
-// ── Add User form ────────────────────────────────────────────────────────────
-function AddUserModal({ onClose }: { onClose: () => void }) {
+// â”€â”€ Add Beekeeper form â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+function AddBeekeeperModal({ onClose }: { onClose: () => void }) {
     const { data, setData, post, processing, reset, errors } = useForm({
         name: '', phone: '', email: '', address: '',
     });
@@ -54,7 +58,7 @@ function AddUserModal({ onClose }: { onClose: () => void }) {
     };
 
     return (
-        <ModalShell title="Add New User" onClose={onClose}>
+        <ModalShell title="Add New Beekeeper" onClose={onClose}>
             <form onSubmit={submit} className="p-6 flex flex-col gap-4">
                 {[
                     { label: 'Full Name', key: 'name',    type: 'text',  placeholder: 'e.g. John Doe',    required: true  },
@@ -77,19 +81,19 @@ function AddUserModal({ onClose }: { onClose: () => void }) {
                         )}
                     </div>
                 ))}
-                <ModalActions onCancel={onClose} processing={processing} label="Save User" />
+                <ModalActions onCancel={onClose} processing={processing} label="Add Beekeeper" />
             </form>
         </ModalShell>
     );
 }
 
-// ── Edit User form ───────────────────────────────────────────────────────────
-function EditUserModal({ beekeeper, onClose }: { beekeeper: Beekeeper; onClose: () => void }) {
+// â”€â”€ Edit Beekeeper form â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+function EditBeekeeperModal({ beekeeper, onClose }: { beekeeper: Beekeeper; onClose: () => void }) {
     const { data, setData, patch, processing, errors } = useForm({
-        name:    beekeeper.name,
-        phone:   beekeeper.phone,
-        email:   beekeeper.email  ?? '',
-        address: beekeeper.address ?? '',
+        name:     beekeeper.name,
+        phone:    beekeeper.phone,
+        email:    beekeeper.email    ?? '',
+        address:  beekeeper.address  ?? '',
         password: '',
     });
 
@@ -99,14 +103,14 @@ function EditUserModal({ beekeeper, onClose }: { beekeeper: Beekeeper; onClose: 
     };
 
     return (
-        <ModalShell title="Edit User" onClose={onClose}>
+        <ModalShell title="Edit Beekeeper" onClose={onClose}>
             <form onSubmit={submit} className="p-6 flex flex-col gap-4">
                 {[
-                    { label: 'Full Name', key: 'name',     type: 'text',     placeholder: 'e.g. John Doe',    required: true  },
-                    { label: 'Phone',     key: 'phone',    type: 'text',     placeholder: '+1 555 000 0000',  required: true  },
-                    { label: 'Email',     key: 'email',    type: 'email',    placeholder: 'john@example.com', required: false },
-                    { label: 'Address',   key: 'address',  type: 'text',     placeholder: '123 Honey Lane',   required: false },
-                    { label: 'New Password', key: 'password', type: 'password', placeholder: 'Leave blank to keep current', required: false },
+                    { label: 'Full Name',     key: 'name',     type: 'text',     placeholder: 'e.g. John Doe',              required: true  },
+                    { label: 'Phone',         key: 'phone',    type: 'text',     placeholder: '+1 555 000 0000',            required: true  },
+                    { label: 'Email',         key: 'email',    type: 'email',    placeholder: 'john@example.com',           required: false },
+                    { label: 'Address',       key: 'address',  type: 'text',     placeholder: '123 Honey Lane',             required: false },
+                    { label: 'New Password',  key: 'password', type: 'password', placeholder: 'Leave blank to keep current', required: false },
                 ].map((f) => (
                     <div key={f.key}>
                         <label className="text-xs font-semibold uppercase tracking-widest text-gray-400 block mb-1.5">{f.label}</label>
@@ -123,74 +127,107 @@ function EditUserModal({ beekeeper, onClose }: { beekeeper: Beekeeper; onClose: 
                         )}
                     </div>
                 ))}
-                <ModalActions onCancel={onClose} processing={processing} label="Update User" />
+                <ModalActions onCancel={onClose} processing={processing} label="Update Beekeeper" />
             </form>
         </ModalShell>
     );
 }
 
-// ── View User modal ──────────────────────────────────────────────────────────
-function ViewUserModal({ beekeeper, onClose }: { beekeeper: Beekeeper; onClose: () => void }) {
+// â”€â”€ View Beekeeper modal â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+function ViewBeekeeperModal({ beekeeper, onClose }: { beekeeper: Beekeeper; onClose: () => void }) {
     const role   = getRole(beekeeper);
     const status = getStatus(beekeeper);
     const sc     = statusConfig[status] ?? statusConfig.active;
     const rc     = roleColors[role]     ?? roleColors.Beekeeper;
 
-    const rows: { label: string; value: string }[] = [
-        { label: 'Full Name', value: beekeeper.name },
-        { label: 'Email',     value: beekeeper.email   ?? '—' },
-        { label: 'Phone',     value: beekeeper.phone },
-        { label: 'Address',   value: beekeeper.address ?? '—' },
-    ];
-
     return (
-        <ModalShell title="User Details" onClose={onClose}>
+        <ModalShell title="Beekeeper Details" onClose={onClose}>
             <div className="p-6 flex flex-col gap-5">
-                {/* Avatar + name */}
+                {/* Avatar + name + id */}
                 <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 rounded-full flex items-center justify-center text-sm font-bold text-white shrink-0"
-                        style={{ backgroundColor: '#0d1b2a' }}>
+                    <div
+                        className="w-14 h-14 rounded-full flex items-center justify-center text-base font-bold text-white shrink-0"
+                        style={{ backgroundColor: '#0d1b2a' }}
+                    >
                         {getInitials(beekeeper.name)}
                     </div>
                     <div>
-                        <p className="font-semibold text-base" style={{ color: '#0d1b2a' }}>{beekeeper.name}</p>
-                        <p className="text-xs text-gray-400">{beekeeper.id}</p>
+                        <p className="font-bold text-base" style={{ color: '#0d1b2a' }}>{beekeeper.name}</p>
+                        <p className="text-xs text-gray-400 mt-0.5">{beekeeper.id}</p>
                     </div>
                 </div>
 
                 {/* Detail rows */}
-                <div className="flex flex-col gap-3">
-                    {rows.map((r) => (
-                        <div key={r.label} className="flex flex-col gap-0.5">
-                            <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400">{r.label}</span>
-                            <span className="text-sm text-gray-700">{r.value}</span>
-                        </div>
-                    ))}
-
+                <div className="flex flex-col gap-3 divide-y divide-gray-50">
+                    {/* Full Name */}
+                    <div className="flex flex-col gap-0.5 pb-2">
+                        <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Full Name</span>
+                        <span className="text-sm text-gray-700">{beekeeper.name}</span>
+                    </div>
+                    {/* Email */}
+                    <div className="flex flex-col gap-0.5 py-2">
+                        <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Email</span>
+                        <span className="text-sm text-gray-700">{beekeeper.email ?? 'â€”'}</span>
+                    </div>
+                    {/* Phone */}
+                    <div className="flex flex-col gap-0.5 py-2">
+                        <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Phone</span>
+                        <span className="text-sm text-gray-700">{beekeeper.phone}</span>
+                    </div>
+                    {/* Address */}
+                    <div className="flex flex-col gap-0.5 py-2">
+                        <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Address</span>
+                        <span className="text-sm text-gray-700">{beekeeper.address ?? 'â€”'}</span>
+                    </div>
                     {/* Role */}
-                    <div className="flex flex-col gap-0.5">
-                        <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400">System Role</span>
+                    <div className="flex flex-col gap-0.5 py-2">
+                        <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Role</span>
                         <span className="inline-flex">
-                            <span className="text-[11px] font-bold px-2.5 py-1 rounded border uppercase tracking-widest"
-                                style={{ backgroundColor: rc.bg, color: rc.color, borderColor: rc.bg === '#f1f5f9' ? '#e5e7eb' : rc.bg }}>
+                            <span
+                                className="text-[11px] font-bold px-2.5 py-1 rounded border uppercase tracking-widest"
+                                style={{ backgroundColor: rc.bg, color: rc.color, borderColor: rc.bg === '#f1f5f9' ? '#e5e7eb' : rc.bg }}
+                            >
                                 {role}
                             </span>
                         </span>
                     </div>
-
                     {/* Status */}
-                    <div className="flex flex-col gap-0.5">
+                    <div className="flex flex-col gap-0.5 py-2">
                         <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Status</span>
                         <div className="flex items-center gap-1.5">
                             <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: sc.dot }} />
                             <span className="text-xs font-medium" style={{ color: sc.labelColor }}>{sc.label}</span>
                         </div>
                     </div>
+                    {/* Hives */}
+                    <div className="flex flex-col gap-0.5 py-2">
+                        <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Hives</span>
+                        <span
+                            className="inline-flex items-center justify-center w-8 h-6 rounded text-xs font-bold"
+                            style={{ backgroundColor: '#fef3c7', color: '#92400e' }}
+                        >
+                            {beekeeper.beehives_count ?? 0}
+                        </span>
+                    </div>
+                    {/* Sign Up Date */}
+                    <div className="flex flex-col gap-0.5 py-2">
+                        <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Sign Up Date</span>
+                        <span className="text-sm text-gray-700">
+                            {beekeeper.created_at ? new Date(beekeeper.created_at).toLocaleDateString() : ''}
+                        </span>
+                    </div>
+                    {/* Last Login */}
+                    <div className="flex flex-col gap-0.5 pt-2">
+                        <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Last Login</span>
+                        <span className="text-sm text-gray-400">â€”</span>
+                    </div>
                 </div>
 
                 <div className="flex justify-end pt-1">
-                    <button onClick={onClose}
-                        className="px-4 py-2 rounded-lg border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-50">
+                    <button
+                        onClick={onClose}
+                        className="px-4 py-2 rounded-lg border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-50"
+                    >
                         Close
                     </button>
                 </div>
@@ -199,18 +236,25 @@ function ViewUserModal({ beekeeper, onClose }: { beekeeper: Beekeeper; onClose: 
     );
 }
 
-// ── Shared modal shell ───────────────────────────────────────────────────────
+// â”€â”€ Shared modal shell â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function ModalShell({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
+    useEffect(() => {
+        document.body.classList.add('overflow-hidden');
+        return () => document.body.classList.remove('overflow-hidden');
+    }, []);
+
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-            <div className="w-full max-w-md rounded-2xl bg-white shadow-2xl">
-                <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 overflow-hidden">
+            <div className="w-full max-w-md rounded-2xl bg-white shadow-2xl flex flex-col max-h-[85vh]">
+                <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 shrink-0">
                     <h2 className="text-base font-semibold" style={{ color: '#0d1b2a' }}>{title}</h2>
                     <button onClick={onClose} className="p-1 rounded hover:bg-gray-100 text-gray-400">
                         <X className="w-4 h-4" />
                     </button>
                 </div>
-                {children}
+                <div className="overflow-y-auto">
+                    {children}
+                </div>
             </div>
         </div>
     );
@@ -226,40 +270,72 @@ function ModalActions({ onCancel, processing, label }: { onCancel: () => void; p
             <button type="submit" disabled={processing}
                 className="px-4 py-2 rounded-lg text-sm font-semibold hover:opacity-90 disabled:opacity-60"
                 style={{ backgroundColor: '#f5a623', color: '#0d1b2a' }}>
-                {processing ? 'Saving…' : label}
+                {processing ? 'Savingâ€¦' : label}
             </button>
         </div>
     );
 }
 
-// ── Main page ────────────────────────────────────────────────────────────────
-export default function Beekeepers({ beekeepers = [] }: { beekeepers?: Beekeeper[] }) {
-    const [showAddModal, setShowAddModal]     = useState(false);
-    const [viewTarget, setViewTarget]         = useState<Beekeeper | null>(null);
-    const [editTarget, setEditTarget]         = useState<Beekeeper | null>(null);
-    const [deleteTarget, setDeleteTarget]     = useState<Beekeeper | null>(null);
-    const [roleFilter, setRoleFilter]         = useState('All Roles');
-    const [statusFilter, setStatusFilter]     = useState('All Statuses');
-    // Search is handled server-side via the header bar — beekeepers prop is already filtered
+// â”€â”€ Main page â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+export default function Beekeepers({
+    beekeepers = [],
+    search: initialSearch = '',
+}: {
+    beekeepers?: Beekeeper[];
+    search?: string;
+}) {
+    const [showAddModal, setShowAddModal] = useState(false);
+    const [viewTarget, setViewTarget]     = useState<Beekeeper | null>(null);
+    const [editTarget, setEditTarget]     = useState<Beekeeper | null>(null);
+    const [revokeTarget, setRevokeTarget] = useState<Beekeeper | null>(null);
+    const [statusFilter, setStatusFilter] = useState('All Statuses');
+    const [showColMenu, setShowColMenu]   = useState(false);
+    const colMenuRef                      = useRef<HTMLDivElement>(null);
 
-    const { delete: destroy, processing: deleting } = useForm({});
+    // Close columns dropdown when clicking outside
+    useEffect(() => {
+        if (!showColMenu) return;
+        const handler = (e: MouseEvent) => {
+            if (colMenuRef.current && !colMenuRef.current.contains(e.target as Node)) {
+                setShowColMenu(false);
+            }
+        };
+        document.addEventListener('mousedown', handler);
+        return () => document.removeEventListener('mousedown', handler);
+    }, [showColMenu]);
+    const [visibleCols, setVisibleCols]   = useState({
+        status:     true,
+        hives:      true,
+        lastLogin:  true,
+        address:    true,
+        signUpDate: true,
+    });
 
-    const confirmDelete = () => {
-        if (!deleteTarget) return;
-        destroy(`/beekeepers/${deleteTarget.id}`, {
-            onSuccess: () => setDeleteTarget(null),
+    // Revoke logic
+    const { patch: revokePatch, processing: revoking } = useForm({});
+
+    const confirmRevoke = () => {
+        if (!revokeTarget) return;
+        revokePatch('/beekeepers/' + revokeTarget.id + '/revoke', {
+            onSuccess: () => setRevokeTarget(null),
         });
     };
 
+    const toggleCol = (col: keyof typeof visibleCols) => {
+        setVisibleCols((prev) => ({ ...prev, [col]: !prev[col] }));
+    };
+
     const exportCSV = () => {
-        const headers = ['Name', 'Email', 'Phone', 'Role', 'Status', 'Address'];
+        const headers = ['Name', 'Email', 'Phone', 'Role', 'Status', 'Hives', 'Address', 'Sign Up Date'];
         const rows = beekeepers.map((bk) => [
             bk.name,
             bk.email ?? '',
             bk.phone,
             getRole(bk),
             getStatus(bk),
+            String(bk.beehives_count ?? 0),
             bk.address ?? '',
+            bk.created_at ? new Date(bk.created_at).toLocaleDateString() : '',
         ]);
 
         const escape = (val: string) => `"${val.replace(/"/g, '""')}"`;
@@ -269,46 +345,53 @@ export default function Beekeepers({ beekeepers = [] }: { beekeepers?: Beekeeper
         const url  = URL.createObjectURL(blob);
         const a    = document.createElement('a');
         a.href     = url;
-        a.download = 'users.csv';
+        a.download = 'beekeepers.csv';
         a.click();
         URL.revokeObjectURL(url);
     };
 
     const filtered = beekeepers.filter((bk) => {
-        const role   = getRole(bk);
         const status = getStatus(bk);
-        const roleOk   = roleFilter   === 'All Roles'    || role   === roleFilter;
-        const statusOk = statusFilter === 'All Statuses' || status === statusFilter.toLowerCase();
-        return roleOk && statusOk;
+        return statusFilter === 'All Statuses' || status === statusFilter.toLowerCase();
     });
+
+    // Count visible columns for colSpan
+    const visibleColCount =
+        1 + // USER IDENTITY always
+        (visibleCols.status ? 1 : 0) +
+        (visibleCols.hives ? 1 : 0) +
+        (visibleCols.lastLogin ? 1 : 0) +
+        (visibleCols.address ? 1 : 0) +
+        (visibleCols.signUpDate ? 1 : 0) +
+        1; // ACTIONS always
 
     return (
         <>
-            <Head title="User Management" />
+            <Head title="Beekeeper Management" />
             <div className="min-h-screen p-6 flex flex-col gap-6" style={{ backgroundColor: '#f8f9fa' }}>
 
                 {/* Page heading */}
                 <div className="flex items-start justify-between gap-4">
                     <div>
-                        <h1 className="text-2xl font-bold" style={{ color: '#0d1b2a' }}>User Management</h1>
-                        <p className="text-sm text-gray-500 mt-1">Configure access levels and monitor activity across the swarm telemetry network.</p>
+                        <h1 className="text-2xl font-bold" style={{ color: '#0d1b2a' }}>Beekeeper Management</h1>
+                        <p className="text-sm text-gray-500 mt-1">Manage and monitor all registered beekeepers in the system.</p>
                     </div>
                     <button
                         onClick={() => setShowAddModal(true)}
                         className="shrink-0 flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold hover:opacity-90 transition-opacity"
                         style={{ backgroundColor: '#f5a623', color: '#0d1b2a' }}
                     >
-                        <UserPlus className="w-4 h-4" /> Add User
+                        <UserPlus className="w-4 h-4" /> Add Beekeeper
                     </button>
                 </div>
 
                 {/* Stat cards */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                     <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
-                        <p className="text-[11px] font-semibold uppercase tracking-widest text-gray-400">Total Users</p>
+                        <p className="text-[11px] font-semibold uppercase tracking-widest text-gray-400">Total Beekeepers</p>
                         <div className="flex items-end gap-2 mt-2">
                             <p className="text-4xl font-bold" style={{ color: '#0d1b2a' }}>{beekeepers.length}</p>
-                            <span className="text-xs font-semibold text-emerald-500 mb-1">↗ +3</span>
+                            <span className="text-xs font-semibold text-emerald-500 mb-1">â†— +3</span>
                         </div>
                         <div className="mt-3 h-1 w-16 rounded-full" style={{ backgroundColor: '#f5a623' }} />
                     </div>
@@ -320,29 +403,31 @@ export default function Beekeepers({ beekeepers = [] }: { beekeepers?: Beekeeper
                         </div>
                         <div className="mt-3 h-1 w-16 rounded-full bg-gray-200" />
                     </div>
-                    <div className="rounded-xl p-5 relative overflow-hidden" style={{ backgroundColor: '#0d1b2a' }}>
-                        <div className="absolute right-4 top-1/2 -translate-y-1/2 opacity-10">
-                            <Shield className="w-20 h-20 text-white" />
+                    <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
+                        <p className="text-[11px] font-semibold uppercase tracking-widest text-gray-400">Active Beekeepers</p>
+                        <div className="flex items-end gap-2 mt-2">
+                            <p className="text-4xl font-bold text-emerald-500">
+                                {beekeepers.filter((bk) => getStatus(bk) === 'active').length}
+                            </p>
                         </div>
-                        <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: '#f5a623' }}>System Status</p>
-                        <p className="text-base font-bold text-white mt-1">Telemetry Integrity Optimal</p>
-                        <p className="text-xs text-slate-400 mt-1 leading-relaxed">All user modifications are being logged to the secure audit trail in real-time.</p>
+                        <div className="mt-3 h-1 w-16 rounded-full bg-emerald-100" />
+                    </div>
+                    <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
+                        <p className="text-[11px] font-semibold uppercase tracking-widest text-gray-400">Inactive / Revoked</p>
+                        <div className="flex items-end gap-2 mt-2">
+                            <p className="text-4xl font-bold text-gray-400">
+                                {beekeepers.filter((bk) => getStatus(bk) !== 'active').length}
+                            </p>
+                        </div>
+                        <div className="mt-3 h-1 w-16 rounded-full bg-gray-200" />
                     </div>
                 </div>
 
                 {/* Table */}
                 <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-                    {/* Filters */}
+                    {/* Filter bar */}
                     <div className="flex items-center gap-3 px-5 py-4 border-b border-gray-100 flex-wrap">
-                        <select
-                            value={roleFilter}
-                            onChange={(e) => setRoleFilter(e.target.value)}
-                            className="text-sm border border-gray-200 rounded-lg px-3 py-2 text-gray-600 outline-none bg-white"
-                        >
-                            <option>All Roles</option>
-                            <option>Administrator</option>
-                            <option>Beekeeper</option>
-                        </select>
+                        {/* Status filter */}
                         <select
                             value={statusFilter}
                             onChange={(e) => setStatusFilter(e.target.value)}
@@ -351,10 +436,49 @@ export default function Beekeepers({ beekeepers = [] }: { beekeepers?: Beekeeper
                             <option>All Statuses</option>
                             <option>Active</option>
                             <option>Pending</option>
-                            <option>Suspended</option>
+                            <option>Revoked</option>
                         </select>
+
+                        {/* Columns toggle */}
+                        <div className="relative" ref={colMenuRef}>
+                            <button
+                                onClick={() => setShowColMenu((v) => !v)}
+                                className="text-sm border border-gray-200 rounded-lg px-3 py-2 flex items-center gap-1.5 text-gray-600 hover:bg-gray-50"
+                            >
+                                Columns <ChevronDown className="w-3.5 h-3.5" />
+                            </button>
+                            {showColMenu && (
+                                <div className="absolute z-10 bg-white border border-gray-200 rounded-xl shadow-lg p-3 w-48 top-full mt-1">
+                                    {/* Always-on identity row */}
+                                    <div className="flex items-center gap-2 px-1 py-1.5 opacity-50 cursor-not-allowed">
+                                        <input type="checkbox" checked readOnly className="rounded" />
+                                        <span className="text-xs text-gray-600">User Identity</span>
+                                    </div>
+                                    {(
+                                        [
+                                            { key: 'status',     label: 'Status' },
+                                            { key: 'hives',      label: 'Hives' },
+                                            { key: 'lastLogin',  label: 'Last Login' },
+                                            { key: 'address',    label: 'Address' },
+                                            { key: 'signUpDate', label: 'Sign Up Date' },
+                                        ] as { key: keyof typeof visibleCols; label: string }[]
+                                    ).map(({ key, label }) => (
+                                        <label key={key} className="flex items-center gap-2 px-1 py-1.5 cursor-pointer hover:bg-gray-50 rounded">
+                                            <input
+                                                type="checkbox"
+                                                checked={visibleCols[key]}
+                                                onChange={() => toggleCol(key)}
+                                                className="rounded"
+                                            />
+                                            <span className="text-xs text-gray-600">{label}</span>
+                                        </label>
+                                    ))}
+                                </div>
+                            )}
+                        </div>
+
                         <span className="ml-auto text-xs text-gray-400">
-                            Showing {Math.min(10, filtered.length)} of {filtered.length} users
+                            Showing {Math.min(10, filtered.length)} of {filtered.length} beekeepers
                         </span>
                     </div>
 
@@ -363,33 +487,39 @@ export default function Beekeepers({ beekeepers = [] }: { beekeepers?: Beekeeper
                         <thead>
                             <tr className="border-b border-gray-100">
                                 <th className="text-left px-5 py-3 text-[10px] font-bold uppercase tracking-widest text-gray-400">User Identity</th>
-                                <th className="text-left px-5 py-3 text-[10px] font-bold uppercase tracking-widest text-gray-400">System Role</th>
-                                <th className="text-left px-5 py-3 text-[10px] font-bold uppercase tracking-widest text-gray-400">Status</th>
-                                <th className="text-left px-5 py-3 text-[10px] font-bold uppercase tracking-widest text-gray-400">Address</th>
+                                {visibleCols.status     && <th className="text-left px-5 py-3 text-[10px] font-bold uppercase tracking-widest text-gray-400">Status</th>}
+                                {visibleCols.hives      && <th className="text-left px-5 py-3 text-[10px] font-bold uppercase tracking-widest text-gray-400">Hives</th>}
+                                {visibleCols.lastLogin  && <th className="text-left px-5 py-3 text-[10px] font-bold uppercase tracking-widest text-gray-400">Last Login</th>}
+                                {visibleCols.address    && <th className="text-left px-5 py-3 text-[10px] font-bold uppercase tracking-widest text-gray-400">Address</th>}
+                                {visibleCols.signUpDate && <th className="text-left px-5 py-3 text-[10px] font-bold uppercase tracking-widest text-gray-400">Sign Up Date</th>}
                                 <th className="text-left px-5 py-3 text-[10px] font-bold uppercase tracking-widest text-gray-400">Actions</th>
                             </tr>
                         </thead>
                         <tbody>
                             {filtered.length === 0 ? (
                                 <tr>
-                                    <td colSpan={5} className="px-5 py-12 text-center text-sm text-gray-400">
-                                        {roleFilter !== 'All Roles' || statusFilter !== 'All Statuses'
-                                            ? 'No users match your filters.'
-                                            : 'No users found. Add your first user to get started.'}
+                                    <td colSpan={visibleColCount} className="px-5 py-12 text-center text-sm text-gray-400">
+                                        {statusFilter !== 'All Statuses'
+                                            ? 'No beekeepers match your filters.'
+                                            : 'No beekeepers found. Add your first beekeeper to get started.'}
                                     </td>
                                 </tr>
                             ) : (
                                 filtered.slice(0, 10).map((bk) => {
-                                    const role   = getRole(bk);
-                                    const status = getStatus(bk);
-                                    const sc     = statusConfig[status] ?? statusConfig.active;
-                                    const rc     = roleColors[role]     ?? roleColors.Beekeeper;
+                                    const role      = getRole(bk);
+                                    const status    = getStatus(bk);
+                                    const sc        = statusConfig[status] ?? statusConfig.active;
+                                    const rc        = roleColors[role]     ?? roleColors.Beekeeper;
+                                    const isRevoked = status === 'revoked';
                                     return (
                                         <tr key={bk.id} className="border-b border-gray-50 hover:bg-gray-50 transition-colors">
+                                            {/* USER IDENTITY */}
                                             <td className="px-5 py-4">
                                                 <div className="flex items-center gap-3">
-                                                    <div className="w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold text-white shrink-0"
-                                                        style={{ backgroundColor: '#0d1b2a' }}>
+                                                    <div
+                                                        className="w-9 h-9 rounded-full flex items-center justify-center text-xs font-bold text-white shrink-0"
+                                                        style={{ backgroundColor: '#0d1b2a' }}
+                                                    >
                                                         {getInitials(bk.name)}
                                                     </div>
                                                     <div>
@@ -398,44 +528,69 @@ export default function Beekeepers({ beekeepers = [] }: { beekeepers?: Beekeeper
                                                     </div>
                                                 </div>
                                             </td>
+                                            {/* STATUS */}
+                                            {visibleCols.status && (
+                                                <td className="px-5 py-4">
+                                                    <div className="flex items-center gap-1.5">
+                                                        <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: sc.dot }} />
+                                                        <span className="text-xs font-medium" style={{ color: sc.labelColor }}>{sc.label}</span>
+                                                    </div>
+                                                </td>
+                                            )}
+                                            {/* HIVES */}
+                                            {visibleCols.hives && (
+                                                <td className="px-5 py-4">
+                                                    <span
+                                                        className="inline-flex items-center justify-center min-w-[1.75rem] h-6 px-2 rounded text-xs font-bold"
+                                                        style={{ backgroundColor: '#fef3c7', color: '#92400e' }}
+                                                    >
+                                                        {bk.beehives_count ?? 0}
+                                                    </span>
+                                                </td>
+                                            )}
+                                            {/* LAST LOGIN */}
+                                            {visibleCols.lastLogin && (
+                                                <td className="px-5 py-4 text-xs italic text-gray-400">Never</td>
+                                            )}
+                                            {/* ADDRESS */}
+                                            {visibleCols.address && (
+                                                <td className="px-5 py-4 text-xs text-gray-400">{bk.address ?? '—'}</td>
+                                            )}
+                                            {/* SIGN UP DATE */}
+                                            {visibleCols.signUpDate && (
+                                                <td className="px-5 py-4 text-xs text-gray-400">
+                                                    {bk.created_at ? new Date(bk.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) : <span className="italic text-gray-400">Never</span>}
+                                                </td>
+                                            )}
+                                            {/* ACTIONS */}
                                             <td className="px-5 py-4">
-                                                <span className="text-[11px] font-bold px-2.5 py-1 rounded border uppercase tracking-widest"
-                                                    style={{ backgroundColor: rc.bg, color: rc.color, borderColor: rc.bg === '#f1f5f9' ? '#e5e7eb' : rc.bg }}>
-                                                    {role}
-                                                </span>
-                                            </td>
-                                            <td className="px-5 py-4">
-                                                <div className="flex items-center gap-1.5">
-                                                    <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: sc.dot }} />
-                                                    <span className="text-xs font-medium" style={{ color: sc.labelColor }}>{sc.label}</span>
-                                                </div>
-                                            </td>
-                                            <td className="px-5 py-4 text-xs text-gray-400">
-                                                {bk.address ?? 'Never'}
-                                            </td>
-                                            <td className="px-5 py-4">
-                                                <div className="flex items-center gap-2">
+                                                <div className="flex items-center gap-1">
                                                     <button
                                                         onClick={() => setViewTarget(bk)}
                                                         className="p-1.5 rounded hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors"
-                                                        title="View user"
+                                                        title="View beekeeper"
                                                     >
                                                         <Eye className="w-3.5 h-3.5" />
                                                     </button>
                                                     <button
                                                         onClick={() => setEditTarget(bk)}
                                                         className="p-1.5 rounded hover:bg-blue-50 text-gray-400 hover:text-blue-500 transition-colors"
-                                                        title="Edit user"
+                                                        title="Edit beekeeper"
                                                     >
                                                         <Edit2 className="w-3.5 h-3.5" />
                                                     </button>
-                                                    <button
-                                                        onClick={() => setDeleteTarget(bk)}
-                                                        className="p-1.5 rounded hover:bg-red-50 text-gray-400 hover:text-red-500 transition-colors"
-                                                        title="Delete user"
-                                                    >
-                                                        <Trash2 className="w-3.5 h-3.5" />
-                                                    </button>
+                                                    {isRevoked ? (
+                                                        <span className="text-xs font-semibold text-gray-400 px-2 py-1 cursor-default">
+                                                            Revoked
+                                                        </span>
+                                                    ) : (
+                                                        <button
+                                                            onClick={() => setRevokeTarget(bk)}
+                                                            className="text-xs font-semibold text-orange-500 hover:text-orange-700 px-2 py-1 rounded hover:bg-orange-50 transition-colors"
+                                                        >
+                                                            Revoke
+                                                        </button>
+                                                    )}
                                                 </div>
                                             </td>
                                         </tr>
@@ -494,43 +649,41 @@ export default function Beekeepers({ beekeepers = [] }: { beekeepers?: Beekeeper
                             Administrators have full read/write access to hive data and swarm records. Beekeepers are limited to their assigned apiaries.
                         </p>
                         <button className="flex items-center gap-1 text-xs font-semibold mt-auto" style={{ color: '#0d1b2a' }}>
-                            View Security Protocols →
+                            View Security Protocols â†’
                         </button>
                     </div>
                 </div>
             </div>
 
-            {/* Add User Modal */}
-            {showAddModal && <AddUserModal onClose={() => setShowAddModal(false)} />}
+            {/* Modals */}
+            {showAddModal && <AddBeekeeperModal onClose={() => setShowAddModal(false)} />}
+            {viewTarget   && <ViewBeekeeperModal beekeeper={viewTarget}  onClose={() => setViewTarget(null)}   />}
+            {editTarget   && <EditBeekeeperModal beekeeper={editTarget}  onClose={() => setEditTarget(null)}   />}
 
-            {/* View User Modal */}
-            {viewTarget && <ViewUserModal beekeeper={viewTarget} onClose={() => setViewTarget(null)} />}
-
-            {/* Edit User Modal */}
-            {editTarget && <EditUserModal beekeeper={editTarget} onClose={() => setEditTarget(null)} />}
-
-            {/* Delete Confirmation Modal */}
-            {deleteTarget && (
+            {/* Revoke confirmation modal */}
+            {revokeTarget && (
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
                     <div className="w-full max-w-sm rounded-2xl bg-white shadow-2xl p-6 flex flex-col gap-4">
-                        <h2 className="text-base font-semibold" style={{ color: '#0d1b2a' }}>Delete User</h2>
+                        <h2 className="text-base font-semibold" style={{ color: '#0d1b2a' }}>Revoke Access</h2>
                         <p className="text-sm text-gray-500">
-                            Are you sure you want to delete <span className="font-semibold text-gray-700">{deleteTarget.name}</span>? This action cannot be undone.
+                            Revoke access for{' '}
+                            <span className="font-semibold text-gray-700">{revokeTarget.name}</span>?
+                            They will no longer be able to access the system.
                         </p>
                         <div className="flex justify-end gap-3">
                             <button
-                                onClick={() => setDeleteTarget(null)}
+                                onClick={() => setRevokeTarget(null)}
                                 className="px-4 py-2 rounded-lg border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-50"
                             >
                                 Cancel
                             </button>
                             <button
-                                onClick={confirmDelete}
-                                disabled={deleting}
-                                className="px-4 py-2 rounded-lg text-sm font-semibold text-white hover:opacity-90 disabled:opacity-60"
-                                style={{ backgroundColor: '#ef4444' }}
+                                onClick={confirmRevoke}
+                                disabled={revoking}
+                                className="px-4 py-2 rounded-lg text-sm font-semibold hover:opacity-90 disabled:opacity-60"
+                                style={{ backgroundColor: '#f5a623', color: '#0d1b2a' }}
                             >
-                                {deleting ? 'Deleting…' : 'Delete'}
+                                {revoking ? 'Revoking\u2026' : 'Revoke Access'}
                             </button>
                         </div>
                     </div>
@@ -543,6 +696,6 @@ export default function Beekeepers({ beekeepers = [] }: { beekeepers?: Beekeeper
 Beekeepers.layout = {
     breadcrumbs: [
         { title: 'Admin Dashboard', href: '/dashboard' },
-        { title: 'User Management', href: '/beekeepers' },
+        { title: 'Beekeeper Management', href: '/beekeepers' },
     ],
 };

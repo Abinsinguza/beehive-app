@@ -19,6 +19,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
    // Route::inertia('beekeepers', 'beekeepers')->name('beekeepers');
     //Route::inertia('beehives', 'beehives')->name('beehives');
     Route::resource('beekeepers', BeekeeperController::class);
+    Route::patch('beekeepers/{beekeeper}/revoke', [BeekeeperController::class, 'revoke'])->name('beekeepers.revoke');
     Route::resource('beehives', BeehiveController::class);
     Route::resource('advisories', AdvisoryController::class);
     Route::resource('inferences', InferenceController::class)->only(['index', 'store']);
