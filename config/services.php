@@ -35,4 +35,9 @@ return [
         ],
     ],
 
+    'bsads_api' => [
+        'base_url' => env('FASTAPI_BASE_URL', 'http://localhost:8000'),
+        'timeout'  => (int) env('FASTAPI_TIMEOUT', 15),
+    ],
+
 ];

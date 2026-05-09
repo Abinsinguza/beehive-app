@@ -2,121 +2,64 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Requests\StoreBeehiveRequest;
-use App\Http\Requests\UpdateBeehiveRequest;
-use App\Models\Beehive;
-use App\Models\Beekeeper;
+use Illuminate\Http\Request;
 use Inertia\Inertia;
 
 class BeehiveController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     */
     public function index()
     {
         $search = request('search', '');
+        $api    = $this->api();
 
-        $beehives = Beehive::with('owner')
-            ->when($search, function ($query, $search) {
-                $query->where('id', 'like', "%{$search}%")
-                      ->orWhere('hive_location', 'like', "%{$search}%")
-                      ->orWhere('hive_type', 'like', "%{$search}%");
-            })
-            ->get();
-
-        return inertia('beehives', [
-            'beehives' => $beehives,
-            'owners'   => Beekeeper::select('id', 'name')->get(),
+        return Inertia::render('beehives', [
+            'beehives' => $api->getHives($search),
+            'owners'   => collect($api->getUsers('farmer'))
+                ->map(fn ($u) => ['id' => $u['user_id'], 'name' => $u['full_name']])
+                ->values()
+                ->all(),
             'search'   => $search,
         ]);
     }
 
-    /**
-     * Show the form for creating a new resource.
-     */
-    public function create()
+    public function store(Request $request)
     {
-        //
-        return view('beehives.create');
-    }
-
-    /**
-     * Store a newly created resource in storage.
-     */
-    public function store(StoreBeehiveRequest $request)
-    {
-        $last = Beehive::orderBy('id', 'desc')->first();
-        if ($last) {
-            $number = (int) substr($last->id, 2); // remove BH
-            $number++;
-        } else {
-            $number = 1;
-        }
-
-        $newId = 'BH' . str_pad($number, 4, '0', STR_PAD_LEFT);
-
-        // Resolve owner by name — find existing or create a new beekeeper record
-        $ownerName = trim($request->owner_name ?? '');
-        $owner = Beekeeper::where('name', $ownerName)->first();
-
-        if (!$owner) {
-            $lastBk = Beekeeper::orderBy('id', 'desc')->first();
-            $bkNum  = $lastBk ? ((int) substr($lastBk->id, 2)) + 1 : 1;
-            $owner  = Beekeeper::create([
-                'id'    => 'BK' . str_pad($bkNum, 4, '0', STR_PAD_LEFT),
-                'name'  => $ownerName,
-                'phone' => 'N/A-' . $bkNum, // placeholder to satisfy unique constraint
-            ]);
-        }
-
-        Beehive::create([
-            'id'                => $newId,
-            'owner_id'          => $owner->id,
-            'hive_location'     => $request->hive_location,
-            'hive_type'         => $request->hive_type,
-            'installation_date' => now()->toDateString(),
-            'current_state'     => $request->current_state,
+        $data = $request->validate([
+            'owner_id'      => ['nullable', 'string'],
+            'hive_location' => ['required', 'string', 'max:150'],
+            'hive_name'     => ['nullable', 'string', 'max:100'],
+            'hive_type'     => ['nullable', 'string', 'max:50'],
+            'current_state' => ['nullable', 'string'],
+            'latitude'      => ['nullable', 'numeric'],
+            'longitude'     => ['nullable', 'numeric'],
         ]);
+
+        $this->api()->createHive(array_filter($data, fn ($v) => $v !== null));
 
         return redirect()->back()->with('success', 'Hive added successfully');
     }
 
-    /**
-     * Display the specified resource.
-     */
-    public function show(Beehive $beehive)
+    public function update(Request $request, string $hiveId)
     {
-        //
-    }
+        $data = $request->validate([
+            'owner_id'          => ['nullable', 'string'],
+            'hive_location'     => ['nullable', 'string', 'max:150'],
+            'hive_name'         => ['nullable', 'string', 'max:100'],
+            'hive_type'         => ['nullable', 'string', 'max:50'],
+            'installation_date' => ['nullable', 'date'],
+            'current_state'     => ['nullable', 'string'],
+            'latitude'          => ['nullable', 'numeric'],
+            'longitude'         => ['nullable', 'numeric'],
+        ]);
 
-    /**
-     * Show the form for editing the specified resource.
-     */
-    public function edit(Beehive $beehive)
-    {
-        //
-    }
-
-    /**
-     * Update the specified resource in storage.
-     */
-    public function update(UpdateBeehiveRequest $request, Beehive $beehive)
-    {
-        $beehive->update($request->validate([
-            'owner_id'          => 'required|string|exists:beekeepers,id',
-            'hive_location'     => 'required|string|max:255',
-            'hive_type'         => 'required|string|max:255',
-            'installation_date' => 'required|date',
-            'current_state'     => 'required|in:active,inactive,migrated,lost',
-        ]));
+        $this->api()->updateHive($hiveId, array_filter($data, fn ($v) => $v !== null));
 
         return redirect()->back()->with('success', 'Hive updated successfully');
     }
 
-    public function destroy(Beehive $beehive)
+    public function destroy(string $hiveId)
     {
-        $beehive->delete();
+        $this->api()->deleteHive($hiveId);
 
         return redirect()->back()->with('success', 'Hive deleted successfully');
     }

@@ -4,8 +4,12 @@ namespace App\Providers;
 
 use App\Actions\Fortify\CreateNewUser;
 use App\Actions\Fortify\ResetUserPassword;
+use App\Models\User;
+use App\Services\BsadsApiClient;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Support\Str;
@@ -40,6 +44,25 @@ class FortifyServiceProvider extends ServiceProvider
     {
         Fortify::resetUserPasswordsUsing(ResetUserPassword::class);
         Fortify::createUsersUsing(CreateNewUser::class);
+
+        // Authenticate the admin via Eloquent, then fetch a FastAPI JWT
+        // and store it in the session so every controller can use it.
+        Fortify::authenticateUsing(function (Request $request) {
+            $user = User::where('email', $request->email)->first();
+
+            if (! $user || ! Hash::check($request->password, $user->password_hash)) {
+                return null;
+            }
+
+            try {
+                $response = app(BsadsApiClient::class)->login($request->email, $request->password);
+                $request->session()->put('api_token', $response['access_token']);
+            } catch (\Throwable $e) {
+                Log::warning('Could not obtain FastAPI JWT after login: ' . $e->getMessage());
+            }
+
+            return $user;
+        });
     }
 
     /**

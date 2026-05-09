@@ -2,25 +2,24 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Requests\StoreBeekeeperRequest;
-use App\Http\Requests\UpdateBeekeeperRequest;
-use App\Models\Beekeeper;
+use Illuminate\Http\Request;
 use Inertia\Inertia;
 
 class BeekeeperController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     */
     public function index()
     {
-        $search = request('search', '');
+        $search      = request('search', '');
+        $beekeepers  = $this->api()->getUsers('farmer');
 
-        $beekeepers = Beekeeper::when($search, function ($query, $search) {
-            $query->where('name', 'like', "%{$search}%")
-                  ->orWhere('email', 'like', "%{$search}%")
-                  ->orWhere('phone', 'like', "%{$search}%");
-        })->get();
+        if ($search) {
+            $s = strtolower($search);
+            $beekeepers = array_values(array_filter($beekeepers, fn ($b) =>
+                str_contains(strtolower($b['full_name'] ?? ''), $s) ||
+                str_contains(strtolower($b['email']     ?? ''), $s) ||
+                str_contains(strtolower($b['phone']     ?? ''), $s)
+            ));
+        }
 
         return Inertia::render('beekeepers', [
             'beekeepers' => $beekeepers,
@@ -28,88 +27,49 @@ class BeekeeperController extends Controller
         ]);
     }
 
-    /**
-     * Show the form for creating a new resource.
-     */
-    public function create()
-    {
-        return view('beekeepers.create');
-    }
-
-    /**
-     * Store a newly created resource in storage.
-     */
-    public function store(StoreBeekeeperRequest $request)
-    {
-        // Get last beekeeper
-        $last = Beekeeper::orderBy('id', 'desc')->first();
-
-        if ($last) {
-            $number = (int) substr($last->id, 2); // remove BK
-            $number++;
-        } else {
-            $number = 1;
-        }
-
-        $newId = 'BK' . str_pad($number, 4, '0', STR_PAD_LEFT);
-
-        Beekeeper::create([
-            'id' => $newId,
-            'name' => $request->name,
-            'email' => $request->email,
-            'phone' => $request->phone,
-            'address' => $request->address,
-        ]);
-
-        return redirect()->back()
-            ->with('success', 'Beekeeper added successfully');
-    }
-
-    /**
-     * Display the specified resource.
-     */
-    public function show(Beekeeper $beekeeper)
-    {
-        //
-    }
-
-    /**
-     * Show the form for editing the specified resource.
-     */
-    public function edit(Beekeeper $beekeeper)
-    {
-        //
-    }
-
-    /**
-     * Update the specified resource in storage.
-     */
-    public function update(UpdateBeekeeperRequest $request, Beekeeper $beekeeper)
+    public function store(Request $request)
     {
         $data = $request->validate([
-            'name'     => 'required|string|max:255',
-            'phone'    => 'required|string|unique:beekeepers,phone,' . $beekeeper->id,
-            'email'    => 'nullable|email',
-            'address'  => 'nullable|string',
-            'password' => 'nullable|min:4',
+            'name'    => ['required', 'string', 'max:100'],
+            'email'   => ['required', 'email'],
+            'phone'   => ['nullable', 'string'],
+            'address' => ['nullable', 'string'],
+            'password'=> ['required', 'string', 'min:8'],
         ]);
 
-        if (empty($data['password'])) {
-            unset($data['password']);
-        }
+        $this->api()->createUser([
+            'full_name' => $data['name'],
+            'email'     => $data['email'],
+            'password'  => $data['password'],
+            'phone'     => $data['phone']    ?? null,
+            'address'   => $data['address']  ?? null,
+            'role'      => 'farmer',
+        ]);
 
-        $beekeeper->update($data);
-
-        return redirect()->back()->with('success', 'User updated successfully');
+        return redirect()->back()->with('success', 'Beekeeper added successfully');
     }
 
-    /**
-     * Remove the specified resource from storage.
-     */
-    public function destroy(Beekeeper $beekeeper)
+    public function update(Request $request, string $userId)
     {
-        $beekeeper->delete();
+        $data = $request->validate([
+            'name'    => ['required', 'string', 'max:100'],
+            'phone'   => ['nullable', 'string'],
+            'address' => ['nullable', 'string'],
+        ]);
 
-        return redirect()->back()->with('success', 'User deleted successfully');
+        $this->api()->updateUser($userId, [
+            'full_name' => $data['name'],
+            'phone'     => $data['phone']   ?? null,
+            'address'   => $data['address'] ?? null,
+        ]);
+
+        return redirect()->back()->with('success', 'Beekeeper updated successfully');
+    }
+
+    public function destroy(string $userId)
+    {
+        $this->api()->deleteUser($userId);
+
+        return redirect()->back()->with('success', 'Beekeeper deleted successfully');
     }
 }

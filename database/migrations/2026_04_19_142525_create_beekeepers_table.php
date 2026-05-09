@@ -1,32 +1,16 @@
 <?php
 
 use Illuminate\Database\Migrations\Migration;
-use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
 
+/**
+ * No-op: beekeepers are now stored in the unified 'users' table with
+ * role = 'farmer'.  The 'beekeepers' database view (created in output.sql)
+ * provides backward compatibility for any raw SQL that still uses that name.
+ * See: App\Models\Beekeeper (points to 'users' with a global role scope).
+ */
 return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     */
-    public function up(): void
-    {
-        Schema::create('beekeepers', function (Blueprint $table) {
-            $table->string('id')->primary();
-            $table->timestamps();
-            $table->string('name');
-            $table->string('email')->nullable();
-            $table->string('phone')->unique();
-            $table->string('address')->nullable();
-            $table->string('password');
-        });
-    }
+    public function up(): void {}
 
-    /**
-     * Reverse the migrations.
-     */
-    public function down(): void
-    {
-        Schema::dropIfExists('beekeepers');
-    }
+    public function down(): void {}
 };

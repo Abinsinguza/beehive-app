@@ -8,35 +8,20 @@ use Illuminate\Validation\Rule;
 
 trait ProfileValidationRules
 {
-    /**
-     * Get the validation rules used to validate user profiles.
-     *
-     * @return array<string, array<int, ValidationRule|array<mixed>|string>>
-     */
-    protected function profileRules(?int $userId = null): array
+    protected function profileRules(?string $userId = null): array
     {
         return [
-            'name' => $this->nameRules(),
+            'name'  => $this->nameRules(),
             'email' => $this->emailRules($userId),
         ];
     }
 
-    /**
-     * Get the validation rules used to validate user names.
-     *
-     * @return array<int, ValidationRule|array<mixed>|string>
-     */
     protected function nameRules(): array
     {
         return ['required', 'string', 'max:255'];
     }
 
-    /**
-     * Get the validation rules used to validate user emails.
-     *
-     * @return array<int, ValidationRule|array<mixed>|string>
-     */
-    protected function emailRules(?int $userId = null): array
+    protected function emailRules(?string $userId = null): array
     {
         return [
             'required',
@@ -44,8 +29,8 @@ trait ProfileValidationRules
             'email',
             'max:255',
             $userId === null
-                ? Rule::unique(User::class)
-                : Rule::unique(User::class)->ignore($userId),
+                ? Rule::unique(User::class, 'email')
+                : Rule::unique(User::class, 'email')->ignore($userId, 'user_id'),
         ];
     }
 }

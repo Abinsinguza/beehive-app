@@ -3,9 +3,7 @@
 namespace App\Http\Controllers\Settings;
 
 use App\Http\Controllers\Controller;
-use App\Http\Requests\Settings\ProfileDeleteRequest;
 use App\Http\Requests\Settings\ProfileUpdateRequest;
-use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -14,29 +12,23 @@ use Inertia\Response;
 
 class ProfileController extends Controller
 {
-    /**
-     * Show the user's profile settings page.
-     */
     public function edit(Request $request): Response
     {
         return Inertia::render('settings/profile', [
-            'mustVerifyEmail' => $request->user() instanceof MustVerifyEmail,
             'status' => $request->session()->get('status'),
         ]);
     }
 
     /**
-     * Update the user's profile information.
+     * Update the logged-in admin's profile via FastAPI PUT /auth/me.
      */
     public function update(ProfileUpdateRequest $request): RedirectResponse
     {
-        $request->user()->fill($request->validated());
+        $validated = $request->validated();
 
-        if ($request->user()->isDirty('email')) {
-            $request->user()->email_verified_at = null;
-        }
-
-        $request->user()->save();
+        $this->api()->updateMe(array_filter([
+            'full_name' => $validated['name'] ?? null,
+        ]));
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Profile updated.')]);
 
@@ -44,18 +36,17 @@ class ProfileController extends Controller
     }
 
     /**
-     * Delete the user's profile.
+     * Delete the admin account via FastAPI DELETE /users/{id}.
      */
-    public function destroy(ProfileDeleteRequest $request): RedirectResponse
+    public function destroy(Request $request): RedirectResponse
     {
         $user = $request->user();
 
         Auth::logout();
-
-        $user->delete();
-
         $request->session()->invalidate();
         $request->session()->regenerateToken();
+
+        $this->api()->deleteUser($user->user_id);
 
         return redirect('/');
     }

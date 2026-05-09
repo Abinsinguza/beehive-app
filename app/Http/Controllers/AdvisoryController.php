@@ -2,79 +2,52 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Requests\StoreAdvisoryRequest;
-use App\Http\Requests\UpdateAdvisoryRequest;
-use App\Models\Advisory;
+use Illuminate\Http\Request;
 use Inertia\Inertia;
+
 class AdvisoryController extends Controller
 {
-    /**
-     * Display a listing of the resource.
-     */
     public function index()
     {
-        //
-        $advisorys = Advisory::all();
         return Inertia::render('advisories', [
-            'advisories' => $advisorys,
+            'advisories' => $this->api()->getAdvisoryTemplates(),
         ]);
     }
 
-    /**
-     * Show the form for creating a new resource.
-     */
-    public function create()
+    public function store(Request $request)
     {
-        //
-        return view('advisories.create');
-    }
-
-    /**
-     * Store a newly created resource in storage.
-     */
-    public function store(StoreAdvisoryRequest $request)
-    {
-        //
-        Advisory::create([
-            'prediction_code' => $request->prediction_code,
-            'condition_label' => $request->condition_label,
-            'advisory_text' => $request->advisory_text,
-            'severity' => $request->severity,
+        $data = $request->validate([
+            'prediction_code' => ['required', 'numeric'],
+            'hive_state'      => ['required', 'string', 'in:normal,pre_swarm,swarm,abscondment,missing_queen,queenbee_present,pest_infested,external_noise,uncertain'],
+            'condition_label' => ['required', 'string', 'max:100'],
+            'advisory_text'   => ['required', 'string'],
+            'advisory_type'   => ['required', 'string', 'in:Reactive,Preventive'],
+            'severity'        => ['required', 'string', 'in:info,low,medium,high,critical'],
         ]);
 
-        return redirect()->back()
-            ->with('success', 'Advisory added successfully');
+        $this->api()->createAdvisoryTemplate($data);
+
+        return redirect()->back()->with('success', 'Advisory template added successfully');
     }
 
-    /**
-     * Display the specified resource.
-     */
-    public function show(Advisory $advisory)
+    public function update(Request $request, string $templateId)
     {
-        //
+        $data = $request->validate([
+            'condition_label' => ['required', 'string', 'max:100'],
+            'advisory_text'   => ['required', 'string'],
+            'advisory_type'   => ['required', 'string', 'in:Reactive,Preventive'],
+            'severity'        => ['required', 'string', 'in:info,low,medium,high,critical'],
+        ]);
+
+        $this->api()->updateAdvisoryTemplate((int) $templateId, $data);
+
+        return redirect()->back()->with('success', 'Advisory template updated successfully');
     }
 
-    /**
-     * Show the form for editing the specified resource.
-     */
-    public function edit(Advisory $advisory)
+    public function destroy(string $templateId)
     {
-        //
-    }
+        $this->api()->deleteAdvisoryTemplate((int) $templateId);
 
-    /**
-     * Update the specified resource in storage.
-     */
-    public function update(UpdateAdvisoryRequest $request, Advisory $advisory)
-    {
-        //
-    }
-
-    /**
-     * Remove the specified resource from storage.
-     */
-    public function destroy(Advisory $advisory)
-    {
-        //
+        return redirect()->back()->with('success', 'Advisory template deleted successfully');
     }
 }

@@ -1,28 +1,15 @@
 <?php
 
 use Illuminate\Database\Migrations\Migration;
-use Illuminate\Database\Schema\Blueprint;
-use Illuminate\Support\Facades\Schema;
 
+/**
+ * No-op: the 'beekeepers' table no longer exists.
+ * Farmers are stored in 'users' where password_hash is always set
+ * (a random placeholder is assigned if the farmer has no direct login).
+ */
 return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     */
-    public function up(): void
-    {
-        Schema::table('beekeepers', function (Blueprint $table) {
-            //
-        });
-    }
+    public function up(): void {}
 
-    /**
-     * Reverse the migrations.
-     */
-    public function down(): void
-    {
-        Schema::table('beekeepers', function (Blueprint $table) {
-            //
-        });
-    }
+    public function down(): void {}
 };
