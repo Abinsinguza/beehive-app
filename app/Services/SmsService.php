@@ -60,24 +60,6 @@ class SmsService
     ): void {
         $masked = str_repeat('*', max(0, strlen($apiKey) - 4)) . substr($apiKey, -4);
 
-        $lines = [
-            '',
-            '┌─────────────────────── SmsService DEBUG ───────────────────────┐',
-            "│  URL      : {$url}",
-            "│  Username : {$username}",
-            "│  API Key  : {$masked}",
-            "│  To       : {$number}",
-            "│  Message  :",
-            ...array_map(fn($l) => "│    {$l}", explode("\n", $message)),
-            '│',
-            '│  Full payload (JSON):',
-            ...array_map(fn($l) => "│    {$l}", explode("\n", json_encode($payload, JSON_PRETTY_PRINT))),
-            '└────────────────────────────────────────────────────────────────┘',
-            '',
-        ];
-
-        error_log(implode("\n", $lines) . "\n");
-
         Log::debug('[SmsService] Outgoing SMS', [
             'url'      => $url,
             'username' => $username,

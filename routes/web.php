@@ -14,7 +14,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::inertia('dashboard', 'dashboard')->name('dashboard');
     Route::inertia('analytics', 'inferences')->name('analytics');
     Route::inertia('monitoring', 'monitoring')->name('monitoring');
-    Route::get('alerts', fn() => inertia('alerts'))->name('alerts.index');
+    Route::get('alerts', [AlertsController::class, 'index'])->name('alerts.index');
     Route::post('alerts', [AlertsController::class, 'store'])->name('alerts.store');
     Route::patch('alerts/{alert}/notify', [AlertsController::class, 'notify'])->name('alerts.notify');
    // Route::inertia('beekeepers', 'beekeepers')->name('beekeepers');

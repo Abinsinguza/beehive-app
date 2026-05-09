@@ -1,6 +1,6 @@
-import { Head, router, useForm } from '@inertiajs/react';
-import { Download, X } from 'lucide-react';
-import { useState } from 'react';
+import { Head, router, useForm, usePage } from '@inertiajs/react';
+import { BellRing, CheckCircle, AlertCircle, Download, Plus, X } from 'lucide-react';
+import { useEffect, useState } from 'react';
 
 type Inference = { id: number; prediction: string; beehive?: { hive_location: string } };
 type Advisory  = { id: number; condition_label: string; advisory_text: string };
@@ -42,8 +42,14 @@ export default function AlertsPage({
     inferences?: Inference[];
     advisories?: Advisory[];
 }) {
+    const { props } = usePage<{ flash?: { success?: string; error?: string } }>();
+    const flash = props.flash;
+
     const [showModal, setShowModal] = useState(false);
     const [notifying, setNotifying] = useState<number | null>(null);
+    const [flashDismissed, setFlashDismissed] = useState(false);
+
+    useEffect(() => { setFlashDismissed(false); }, [flash?.success, flash?.error]);
     const [hiveFilter, setHiveFilter] = useState('All Hives');
     const [severityFilter, setSeverityFilter] = useState('All Levels');
     const [dateFrom, setDateFrom] = useState('');
@@ -72,14 +78,16 @@ export default function AlertsPage({
     // Use real alerts if available, otherwise show static demo logs
     const logs = alerts.length > 0
         ? alerts.map((a) => ({
-            ts: new Date(a.alert_timestamp).toLocaleString(),
-            hive: a.inference?.beehive?.hive_location ?? 'SYSTEM',
-            severity: a.alert_type,
-            desc: a.advisory?.advisory_text ?? '—',
-            action: a.status === 'pending' ? 'ACKNOWLEDGE' : 'DETAILS',
-            alertObj: a,
+            ts:         new Date(a.alert_timestamp).toLocaleString(),
+            hive:       a.inference?.beehive?.hive_location ?? 'SYSTEM',
+            beekeeper:  a.inference?.beehive?.owner?.name   ?? null,
+            severity:   a.alert_type,
+            desc:       a.advisory?.advisory_text ?? '—',
+            status:     a.status,
+            action:     a.status === 'pending' ? 'NOTIFY' : 'SENT',
+            alertObj:   a,
         }))
-        : staticLogs.map((l) => ({ ...l, alertObj: null }));
+        : staticLogs.map((l) => ({ ...l, beekeeper: null, status: null, alertObj: null }));
 
     // Filter logs by date range using local date string comparison
     const filteredLogs = logs.filter((log) => {
@@ -118,6 +126,13 @@ export default function AlertsPage({
                     <span className="text-sm font-semibold" style={{ color: '#f5a623' }}>Active Monitoring</span>
                     <div className="ml-auto flex items-center gap-3">
                         <button
+                            onClick={() => setShowModal(true)}
+                            className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold hover:opacity-90 transition-opacity"
+                            style={{ backgroundColor: '#0d1b2a', color: '#ffffff' }}
+                        >
+                            <Plus className="w-4 h-4" /> Add Alert
+                        </button>
+                        <button
                             onClick={exportLog}
                             className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold hover:opacity-90 transition-opacity"
                             style={{ backgroundColor: '#f5a623', color: '#0d1b2a' }}
@@ -139,6 +154,32 @@ export default function AlertsPage({
                 </div>
 
                 <div className="p-6 flex flex-col gap-5">
+
+                    {/* Flash messages */}
+                    {!flashDismissed && flash?.success && (
+                        <div className="flex items-center justify-between gap-3 px-4 py-3 rounded-xl text-sm font-medium"
+                            style={{ backgroundColor: '#ecfdf5', color: '#065f46', border: '1px solid #a7f3d0' }}>
+                            <div className="flex items-center gap-2">
+                                <CheckCircle className="w-4 h-4 shrink-0" />
+                                <span>{flash.success}</span>
+                            </div>
+                            <button onClick={() => setFlashDismissed(true)} className="p-0.5 rounded hover:opacity-70">
+                                <X className="w-4 h-4" />
+                            </button>
+                        </div>
+                    )}
+                    {!flashDismissed && flash?.error && (
+                        <div className="flex items-center justify-between gap-3 px-4 py-3 rounded-xl text-sm font-medium"
+                            style={{ backgroundColor: '#fef2f2', color: '#991b1b', border: '1px solid #fecaca' }}>
+                            <div className="flex items-center gap-2">
+                                <AlertCircle className="w-4 h-4 shrink-0" />
+                                <span>{flash.error}</span>
+                            </div>
+                            <button onClick={() => setFlashDismissed(true)} className="p-0.5 rounded hover:opacity-70">
+                                <X className="w-4 h-4" />
+                            </button>
+                        </div>
+                    )}
 
                     {/* Filters */}
                     <div className="flex items-center gap-3 flex-wrap">
@@ -243,19 +284,28 @@ export default function AlertsPage({
                                 <thead>
                                     <tr className="border-b border-gray-100">
                                         <th className="text-left px-4 py-3 text-[10px] font-bold uppercase tracking-widest text-gray-400">Timestamp</th>
-                                        <th className="text-left px-4 py-3 text-[10px] font-bold uppercase tracking-widest text-gray-400">Hive ID</th>
+                                        <th className="text-left px-4 py-3 text-[10px] font-bold uppercase tracking-widest text-gray-400">Hive / Beekeeper</th>
                                         <th className="text-left px-4 py-3 text-[10px] font-bold uppercase tracking-widest text-gray-400">Severity</th>
                                         <th className="text-left px-4 py-3 text-[10px] font-bold uppercase tracking-widest text-gray-400">Event Description</th>
+                                        <th className="text-left px-4 py-3 text-[10px] font-bold uppercase tracking-widest text-gray-400">Status</th>
                                         <th className="text-left px-4 py-3 text-[10px] font-bold uppercase tracking-widest text-gray-400">Action</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {filteredLogs.map((log, i) => {
-                                        const sc = severityConfig[log.severity] ?? severityConfig.Info;
+                                        const sc        = severityConfig[log.severity] ?? severityConfig.Info;
+                                        const isPending = log.alertObj?.status === 'pending';
+                                        const isSent    = log.alertObj?.status === 'sent';
+                                        const isStatic  = log.alertObj === null;
                                         return (
                                             <tr key={i} className="border-b border-gray-50 hover:bg-gray-50 transition-colors">
                                                 <td className="px-4 py-4 text-gray-400 whitespace-nowrap font-mono">{log.ts}</td>
-                                                <td className="px-4 py-4 font-semibold" style={{ color: '#0d1b2a' }}>{log.hive}</td>
+                                                <td className="px-4 py-4">
+                                                    <p className="font-semibold text-xs" style={{ color: '#0d1b2a' }}>{log.hive}</p>
+                                                    {log.beekeeper && (
+                                                        <p className="text-[10px] text-gray-400 mt-0.5">{log.beekeeper}</p>
+                                                    )}
+                                                </td>
                                                 <td className="px-4 py-4">
                                                     <span className="text-[10px] font-bold px-2 py-1 rounded uppercase tracking-widest"
                                                         style={{ backgroundColor: sc.bg, color: sc.color }}>
@@ -264,17 +314,43 @@ export default function AlertsPage({
                                                 </td>
                                                 <td className="px-4 py-4 text-gray-600 leading-snug max-w-xs">{log.desc}</td>
                                                 <td className="px-4 py-4">
-                                                    {log.alertObj && log.alertObj.status === 'pending' ? (
+                                                    {isSent ? (
+                                                        <span className="text-[10px] font-bold px-2 py-1 rounded uppercase tracking-widest"
+                                                            style={{ backgroundColor: '#ecfdf5', color: '#065f46' }}>
+                                                            Sent
+                                                        </span>
+                                                    ) : isPending ? (
+                                                        <span className="text-[10px] font-bold px-2 py-1 rounded uppercase tracking-widest"
+                                                            style={{ backgroundColor: '#fff7ed', color: '#c2410c' }}>
+                                                            Pending
+                                                        </span>
+                                                    ) : (
+                                                        <span className="text-[10px] text-gray-400">—</span>
+                                                    )}
+                                                </td>
+                                                <td className="px-4 py-4">
+                                                    {isPending ? (
                                                         <button
                                                             onClick={() => handleNotify(log.alertObj!)}
-                                                            disabled={notifying === log.alertObj.id}
-                                                            className="text-[10px] font-bold uppercase tracking-widest hover:underline"
-                                                            style={{ color: '#f5a623' }}
+                                                            disabled={notifying === log.alertObj!.id}
+                                                            className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest px-2.5 py-1.5 rounded-lg transition-opacity hover:opacity-80 disabled:opacity-50"
+                                                            style={{ backgroundColor: '#f5a623', color: '#0d1b2a' }}
                                                         >
-                                                            {notifying === log.alertObj.id ? 'Sending…' : log.action}
+                                                            <BellRing className="w-3 h-3" />
+                                                            {notifying === log.alertObj!.id ? 'Sending…' : 'Notify'}
+                                                        </button>
+                                                    ) : isSent ? (
+                                                        <button
+                                                            onClick={() => handleNotify(log.alertObj!)}
+                                                            disabled={notifying === log.alertObj!.id}
+                                                            className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest px-2.5 py-1.5 rounded-lg border transition-colors hover:bg-gray-50 disabled:opacity-50"
+                                                            style={{ borderColor: '#d1d5db', color: '#6b7280' }}
+                                                        >
+                                                            <BellRing className="w-3 h-3" />
+                                                            {notifying === log.alertObj!.id ? 'Sending…' : 'Resend'}
                                                         </button>
                                                     ) : (
-                                                        <button className="text-[10px] font-bold uppercase tracking-widest text-gray-500 hover:text-gray-700">
+                                                        <button className="text-[10px] font-bold uppercase tracking-widest text-gray-400 hover:text-gray-600 transition-colors">
                                                             {log.action}
                                                         </button>
                                                     )}
