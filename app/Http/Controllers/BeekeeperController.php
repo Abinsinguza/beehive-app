@@ -16,11 +16,12 @@ class BeekeeperController extends Controller
     {
         $search = request('search', '');
 
-        $beekeepers = Beekeeper::when($search, function ($query, $search) {
-            $query->where('name', 'like', "%{$search}%")
-                  ->orWhere('email', 'like', "%{$search}%")
-                  ->orWhere('phone', 'like', "%{$search}%");
-        })->get();
+        $beekeepers = Beekeeper::withCount('beehives')
+            ->when($search, function ($query, $search) {
+                $query->where('name', 'like', "%{$search}%")
+                      ->orWhere('email', 'like', "%{$search}%")
+                      ->orWhere('phone', 'like', "%{$search}%");
+            })->get();
 
         return Inertia::render('beekeepers', [
             'beekeepers' => $beekeepers,
@@ -111,5 +112,15 @@ class BeekeeperController extends Controller
         $beekeeper->delete();
 
         return redirect()->back()->with('success', 'User deleted successfully');
+    }
+
+    /**
+     * Revoke (soft-deactivate) a beekeeper without deleting.
+     */
+    public function revoke(Beekeeper $beekeeper)
+    {
+        $beekeeper->update(['status' => 'revoked']);
+
+        return redirect()->back()->with('success', 'Beekeeper access revoked.');
     }
 }
