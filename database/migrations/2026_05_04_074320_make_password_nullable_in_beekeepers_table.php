@@ -12,17 +12,14 @@ return new class extends Migration
     public function up(): void
     {
         Schema::table('beekeepers', function (Blueprint $table) {
-            //
+            $table->string('password')->nullable()->change();
         });
     }
 
-    /**
-     * Reverse the migrations.
-     */
     public function down(): void
     {
         Schema::table('beekeepers', function (Blueprint $table) {
-            //
+            $table->string('password')->nullable(false)->change();
         });
     }
 };

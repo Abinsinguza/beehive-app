@@ -46,33 +46,20 @@ class BeehiveController extends Controller
      */
     public function store(StoreBeehiveRequest $request)
     {
-        $last = Beehive::orderBy('id', 'desc')->first();
-        if ($last) {
-            $number = (int) substr($last->id, 2); // remove BH
-            $number++;
-        } else {
-            $number = 1;
-        }
+        $request->validate([
+            'owner_id'      => ['required', 'string', 'exists:beekeepers,id'],
+            'hive_location' => ['required', 'string', 'max:255'],
+            'hive_type'     => ['required', 'string', 'max:255'],
+            'current_state' => ['required', 'in:active,inactive,migrated,lost'],
+        ]);
 
-        $newId = 'BH' . str_pad($number, 4, '0', STR_PAD_LEFT);
-
-        // Resolve owner by name — find existing or create a new beekeeper record
-        $ownerName = trim($request->owner_name ?? '');
-        $owner = Beekeeper::where('name', $ownerName)->first();
-
-        if (!$owner) {
-            $lastBk = Beekeeper::orderBy('id', 'desc')->first();
-            $bkNum  = $lastBk ? ((int) substr($lastBk->id, 2)) + 1 : 1;
-            $owner  = Beekeeper::create([
-                'id'    => 'BK' . str_pad($bkNum, 4, '0', STR_PAD_LEFT),
-                'name'  => $ownerName,
-                'phone' => 'N/A-' . $bkNum, // placeholder to satisfy unique constraint
-            ]);
-        }
+        $last   = Beehive::orderBy('id', 'desc')->first();
+        $number = $last ? ((int) substr($last->id, 2)) + 1 : 1;
+        $newId  = 'BH' . str_pad($number, 4, '0', STR_PAD_LEFT);
 
         Beehive::create([
             'id'                => $newId,
-            'owner_id'          => $owner->id,
+            'owner_id'          => $request->owner_id,
             'hive_location'     => $request->hive_location,
             'hive_type'         => $request->hive_type,
             'installation_date' => now()->toDateString(),

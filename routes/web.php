@@ -6,6 +6,7 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AdvisoryController;
 use App\Http\Controllers\AlertsController;
 use App\Http\Controllers\InferenceController;
+use App\Http\Controllers\SystemConfigController;
 
 Route::redirect('/', '/login')->name('home');
 
@@ -19,11 +20,13 @@ Route::middleware(['auth', 'verified'])->group(function () {
    // Route::inertia('beekeepers', 'beekeepers')->name('beekeepers');
     //Route::inertia('beehives', 'beehives')->name('beehives');
     Route::resource('beekeepers', BeekeeperController::class);
-    Route::patch('beekeepers/{beekeeper}/revoke', [BeekeeperController::class, 'revoke'])->name('beekeepers.revoke');
+    Route::patch('beekeepers/{beekeeper}/revoke',   [BeekeeperController::class, 'revoke'])->name('beekeepers.revoke');
+    Route::patch('beekeepers/{beekeeper}/restore',  [BeekeeperController::class, 'restore'])->name('beekeepers.restore');
     Route::resource('beehives', BeehiveController::class);
     Route::resource('advisories', AdvisoryController::class);
     Route::resource('inferences', InferenceController::class)->only(['index', 'store']);
-    Route::inertia('system-config', 'system-config')->name('system-config');
+    Route::get('system-config',  [SystemConfigController::class, 'index'])->name('system-config');
+    Route::post('system-config', [SystemConfigController::class, 'update'])->name('system-config.update');
     Route::inertia('notifications', 'notifications')->name('notifications');
     Route::inertia('help', 'help')->name('help');
 });

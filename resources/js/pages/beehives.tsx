@@ -40,7 +40,7 @@ export default function Beehives({ beehives = [], owners = [], search: initialSe
     const [editTarget, setEditTarget]   = useState<Beehive | null>(null);
 
     const { data, setData, post, reset, processing } = useForm({
-        owner_name: '',
+        owner_id: '',
         hive_location: '',
         hive_type: '',
         current_state: '',
@@ -323,9 +323,11 @@ export default function Beehives({ beehives = [], owners = [], search: initialSe
                         <form onSubmit={submit} className="p-6 flex flex-col gap-4">
                             <div>
                                 <label className="text-xs font-semibold uppercase tracking-widest text-gray-400 block mb-1.5">Owner</label>
-                                <input type="text" value={data.owner_name} onChange={(e) => setData('owner_name', e.target.value)}
-                                    placeholder="e.g. John Doe"
-                                    className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-700 outline-none placeholder-gray-300" required />
+                                <select value={data.owner_id} onChange={(e) => setData('owner_id', e.target.value)}
+                                    className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-700 outline-none bg-white" required>
+                                    <option value="" disabled>Select a beekeeper</option>
+                                    {owners.map((o) => <option key={o.id} value={o.id}>{o.name}</option>)}
+                                </select>
                             </div>
                             <div>
                                 <label className="text-xs font-semibold uppercase tracking-widest text-gray-400 block mb-1.5">Location</label>

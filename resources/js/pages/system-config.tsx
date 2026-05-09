@@ -1,18 +1,49 @@
-import { Head } from '@inertiajs/react';
-import { useState } from 'react';
-import { Brain, Key, AlertOctagon } from 'lucide-react';
+import { Head, useForm, usePage } from '@inertiajs/react';
+import { AlertOctagon, CheckCircle, Eye, EyeOff, Key, MessageSquare, Server, Smartphone, X } from 'lucide-react';
+import { useRef, useState } from 'react';
+
+type Settings = {
+    sms_server_url: string;
+    sms_username:   string;
+    sms_api_key:    string;
+    sms_sender_id:  string;
+    sms_template:   string;
+};
+
+const WILDCARDS = [
+    { tag: '#beeHive',      desc: 'Hive ID'           },
+    { tag: '#beekeeper',    desc: 'Beekeeper name'     },
+    { tag: '#alertMessage', desc: 'Advisory message'   },
+    { tag: '#hiveLocation', desc: 'Hive location'      },
+    { tag: '#alertType',    desc: 'Alert severity'     },
+    { tag: '#prediction',   desc: 'ML prediction'      },
+    { tag: '#timestamp',    desc: 'Date & time'        },
+    { tag: '#confidence',   desc: 'Confidence score'   },
+];
+
+const PREVIEW_MAP: Record<string, string> = {
+    '#beeHive':      'BH0042',
+    '#beekeeper':    'John Ssekandi',
+    '#alertMessage': 'Inspect hive immediately — colony collapse risk detected.',
+    '#hiveLocation': 'North Field, Sector B',
+    '#alertType':    'Critical',
+    '#prediction':   'Swarm',
+    '#timestamp':    '2026-04-23 14:32',
+    '#confidence':   '96.2%',
+};
 
 const alertRoutes = [
-    { label: 'Critical Swarm Events',  enabled: true,  orange: true },
-    { label: 'Temperature Anomalies',  enabled: true,  orange: true },
-    { label: 'Low Battery Warning',    enabled: false, orange: false, muted: true },
-    { label: 'Maintenance Reminders',  enabled: false, orange: false },
-    { label: 'Daily Digest Reports',   enabled: true,  orange: true },
+    { label: 'Critical Swarm Events',  enabled: true,  muted: false },
+    { label: 'Temperature Anomalies',  enabled: true,  muted: false },
+    { label: 'Low Battery Warning',    enabled: false, muted: true  },
+    { label: 'Maintenance Reminders',  enabled: false, muted: false },
+    { label: 'Daily Digest Reports',   enabled: true,  muted: false },
 ];
 
 function Toggle({ on, onChange }: { on: boolean; onChange: () => void }) {
     return (
         <button
+            type="button"
             onClick={onChange}
             className="relative inline-flex w-10 h-5 rounded-full transition-colors shrink-0"
             style={{ backgroundColor: on ? '#f5a623' : '#d1d5db' }}
@@ -25,149 +56,198 @@ function Toggle({ on, onChange }: { on: boolean; onChange: () => void }) {
     );
 }
 
-export default function SystemConfig() {
-    const [sensitivity, setSensitivity] = useState(75);
-    const [inferenceEngine, setInferenceEngine] = useState('NeuralCore-V4 (Stable)');
-    const [pollingRate, setPollingRate] = useState('Real-time (50ms)');
-    const [webhookUrl, setWebhookUrl] = useState('');
-    const [twoFactor, setTwoFactor] = useState(true);
+export default function SystemConfig({ settings }: { settings: Settings }) {
+    const { props } = usePage<{ flash?: { success?: string; error?: string } }>();
+    const flash = props.flash;
+
+    // ── SMS form (persisted to DB) ───────────────────────────────────────────
+    const textareaRef = useRef<HTMLTextAreaElement>(null);
+    const { data, setData, post, processing, errors } = useForm({
+        sms_server_url: settings?.sms_server_url ?? '',
+        sms_username:   settings?.sms_username   ?? '',
+        sms_api_key:    settings?.sms_api_key    ?? '',
+        sms_sender_id:  settings?.sms_sender_id  ?? '',
+        sms_template:   settings?.sms_template   ?? '',
+    });
+
+    const [showApiKey, setShowApiKey] = useState(false);
+    const [flashDismissed, setFlashDismissed] = useState(false);
+
+    const insertWildcard = (tag: string) => {
+        const el = textareaRef.current;
+        if (!el) return;
+        const start = el.selectionStart ?? data.sms_template.length;
+        const end   = el.selectionEnd   ?? data.sms_template.length;
+        const next  = data.sms_template.slice(0, start) + tag + data.sms_template.slice(end);
+        setData('sms_template', next);
+        requestAnimationFrame(() => {
+            el.focus();
+            el.setSelectionRange(start + tag.length, start + tag.length);
+        });
+    };
+
+    const previewText = Object.entries(PREVIEW_MAP).reduce(
+        (txt, [key, val]) => txt.replaceAll(key, val),
+        data.sms_template,
+    );
+
+    const submit = (e: React.FormEvent) => {
+        e.preventDefault();
+        setFlashDismissed(false);
+        post('/system-config');
+    };
+
+    // ── Local-only UI state ──────────────────────────────────────────────────
     const [routes, setRoutes] = useState(alertRoutes.map((r) => ({ ...r })));
 
-    const toggleRoute = (i: number) => {
+    const toggleRoute = (i: number) =>
         setRoutes((prev) => prev.map((r, idx) => idx === i ? { ...r, enabled: !r.enabled } : r));
-    };
+
+    const showFlash = !flashDismissed && (flash?.success || flash?.error);
 
     return (
         <>
             <Head title="System Settings" />
-            <div className="min-h-screen p-6" style={{ backgroundColor: '#f8f9fa' }}>
+
+            <form onSubmit={submit} className="min-h-screen p-6 flex flex-col gap-5" style={{ backgroundColor: '#f8f9fa' }}>
+
+                {/* Flash banner */}
+                {showFlash && (
+                    <div
+                        className="flex items-center justify-between gap-3 px-4 py-3 rounded-xl text-sm font-medium"
+                        style={{
+                            backgroundColor: flash?.success ? '#ecfdf5' : '#fef2f2',
+                            color:           flash?.success ? '#065f46'  : '#991b1b',
+                            border:          flash?.success ? '1px solid #a7f3d0' : '1px solid #fecaca',
+                        }}
+                    >
+                        <div className="flex items-center gap-2">
+                            <CheckCircle className="w-4 h-4 shrink-0" />
+                            <span>{flash?.success ?? flash?.error}</span>
+                        </div>
+                        <button type="button" onClick={() => setFlashDismissed(true)} className="p-0.5 rounded hover:opacity-70">
+                            <X className="w-4 h-4" />
+                        </button>
+                    </div>
+                )}
 
                 {/* Page heading */}
-                <div className="mb-6">
+                <div>
                     <h1 className="text-2xl font-bold" style={{ color: '#0d1b2a' }}>System Settings</h1>
                     <p className="text-sm text-gray-500 mt-1">Configure swarm detection algorithms and global integration keys.</p>
                 </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
 
-                    {/* Left: main panels */}
+                    {/* ── Left column ─────────────────────────────────────────────────── */}
                     <div className="lg:col-span-2 flex flex-col gap-5">
 
-                        {/* AI Model Controls */}
+                        {/* SMS / Notifications — wired to DB ──────────────────────────── */}
                         <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
                             <div className="flex items-center gap-2 mb-1">
-                                <Brain className="w-5 h-5 text-gray-500" />
-                                <h2 className="font-semibold text-base" style={{ color: '#0d1b2a' }}>AI Model Controls</h2>
+                                <Smartphone className="w-5 h-5 text-gray-500" />
+                                <h2 className="font-semibold text-base" style={{ color: '#0d1b2a' }}>SMS Notifications</h2>
                             </div>
                             <div className="h-px mb-5" style={{ backgroundColor: '#f5a623' }} />
 
-                            {/* Acoustic Sensitivity */}
-                            <div className="mb-5">
-                                <label className="text-[11px] font-semibold uppercase tracking-widest text-gray-400 block mb-2">
-                                    Acoustic Sensitivity
-                                </label>
-                                <div className="flex items-center gap-3">
-                                    <div className="relative flex-1">
-                                        <input
-                                            type="range" min={0} max={100} value={sensitivity}
-                                            onChange={(e) => setSensitivity(Number(e.target.value))}
-                                            className="w-full h-1.5 rounded-full appearance-none cursor-pointer"
-                                            style={{
-                                                background: `linear-gradient(to right, #f5a623 ${sensitivity}%, #e5e7eb ${sensitivity}%)`,
-                                            }}
-                                        />
-                                    </div>
-                                    <span className="text-sm font-semibold w-10 text-right" style={{ color: '#0d1b2a' }}>{sensitivity}%</span>
-                                </div>
-                                <p className="text-[11px] text-gray-400 mt-1 italic">
-                                    Adjusts threshold for 'piping' and 'quacking' sound detection in queen cells.
-                                </p>
-                            </div>
-
-                            {/* Inference Engine + Polling Rate */}
-                            <div className="grid grid-cols-2 gap-4">
-                                <div>
-                                    <label className="text-[11px] font-semibold uppercase tracking-widest text-gray-400 block mb-1.5">
-                                        Inference Engine
-                                    </label>
-                                    <select
-                                        value={inferenceEngine}
-                                        onChange={(e) => setInferenceEngine(e.target.value)}
-                                        className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-700 outline-none bg-white"
-                                    >
-                                        <option>NeuralCore-V4 (Stable)</option>
-                                        <option>NeuralCore-V5 (Beta)</option>
-                                        <option>LightBee-V2 (Fast)</option>
-                                    </select>
-                                </div>
-                                <div>
-                                    <label className="text-[11px] font-semibold uppercase tracking-widest text-gray-400 block mb-1.5">
-                                        Polling Rate
-                                    </label>
-                                    <select
-                                        value={pollingRate}
-                                        onChange={(e) => setPollingRate(e.target.value)}
-                                        className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-700 outline-none bg-white"
-                                    >
-                                        <option>Real-time (50ms)</option>
-                                        <option>Fast (100ms)</option>
-                                        <option>Standard (500ms)</option>
-                                        <option>Low Power (1s)</option>
-                                    </select>
-                                </div>
-                            </div>
-                        </div>
-
-                        {/* API & Security */}
-                        <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
-                            <div className="flex items-center gap-2 mb-1">
-                                <Key className="w-5 h-5 text-gray-500" />
-                                <h2 className="font-semibold text-base" style={{ color: '#0d1b2a' }}>API &amp; Security</h2>
-                            </div>
-                            <div className="h-px mb-5" style={{ backgroundColor: '#f5a623' }} />
-
-                            {/* Master API Key */}
+                            {/* Server URL */}
                             <div className="mb-4">
                                 <label className="text-[11px] font-semibold uppercase tracking-widest text-gray-400 block mb-1.5">
-                                    Master API Key
-                                </label>
-                                <div className="flex items-center gap-2">
-                                    <input
-                                        type="password"
-                                        readOnly
-                                        value="your-master-api-key-here"
-                                        className="flex-1 border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-500 outline-none bg-white"
-                                    />
-                                    <button className="px-4 py-2.5 rounded-lg text-sm font-bold text-white hover:opacity-90 transition-opacity" style={{ backgroundColor: '#0d1b2a' }}>
-                                        Copy
-                                    </button>
-                                    <button className="px-4 py-2.5 rounded-lg text-sm font-bold border border-gray-300 text-gray-700 hover:bg-gray-50 transition-colors">
-                                        Rotate
-                                    </button>
-                                </div>
-                            </div>
-
-                            {/* Webhook Endpoint */}
-                            <div className="mb-4">
-                                <label className="text-[11px] font-semibold uppercase tracking-widest text-gray-400 block mb-1.5">
-                                    Webhook Endpoint
+                                    <Server className="inline w-3 h-3 mr-1" />SMS Server URL
                                 </label>
                                 <input
                                     type="url"
-                                    value={webhookUrl}
-                                    onChange={(e) => setWebhookUrl(e.target.value)}
-                                    placeholder="https://your-server.com/api/hive-events"
-                                    className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-500 outline-none bg-white placeholder-gray-300"
+                                    value={data.sms_server_url}
+                                    onChange={(e) => setData('sms_server_url', e.target.value)}
+                                    placeholder="https://comms-test.pahappa.net/api/v1/json/"
+                                    className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-700 outline-none placeholder-gray-300"
                                 />
+                                {errors.sms_server_url && <p className="text-xs text-red-500 mt-1">{errors.sms_server_url}</p>}
                             </div>
 
-                            {/* Two-Factor Authentication */}
-                            <div className="flex items-center justify-between p-4 rounded-lg border border-gray-200">
+                            {/* Username + Sender ID */}
+                            <div className="grid grid-cols-2 gap-4 mb-4">
                                 <div>
-                                    <p className="text-sm font-semibold" style={{ color: '#0d1b2a' }}>Two-Factor Authentication</p>
-                                    <p className="text-xs text-gray-400 mt-0.5">Protect administrative access to swarm data.</p>
+                                    <label className="text-[11px] font-semibold uppercase tracking-widest text-gray-400 block mb-1.5">Username</label>
+                                    <input
+                                        type="text"
+                                        value={data.sms_username}
+                                        onChange={(e) => setData('sms_username', e.target.value)}
+                                        placeholder="your-sms-username"
+                                        className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-700 outline-none placeholder-gray-300"
+                                    />
+                                    {errors.sms_username && <p className="text-xs text-red-500 mt-1">{errors.sms_username}</p>}
                                 </div>
-                                <Toggle on={twoFactor} onChange={() => setTwoFactor(!twoFactor)} />
+                                <div>
+                                    <label className="text-[11px] font-semibold uppercase tracking-widest text-gray-400 block mb-1.5">Sender ID</label>
+                                    <input
+                                        type="text"
+                                        value={data.sms_sender_id}
+                                        onChange={(e) => setData('sms_sender_id', e.target.value)}
+                                        placeholder="BeeHive"
+                                        className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-700 outline-none placeholder-gray-300"
+                                    />
+                                    {errors.sms_sender_id && <p className="text-xs text-red-500 mt-1">{errors.sms_sender_id}</p>}
+                                </div>
+                            </div>
+
+                            {/* API Key */}
+                            <div className="mb-5">
+                                <label className="text-[11px] font-semibold uppercase tracking-widest text-gray-400 block mb-1.5">
+                                    <Key className="inline w-3 h-3 mr-1" />API Key
+                                </label>
+                                <div className="flex items-center gap-2">
+                                    <input
+                                        type={showApiKey ? 'text' : 'password'}
+                                        value={data.sms_api_key}
+                                        onChange={(e) => setData('sms_api_key', e.target.value)}
+                                        placeholder="••••••••••••••••"
+                                        className="flex-1 border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-700 outline-none placeholder-gray-300"
+                                    />
+                                    <button type="button" onClick={() => setShowApiKey((v) => !v)}
+                                        className="p-2.5 rounded-lg border border-gray-200 text-gray-400 hover:text-gray-600 hover:bg-gray-50 transition-colors">
+                                        {showApiKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                                    </button>
+                                </div>
+                                {errors.sms_api_key && <p className="text-xs text-red-500 mt-1">{errors.sms_api_key}</p>}
+                            </div>
+
+                            {/* SMS Template */}
+                            <div>
+                                <label className="text-[11px] font-semibold uppercase tracking-widest text-gray-400 block mb-1.5">
+                                    <MessageSquare className="inline w-3 h-3 mr-1" />SMS Template
+                                </label>
+                                <textarea
+                                    ref={textareaRef}
+                                    value={data.sms_template}
+                                    onChange={(e) => setData('sms_template', e.target.value)}
+                                    rows={5}
+                                    className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-700 outline-none resize-none font-mono"
+                                />
+                                {errors.sms_template && <p className="text-xs text-red-500 mt-1">{errors.sms_template}</p>}
+
+                                {/* Wildcard chips */}
+                                <div className="mt-2 flex flex-wrap gap-1.5">
+                                    {WILDCARDS.map(({ tag, desc }) => (
+                                        <button
+                                            key={tag}
+                                            type="button"
+                                            title={desc}
+                                            onClick={() => insertWildcard(tag)}
+                                            className="text-[10px] font-mono px-2 py-1 rounded border border-gray-200 text-gray-500 hover:border-orange-300 hover:text-orange-600 hover:bg-orange-50 transition-colors"
+                                        >
+                                            {tag}
+                                        </button>
+                                    ))}
+                                </div>
+
+                                {/* Preview */}
+                                {data.sms_template && (
+                                    <div className="mt-3 rounded-lg p-3 border border-dashed border-gray-200" style={{ backgroundColor: '#f8f9fa' }}>
+                                        <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1">Preview</p>
+                                        <p className="text-xs text-gray-600 whitespace-pre-line">{previewText}</p>
+                                    </div>
+                                )}
                             </div>
                         </div>
 
@@ -182,14 +262,14 @@ export default function SystemConfig() {
                                     <p className="text-sm font-semibold" style={{ color: '#0d1b2a' }}>Reset Cluster Configuration</p>
                                     <p className="text-xs text-gray-400 mt-0.5">This will revert all monitoring configurations to factory defaults.</p>
                                 </div>
-                                <button className="shrink-0 px-5 py-2.5 rounded-lg text-sm font-bold border-2 border-red-500 text-red-500 hover:bg-red-50 transition-colors">
+                                <button type="button" className="shrink-0 px-5 py-2.5 rounded-lg text-sm font-bold border-2 border-red-500 text-red-500 hover:bg-red-50 transition-colors">
                                     Reset All
                                 </button>
                             </div>
                         </div>
                     </div>
 
-                    {/* Right: Alert Routing + System Health + Actions */}
+                    {/* ── Right column ────────────────────────────────────────────────── */}
                     <div className="flex flex-col gap-4">
 
                         {/* Alert Routing */}
@@ -237,22 +317,26 @@ export default function SystemConfig() {
                             </span>
                         </div>
 
-                        {/* Save + Export */}
+                        {/* Save Changes — submits SMS settings */}
                         <button
-                            className="w-full py-3 rounded-xl text-sm font-bold hover:opacity-90 transition-opacity"
+                            type="submit"
+                            disabled={processing}
+                            className="w-full py-3 rounded-xl text-sm font-bold hover:opacity-90 transition-opacity disabled:opacity-60"
                             style={{ backgroundColor: '#f5a623', color: '#0d1b2a' }}
                         >
-                            Save Changes
+                            {processing ? 'Saving…' : 'Save Changes'}
                         </button>
-                        <button className="w-full py-3 rounded-xl text-sm font-bold border border-gray-300 text-gray-700 hover:bg-gray-50 transition-colors">
+
+                        <button type="button" className="w-full py-3 rounded-xl text-sm font-bold border border-gray-300 text-gray-700 hover:bg-gray-50 transition-colors">
                             Export Configuration
                         </button>
+
                         <p className="text-center text-[10px] text-gray-400 uppercase tracking-widest">
                             System Version: 2.4.0-Stable
                         </p>
                     </div>
                 </div>
-            </div>
+            </form>
         </>
     );
 }

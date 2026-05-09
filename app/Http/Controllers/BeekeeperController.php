@@ -95,7 +95,9 @@ class BeekeeperController extends Controller
             'password' => 'nullable|min:4',
         ]);
 
-        if (empty($data['password'])) {
+        if (!empty($data['password'])) {
+            $data['password'] = bcrypt($data['password']);
+        } else {
             unset($data['password']);
         }
 
@@ -122,5 +124,15 @@ class BeekeeperController extends Controller
         $beekeeper->update(['status' => 'revoked']);
 
         return redirect()->back()->with('success', 'Beekeeper access revoked.');
+    }
+
+    /**
+     * Restore a previously revoked beekeeper.
+     */
+    public function restore(Beekeeper $beekeeper)
+    {
+        $beekeeper->update(['status' => 'active']);
+
+        return redirect()->back()->with('success', 'Beekeeper access restored.');
     }
 }
