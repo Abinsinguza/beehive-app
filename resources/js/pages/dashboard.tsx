@@ -7,7 +7,7 @@ import {
     Users,
     X,
 } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { dashboard } from '@/routes';
 
 type DashboardProps = {
@@ -250,6 +250,38 @@ export default function Dashboard({ stats, recent_beehives = [] }: DashboardProp
 
     // ── Risk color helper ────────────────────────────────────────────────────
     const riskColor = (pct: number) => pct > 75 ? '#ef4444' : pct >= 50 ? '#f5a623' : '#22c55e';
+
+    // ── Listen for search-triggered actions (from app-header) ────────────────
+    useEffect(() => {
+        const handler = (e: Event) => {
+            const { action, target } = (e as CustomEvent).detail;
+            if (action === 'scroll') {
+                const el = document.getElementById(target);
+                if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            } else if (action === 'modal') {
+                if (target === 'export')  setShowExportModal(true);
+                if (target === 'locator') setShowLocatorModal(true);
+            }
+        };
+        window.addEventListener('dashboard-search-action', handler);
+        return () => window.removeEventListener('dashboard-search-action', handler);
+    }, []);
+
+    // ── Handle ?open= query param (from search on other pages) ──────────────
+    useEffect(() => {
+        const params = new URLSearchParams(window.location.search);
+        const open = params.get('open');
+        if (open === 'export')  { setShowExportModal(true);  }
+        if (open === 'locator') { setShowLocatorModal(true); }
+        // Handle hash scroll
+        const hash = window.location.hash.replace('#', '');
+        if (hash) {
+            setTimeout(() => {
+                const el = document.getElementById(hash);
+                if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            }, 300);
+        }
+    }, []);
 
     // ── Alert card state ─────────────────────────────────────────────────────
     type AlertCard = typeof criticalAlerts[number];
@@ -846,7 +878,7 @@ export default function Dashboard({ stats, recent_beehives = [] }: DashboardProp
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 flex-1">
 
                         {/* Frequency chart panel */}
-                        <div className="lg:col-span-2 bg-white rounded-xl border border-gray-200 shadow-sm flex flex-col overflow-hidden">
+                        <div id="section-chart" className="lg:col-span-2 bg-white rounded-xl border border-gray-200 shadow-sm flex flex-col overflow-hidden">
                             <div className="flex items-center gap-3 px-5 py-4 border-b border-gray-100">
                                 <span className="font-semibold text-sm" style={{ color: '#0d1b2a' }}>
                                     Acoustic Swarm Frequency Analysis
@@ -894,7 +926,7 @@ export default function Dashboard({ stats, recent_beehives = [] }: DashboardProp
                         </div>
 
                         {/* Critical Alerts panel */}
-                        <div className="bg-white rounded-xl border border-gray-200 shadow-sm flex flex-col overflow-hidden">
+                        <div id="section-alerts" className="bg-white rounded-xl border border-gray-200 shadow-sm flex flex-col overflow-hidden">
                             <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
                                 <span className="font-semibold text-sm" style={{ color: '#0d1b2a' }}>Critical Alerts</span>
                                 <span className="text-[10px] font-bold px-2 py-0.5 rounded text-white" style={{ backgroundColor: '#f5a623' }}>
@@ -1037,7 +1069,7 @@ export default function Dashboard({ stats, recent_beehives = [] }: DashboardProp
                     </div>
 
                     {/* ── Swarm Risk + Seasonal Forecast row ── */}
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                    <div id="section-risk" className="grid grid-cols-1 lg:grid-cols-3 gap-4">
 
                         {/* Swarm Risk Factor */}
                         <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5 flex items-start gap-4">
@@ -1065,7 +1097,7 @@ export default function Dashboard({ stats, recent_beehives = [] }: DashboardProp
                         </div>
 
                         {/* Seasonal Forecast banner */}
-                        <div className="lg:col-span-2 rounded-xl p-6 flex flex-col justify-between gap-4 relative overflow-hidden" style={{ backgroundColor: '#0d1b2a' }}>
+                        <div id="section-forecast" className="lg:col-span-2 rounded-xl p-6 flex flex-col justify-between gap-4 relative overflow-hidden" style={{ backgroundColor: '#0d1b2a' }}>
                             {/* Decorative checkmark watermark */}
                             <div className="absolute right-6 top-1/2 -translate-y-1/2 opacity-10">
                                 <svg xmlns="http://www.w3.org/2000/svg" className="w-32 h-32 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1}>
