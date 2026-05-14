@@ -358,7 +358,7 @@ export default function Beehives({ beehives = [], owners = [], search: initialSe
                                 <button type="submit" disabled={processing}
                                     className="px-4 py-2 rounded-lg text-sm font-semibold hover:opacity-90 disabled:opacity-60"
                                     style={{ backgroundColor: '#f5a623', color: '#0d1b2a' }}>
-                                    {processing ? 'Saving…' : 'Save Hive'}
+                                    {processing ? 'Saving…' : 'Save'}
                                 </button>
                             </div>
                         </form>

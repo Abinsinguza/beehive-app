@@ -49,7 +49,7 @@ function getStatus(bk: Beekeeper): string {
 // â”€â”€ Add Beekeeper form â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function AddBeekeeperModal({ onClose }: { onClose: () => void }) {
     const { data, setData, post, processing, reset, errors } = useForm({
-        name: '', phone: '', email: '', address: '',
+        name: '', phone: '', email: '', address: '', password: '',
     });
 
     const submit = (e: React.FormEvent) => {
@@ -61,10 +61,11 @@ function AddBeekeeperModal({ onClose }: { onClose: () => void }) {
         <ModalShell title="Add New Beekeeper" onClose={onClose}>
             <form onSubmit={submit} className="p-6 flex flex-col gap-4">
                 {[
-                    { label: 'Full Name', key: 'name',    type: 'text',  placeholder: 'e.g. John Doe',    required: true  },
-                    { label: 'Phone',     key: 'phone',   type: 'text',  placeholder: '+1 555 000 0000',  required: true  },
-                    { label: 'Email',     key: 'email',   type: 'email', placeholder: 'john@example.com', required: false },
-                    { label: 'Address',   key: 'address', type: 'text',  placeholder: '123 Honey Lane',   required: false },
+                    { label: 'Full Name', key: 'name',     type: 'text',     placeholder: 'e.g. John Doe',         required: true  },
+                    { label: 'Phone',     key: 'phone',    type: 'text',     placeholder: '+256 700 000 000',       required: true  },
+                    { label: 'Email',     key: 'email',    type: 'email',    placeholder: 'john@example.com',       required: false },
+                    { label: 'Password',  key: 'password', type: 'password', placeholder: 'Auto-generated password', required: false },
+                    { label: 'Address',   key: 'address',  type: 'text',     placeholder: '123 Honey Lane',         required: false },
                 ].map((f) => (
                     <div key={f.key}>
                         <label className="text-xs font-semibold uppercase tracking-widest text-gray-400 block mb-1.5">{f.label}</label>
@@ -81,7 +82,7 @@ function AddBeekeeperModal({ onClose }: { onClose: () => void }) {
                         )}
                     </div>
                 ))}
-                <ModalActions onCancel={onClose} processing={processing} label="Add Beekeeper" />
+                <ModalActions onCancel={onClose} processing={processing} label="Save" />
             </form>
         </ModalShell>
     );

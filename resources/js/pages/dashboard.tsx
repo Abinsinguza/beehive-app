@@ -4,6 +4,7 @@ import {
     AlertTriangle,
     BarChart2,
     CheckCircle2,
+    Mic,
     Users,
     X,
 } from 'lucide-react';
@@ -42,6 +43,33 @@ const chartPaths = {
     },
 } as const;
 
+// X-axis tick labels per time range (evenly spaced across chart width x=50..590)
+const xLabels: Record<string, { label: string; x: number }[]> = {
+    '1H':  [
+        { label: '09:00', x: 50  }, { label: '09:10', x: 140 }, { label: '09:20', x: 230 },
+        { label: '09:30', x: 320 }, { label: '09:40', x: 410 }, { label: '09:50', x: 500 }, { label: '10:00', x: 590 },
+    ],
+    '24H': [
+        { label: '00:00', x: 50  }, { label: '04:00', x: 140 }, { label: '08:00', x: 230 },
+        { label: '12:00', x: 320 }, { label: '16:00', x: 410 }, { label: '20:00', x: 500 }, { label: '24:00', x: 590 },
+    ],
+    '7D':  [
+        { label: 'Mon', x: 50  }, { label: 'Tue', x: 140 }, { label: 'Wed', x: 230 },
+        { label: 'Thu', x: 320 }, { label: 'Fri', x: 410 }, { label: 'Sat', x: 500 }, { label: 'Sun', x: 590 },
+    ],
+};
+
+// Y-axis: Hz values mapped to SVG y coordinates (viewBox height 340, plot area y=20..310)
+// 0Hz=310, 1000Hz=20 → y = 310 - (hz/1000)*290
+const yAxis = [
+    { label: '800Hz', y: 78  },
+    { label: '600Hz', y: 136 },
+    { label: '420Hz', y: 188 }, // threshold
+    { label: '400Hz', y: 194 },
+    { label: '200Hz', y: 252 },
+    { label: '0Hz',   y: 310 },
+];
+
 type TimeRange = '1H' | '24H' | '7D';
 
 // ── Mock hive pins for Hive Locator ─────────────────────────────────────────
@@ -56,10 +84,10 @@ const hivePins = [
 
 // ── Forecast hive data ───────────────────────────────────────────────────────
 const forecastHives = [
-    { id: 'HIVE-A12', risk: 89, temp: '36.2°C', humidity: '78%', pressure: 'Rising' },
-    { id: 'HIVE-C08', risk: 72, temp: '35.8°C', humidity: '85%', pressure: 'Stable' },
-    { id: 'HIVE-B11', risk: 61, temp: '34.1°C', humidity: '71%', pressure: 'Falling' },
-    { id: 'HIVE-A03', risk: 45, temp: '33.9°C', humidity: '68%', pressure: 'Stable' },
+    { id: 'HIVE-A12', risk: 89, temp: '36.2°C', humidity: '78%', pressure: 'Rising',  classification: 'Pre-Swarm',        classColor: '#f59e0b' },
+    { id: 'HIVE-C08', risk: 72, temp: '35.8°C', humidity: '85%', pressure: 'Stable',  classification: 'Pest/Disturbance', classColor: '#f97316' },
+    { id: 'HIVE-B11', risk: 61, temp: '34.1°C', humidity: '71%', pressure: 'Falling', classification: 'Pre-Swarm',        classColor: '#f59e0b' },
+    { id: 'HIVE-A03', risk: 45, temp: '33.9°C', humidity: '68%', pressure: 'Stable',  classification: 'Normal',           classColor: '#22c55e' },
 ];
 
 // ── Checklist items ──────────────────────────────────────────────────────────
@@ -72,35 +100,131 @@ const initialChecklist = [
     { id: 6, text: 'Brief field team on swarm protocol', done: false },
 ];
 
+// ── Hive status distribution data ───────────────────────────────────────────
+const hiveStatusData = [
+    { state: 'Normal',           count: 1198, color: '#22c55e', desc: 'Hive activity within expected frequency range' },
+    { state: 'Pre-Swarm',        count: 47,   color: '#f59e0b', desc: 'Acoustic signature approaching swarm threshold (420Hz)' },
+    { state: 'Swarm',            count: 12,   color: '#ef4444', desc: 'Swarming behavior detected — immediate action required' },
+    { state: 'Abscondence',      count: 8,    color: '#991b1b', desc: 'Colony has permanently left the hive' },
+    { state: 'Pest/Disturbance', count: 14,   color: '#f97316', desc: 'External disturbance or pest activity detected' },
+    { state: 'Uncertain',        count: 5,    color: '#9ca3af', desc: 'Low confidence classification — flagged for expert review' },
+];
+const HIVE_TOTAL = hiveStatusData.reduce((s, d) => s + d.count, 0); // 1284
+
 const criticalAlerts = [
     {
         id: 1,
-        color: '#f5a623',
+        color: '#f59e0b',
         title: 'Hive-A12: Pre-Swarm Detected',
         time: '2m ago',
         desc: 'Acoustic signature exceeded 420Hz threshold. Temperature spike of 2.4°C.',
         actions: ['DEPLOY TEAM', 'DISMISS'],
         hive: 'A12',
+        state: 'Pre-Swarm',
+        stateColor: '#f59e0b',
     },
     {
         id: 2,
-        color: '#94a3b8',
-        title: 'Hive Node 04: Offline',
+        color: '#9ca3af',
+        title: 'Hive Node 04: Uncertain',
         time: '14m ago',
-        desc: 'Low battery detected before connection timeout at Sector 4-B.',
+        desc: 'Low confidence ML classification. Audio quality insufficient for reliable detection.',
         actions: [],
         hive: null,
+        state: 'Uncertain',
+        stateColor: '#9ca3af',
     },
     {
         id: 3,
-        color: '#f5a623',
-        title: 'Hive-C08: Humidity Alert',
+        color: '#f97316',
+        title: 'Hive-C08: Pest/Disturbance',
         time: '45m ago',
-        desc: 'Relative humidity above 85%. Possible moisture accumulation in brood chamber.',
+        desc: 'External disturbance pattern detected. Possible pest activity near brood chamber.',
         actions: ['CHECK HIVE'],
         hive: 'C08',
+        state: 'Pest/Disturbance',
+        stateColor: '#f97316',
     },
 ];
+
+// ── Pure-SVG Donut Chart component ──────────────────────────────────────────
+type DonutSlice = { state: string; count: number; color: string; desc: string };
+
+function DonutChart({ data, total }: { data: DonutSlice[]; total: number }) {
+    const [tooltip, setTooltip] = useState<{ slice: DonutSlice; x: number; y: number } | null>(null);
+
+    const cx = 90, cy = 90, R = 72, r = 44;
+    let cumAngle = -Math.PI / 2; // start at top
+
+    const slices = data.map((d) => {
+        const angle = (d.count / total) * 2 * Math.PI;
+        const start = cumAngle;
+        cumAngle += angle;
+        const end = cumAngle;
+
+        const x1 = cx + R * Math.cos(start), y1 = cy + R * Math.sin(start);
+        const x2 = cx + R * Math.cos(end),   y2 = cy + R * Math.sin(end);
+        const ix1 = cx + r * Math.cos(start), iy1 = cy + r * Math.sin(start);
+        const ix2 = cx + r * Math.cos(end),   iy2 = cy + r * Math.sin(end);
+        const large = angle > Math.PI ? 1 : 0;
+
+        const path = [
+            `M ${x1} ${y1}`,
+            `A ${R} ${R} 0 ${large} 1 ${x2} ${y2}`,
+            `L ${ix2} ${iy2}`,
+            `A ${r} ${r} 0 ${large} 0 ${ix1} ${iy1}`,
+            'Z',
+        ].join(' ');
+
+        const midAngle = start + angle / 2;
+        return { ...d, path, midAngle, pct: ((d.count / total) * 100).toFixed(1) };
+    });
+
+    return (
+        <div className="relative shrink-0">
+            <svg
+                width="180" height="180"
+                onMouseLeave={() => setTooltip(null)}
+            >
+                {slices.map((s) => (
+                    <Link key={s.state} href="/beehives">
+                        <path
+                            d={s.path}
+                            fill={s.color}
+                            opacity={tooltip?.slice.state === s.state ? 1 : 0.88}
+                            className="cursor-pointer transition-opacity"
+                            onMouseEnter={(e) => {
+                                const rect = (e.currentTarget.closest('svg') as SVGSVGElement).getBoundingClientRect();
+                                setTooltip({ slice: s, x: e.clientX - rect.left, y: e.clientY - rect.top });
+                            }}
+                        />
+                    </Link>
+                ))}
+                {/* Center label */}
+                <text x={cx} y={cy - 6}  textAnchor="middle" fontSize="18" fontWeight="700" fill="#0d1b2a">{total.toLocaleString()}</text>
+                <text x={cx} y={cy + 10} textAnchor="middle" fontSize="9"  fill="#94a3b8">Total Hives</text>
+            </svg>
+
+            {/* Tooltip */}
+            {tooltip && (
+                <div
+                    className="absolute z-20 pointer-events-none rounded-xl shadow-xl border border-gray-100 bg-white p-3 w-52"
+                    style={{ left: tooltip.x + 8, top: tooltip.y - 20 }}
+                >
+                    <div className="flex items-center gap-2 mb-1">
+                        <span className="w-2.5 h-2.5 rounded-full shrink-0" style={{ backgroundColor: tooltip.slice.color }} />
+                        <span className="text-xs font-bold" style={{ color: '#0d1b2a' }}>{tooltip.slice.state}</span>
+                    </div>
+                    <p className="text-xs font-semibold" style={{ color: '#0d1b2a' }}>
+                        {tooltip.slice.count.toLocaleString()} hives
+                        <span className="text-gray-400 font-normal ml-1">({tooltip.slice.pct}%)</span>
+                    </p>
+                    <p className="text-[10px] text-gray-400 mt-1 leading-snug">{tooltip.slice.desc}</p>
+                </div>
+            )}
+        </div>
+    );
+}
 
 export default function Dashboard({ stats, recent_beehives = [] }: DashboardProps) {
     const { auth } = usePage().props;
@@ -560,9 +684,10 @@ export default function Dashboard({ stats, recent_beehives = [] }: DashboardProp
                                         <tr className="bg-gray-50">
                                             <th className="text-left px-4 py-2.5 font-semibold text-gray-400 uppercase tracking-widest text-[10px]">Hive</th>
                                             <th className="text-left px-4 py-2.5 font-semibold text-gray-400 uppercase tracking-widest text-[10px]">Risk</th>
+                                            <th className="text-left px-4 py-2.5 font-semibold text-gray-400 uppercase tracking-widest text-[10px]">Classification</th>
                                             <th className="text-left px-4 py-2.5 font-semibold text-gray-400 uppercase tracking-widest text-[10px]">Temp</th>
                                             <th className="text-left px-4 py-2.5 font-semibold text-gray-400 uppercase tracking-widest text-[10px]">Humidity</th>
-                                            <th className="text-left px-4 py-2.5 font-semibold text-gray-400 uppercase tracking-widest text-[10px]">Pressure</th>
+                                            <th className="text-left px-4 py-2.5 font-semibold text-gray-400 uppercase tracking-widest text-[10px]">Atm. Pressure</th>
                                         </tr>
                                     </thead>
                                     <tbody className="divide-y divide-gray-100">
@@ -571,6 +696,14 @@ export default function Dashboard({ stats, recent_beehives = [] }: DashboardProp
                                                 <td className="px-4 py-3 font-semibold" style={{ color: '#0d1b2a' }}>{h.id}</td>
                                                 <td className="px-4 py-3">
                                                     <span className="font-bold" style={{ color: riskColor(h.risk) }}>{h.risk}%</span>
+                                                </td>
+                                                <td className="px-4 py-3">
+                                                    <span
+                                                        className="text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-widest"
+                                                        style={{ backgroundColor: `${h.classColor}20`, color: h.classColor }}
+                                                    >
+                                                        {h.classification}
+                                                    </span>
                                                 </td>
                                                 <td className="px-4 py-3 text-gray-500">{h.temp}</td>
                                                 <td className="px-4 py-3 text-gray-500">{h.humidity}</td>
@@ -806,7 +939,10 @@ export default function Dashboard({ stats, recent_beehives = [] }: DashboardProp
                     <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
 
                         {/* Total Active Hives */}
-                        <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm flex flex-col gap-1">
+                        <Link
+                            href="/beehives"
+                            className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm flex flex-col gap-1 cursor-pointer hover:shadow-md hover:border-gray-300 transition-all"
+                        >
                             <div className="flex items-start justify-between">
                                 <p className="text-[11px] font-semibold uppercase tracking-widest text-gray-400 leading-tight">
                                     Total Active<br />Hives
@@ -820,10 +956,13 @@ export default function Dashboard({ stats, recent_beehives = [] }: DashboardProp
                                 <Activity className="w-3 h-3" />
                                 +12% vs last month
                             </div>
-                        </div>
+                        </Link>
 
                         {/* Active Alerts */}
-                        <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm flex flex-col gap-1">
+                        <Link
+                            href="/alerts"
+                            className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm flex flex-col gap-1 cursor-pointer hover:shadow-md hover:border-gray-300 transition-all"
+                        >
                             <div className="flex items-start justify-between">
                                 <p className="text-[11px] font-semibold uppercase tracking-widest text-gray-400">
                                     Active Alerts
@@ -837,40 +976,145 @@ export default function Dashboard({ stats, recent_beehives = [] }: DashboardProp
                                 <span className="w-1 h-1 rounded-full inline-block" style={{ backgroundColor: '#f5a623' }} />
                                 Immediate attention required
                             </div>
-                        </div>
+                        </Link>
 
-                        {/* System Health */}
-                        <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm flex flex-col gap-1">
+                        {/* Hives at Risk */}
+                        <Link
+                            href="/beehives"
+                            className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm flex flex-col gap-1 cursor-pointer hover:shadow-md hover:border-gray-300 transition-all"
+                        >
                             <div className="flex items-start justify-between">
                                 <p className="text-[11px] font-semibold uppercase tracking-widest text-gray-400 leading-tight">
-                                    System<br />Health
+                                    Hives<br />at Risk
                                 </p>
-                                <CheckCircle2 className="w-5 h-5 text-gray-300 shrink-0" />
+                                <AlertTriangle className="w-5 h-5 shrink-0" style={{ color: '#f5a623' }} />
+                            </div>
+                            <p className="text-4xl font-bold mt-2" style={{ color: '#f5a623' }}>
+                                03
+                            </p>
+                            <div className="mt-2 flex items-center gap-1 text-xs font-medium" style={{ color: '#f5a623' }}>
+                                <span className="w-1 h-1 rounded-full inline-block" style={{ backgroundColor: '#f5a623' }} />
+                                Above swarm threshold (420Hz)
+                            </div>
+                        </Link>
+
+                        {/* Recordings Processed Today */}
+                        <Link
+                            href="/alerts"
+                            className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm flex flex-col gap-1 cursor-pointer hover:shadow-md hover:border-gray-300 transition-all"
+                        >
+                            <div className="flex items-start justify-between">
+                                <p className="text-[11px] font-semibold uppercase tracking-widest text-gray-400 leading-tight">
+                                    Recordings<br />Processed Today
+                                </p>
+                                <Mic className="w-5 h-5 text-gray-300 shrink-0" />
                             </div>
                             <p className="text-4xl font-bold mt-2" style={{ color: '#0d1b2a' }}>
-                                98<span className="text-2xl">%</span>
+                                47
                             </p>
-                            <div className="mt-2 flex items-center gap-1 text-gray-400 text-xs">
-                                <BarChart2 className="w-3 h-3" />
-                                All nodes communicating
+                            <div className="mt-2 flex items-center gap-1 text-emerald-500 text-xs font-medium">
+                                <Activity className="w-3 h-3" />
+                                ML classifications completed
+                            </div>
+                        </Link>
+                    </div>
+
+                    {/* ── Hive Status Distribution donut chart ── */}
+                    <div id="section-donut" className="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
+                        <div className="mb-4">
+                            <p className="font-semibold text-sm" style={{ color: '#0d1b2a' }}>Hive Status Distribution</p>
+                            <p className="text-[11px] text-gray-400 mt-0.5">Current ML classification across all active hives</p>
+                        </div>
+                        <div className="flex items-center gap-8 flex-wrap">
+                            {/* SVG Donut */}
+                            <DonutChart data={hiveStatusData} total={HIVE_TOTAL} />
+                            {/* Legend */}
+                            <div className="flex flex-col gap-2.5 flex-1 min-w-[200px]">
+                                {hiveStatusData.map((d) => {
+                                    const pct = ((d.count / HIVE_TOTAL) * 100).toFixed(1);
+                                    return (
+                                        <Link
+                                            key={d.state}
+                                            href="/beehives"
+                                            className="flex items-center gap-3 group cursor-pointer hover:bg-gray-50 rounded-lg px-2 py-1 -mx-2 transition-colors"
+                                        >
+                                            <span className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: d.color }} />
+                                            <span className="text-xs font-medium flex-1" style={{ color: '#0d1b2a' }}>{d.state}</span>
+                                            <span className="text-xs font-bold tabular-nums" style={{ color: '#0d1b2a' }}>{d.count.toLocaleString()}</span>
+                                            <span className="text-[10px] text-gray-400 w-12 text-right tabular-nums">{pct}%</span>
+                                        </Link>
+                                    );
+                                })}
                             </div>
                         </div>
+                    </div>
 
-                        {/* Active Users */}
-                        <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm flex flex-col gap-1">
-                            <div className="flex items-start justify-between">
-                                <p className="text-[11px] font-semibold uppercase tracking-widest text-gray-400">
-                                    Active Users
-                                </p>
-                                <Users className="w-5 h-5 text-gray-300 shrink-0" />
+                    {/* ── Recent ML Classifications panel ── */}
+                    <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+                        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+                            <div>
+                                <p className="font-semibold text-sm" style={{ color: '#0d1b2a' }}>Recent ML Classifications</p>
+                                <p className="text-[11px] text-gray-400 mt-0.5">Latest audio recordings processed by the classification engine</p>
                             </div>
-                            <p className="text-4xl font-bold mt-2" style={{ color: '#0d1b2a' }}>
-                                {stats?.total_beekeepers ?? 24}
-                            </p>
-                            <div className="mt-2 flex items-center gap-1 text-gray-400 text-xs">
-                                <span className="w-2 h-2 rounded-full bg-emerald-400 inline-block" />
-                                14 currently online
-                            </div>
+                        </div>
+                        <table className="w-full text-xs">
+                            <thead>
+                                <tr className="border-b border-gray-100">
+                                    {['Hive ID', 'Time', 'Classification', 'Confidence', 'Action'].map((h) => (
+                                        <th key={h} className="text-left px-5 py-3 text-[10px] font-bold uppercase tracking-widest text-gray-400">{h}</th>
+                                    ))}
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {[
+                                    { hive: 'Hive-A12', time: '09:42 AM', cls: 'Pre-Swarm',        clsColor: '#f59e0b', conf: 87, action: 'View Hive',          href: '/beehives', uncertain: false },
+                                    { hive: 'Hive-B03', time: '09:38 AM', cls: 'Normal',            clsColor: '#22c55e', conf: 94, action: 'View Hive',          href: '/beehives', uncertain: false },
+                                    { hive: 'Hive-C08', time: '09:35 AM', cls: 'Pest/Disturbance', clsColor: '#f97316', conf: 72, action: 'View Hive',          href: '/beehives', uncertain: false },
+                                    { hive: 'Hive-A01', time: '09:30 AM', cls: 'Normal',            clsColor: '#22c55e', conf: 96, action: 'View Hive',          href: '/beehives', uncertain: false },
+                                    { hive: 'Hive-B11', time: '09:25 AM', cls: 'Uncertain',         clsColor: '#9ca3af', conf: 45, action: 'Review (flagged)',   href: '/alerts',   uncertain: true  },
+                                ].map((row) => {
+                                    const confColor = row.conf >= 80 ? '#22c55e' : row.conf >= 60 ? '#f59e0b' : '#ef4444';
+                                    return (
+                                        <tr
+                                            key={row.hive + row.time}
+                                            className="border-b border-gray-50 hover:bg-gray-50 transition-colors"
+                                            style={row.uncertain ? { backgroundColor: '#fffbeb' } : {}}
+                                        >
+                                            <td className="px-5 py-3 font-semibold text-xs" style={{ color: '#0d1b2a' }}>{row.hive}</td>
+                                            <td className="px-5 py-3 text-gray-400 font-mono">{row.time}</td>
+                                            <td className="px-5 py-3">
+                                                <span
+                                                    className="text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-widest"
+                                                    style={{ backgroundColor: `${row.clsColor}20`, color: row.clsColor }}
+                                                >
+                                                    {row.cls}
+                                                </span>
+                                            </td>
+                                            <td className="px-5 py-3">
+                                                <span className="font-bold text-xs" style={{ color: confColor }}>{row.conf}%</span>
+                                            </td>
+                                            <td className="px-5 py-3">
+                                                <Link
+                                                    href={row.href}
+                                                    className="text-[10px] font-bold uppercase tracking-widest hover:underline"
+                                                    style={{ color: row.uncertain ? '#f59e0b' : '#0d1b2a' }}
+                                                >
+                                                    {row.action}
+                                                </Link>
+                                            </td>
+                                        </tr>
+                                    );
+                                })}
+                            </tbody>
+                        </table>
+                        <div className="px-5 py-3 border-t border-gray-100 flex justify-end">
+                            <Link
+                                href="/alerts"
+                                className="text-xs font-semibold hover:underline"
+                                style={{ color: '#f5a623' }}
+                            >
+                                View All Classifications →
+                            </Link>
                         </div>
                     </div>
 
@@ -880,10 +1124,15 @@ export default function Dashboard({ stats, recent_beehives = [] }: DashboardProp
                         {/* Frequency chart panel */}
                         <div id="section-chart" className="lg:col-span-2 bg-white rounded-xl border border-gray-200 shadow-sm flex flex-col overflow-hidden">
                             <div className="flex items-center gap-3 px-5 py-4 border-b border-gray-100">
-                                <span className="font-semibold text-sm" style={{ color: '#0d1b2a' }}>
-                                    Acoustic Swarm Frequency Analysis
-                                </span>
-                                <span className="text-[10px] font-semibold border border-gray-300 rounded px-2 py-0.5 text-gray-500 uppercase tracking-wide">
+                                <div>
+                                    <span className="font-semibold text-sm" style={{ color: '#0d1b2a' }}>
+                                        Acoustic Swarm Frequency Analysis
+                                    </span>
+                                    <p className="text-[10px] text-gray-400 mt-0.5">
+                                        Baseline hive frequency vs live swarm intensity score over time
+                                    </p>
+                                </div>
+                                <span className="text-[10px] font-semibold border border-gray-300 rounded px-2 py-0.5 text-gray-500 uppercase tracking-wide ml-2">
                                     Live Data
                                 </span>
                                 <span className="text-[10px] font-semibold rounded px-2 py-0.5 text-white uppercase tracking-wide ml-auto" style={{ backgroundColor: '#0d1b2a' }}>
@@ -893,34 +1142,56 @@ export default function Dashboard({ stats, recent_beehives = [] }: DashboardProp
 
                             {/* SVG chart */}
                             <div className="flex-1 relative p-4">
-                                <svg viewBox="0 0 600 320" className="w-full h-full" preserveAspectRatio="none">
-                                    {/* Y-axis labels */}
-                                    {['MAX', '800Hz', '600Hz', '400Hz', '200Hz'].map((label, i) => (
-                                        <text key={label} x="8" y={30 + i * 68} fontSize="9" fill="#94a3b8">{label}</text>
+                                <svg viewBox="0 0 640 360" className="w-full h-full" preserveAspectRatio="xMidYMid meet">
+
+                                    {/* ── Y-axis title (rotated) ── */}
+                                    <text
+                                        x="-180" y="12"
+                                        fontSize="9" fill="#64748b" fontWeight="600"
+                                        transform="rotate(-90)"
+                                        textAnchor="middle"
+                                    >
+                                        Frequency (Hz)
+                                    </text>
+
+                                    {/* ── Y-axis labels + grid lines ── */}
+                                    {[
+                                        { label: 'MAX',   y: 20  },
+                                        { label: '800Hz', y: 78  },
+                                        { label: '600Hz', y: 136 },
+                                        { label: '400Hz', y: 194 },
+                                        { label: '200Hz', y: 252 },
+                                        { label: '0Hz',   y: 310 },
+                                    ].map(({ label, y }) => (
+                                        <g key={label}>
+                                            <text x="44" y={y + 3} fontSize="8" fill="#94a3b8" textAnchor="end">{label}</text>
+                                            <line x1="50" y1={y} x2="610" y2={y} stroke="#f1f5f9" strokeWidth="1" />
+                                        </g>
                                     ))}
-                                    {/* Grid lines */}
-                                    {[30, 98, 166, 234, 302].map((y) => (
-                                        <line key={y} x1="50" y1={y} x2="590" y2={y} stroke="#f1f5f9" strokeWidth="1" />
-                                    ))}
-                                    {/* Dark wave (sine-like) */}
-                                    <path
-                                        d={chartPaths[activeRange].dark}
-                                        fill="none"
-                                        stroke="#0d1b2a"
-                                        strokeWidth="2.5"
-                                    />
-                                    {/* Orange dashed rising line */}
-                                    <path
-                                        d={chartPaths[activeRange].orange}
-                                        fill="none"
-                                        stroke="#f5a623"
-                                        strokeWidth="2"
-                                        strokeDasharray="6 4"
-                                    />
-                                    {/* Alert tooltip */}
+
+                                    {/* ── Swarm threshold line at 420Hz (y≈188) ── */}
+                                    <line x1="50" y1={188} x2="610" y2={188} stroke="#ef4444" strokeWidth="1.5" strokeDasharray="5 3" opacity="0.7" />
+                                    <text x="612" y={192} fontSize="8" fill="#ef4444" fontWeight="600">⚠ 420Hz</text>
+
+                                    {/* ── Data paths ── */}
+                                    <path d={chartPaths[activeRange].dark}   fill="none" stroke="#0d1b2a" strokeWidth="2.5" />
+                                    <path d={chartPaths[activeRange].orange} fill="none" stroke="#f5a623" strokeWidth="2" strokeDasharray="6 4" />
+
+                                    {/* ── Alert tooltip ── */}
                                     <rect x="330" y="110" width="90" height="36" rx="4" fill="#0d1b2a" />
                                     <text x="375" y="126" fontSize="9" fill="white" textAnchor="middle" fontWeight="bold">ALERT: 432 Hz</text>
                                     <text x="375" y="139" fontSize="8" fill="#f5a623" textAnchor="middle">▲ threshold</text>
+
+                                    {/* ── X-axis baseline ── */}
+                                    <line x1="50" y1="310" x2="610" y2="310" stroke="#e2e8f0" strokeWidth="1" />
+
+                                    {/* ── X-axis tick labels ── */}
+                                    {xLabels[activeRange].map(({ label, x }) => (
+                                        <text key={label} x={x} y="325" fontSize="8" fill="#94a3b8" textAnchor="middle">{label}</text>
+                                    ))}
+
+                                    {/* ── X-axis title ── */}
+                                    <text x="330" y="345" fontSize="9" fill="#64748b" fontWeight="600" textAnchor="middle">Time</text>
                                 </svg>
                             </div>
                         </div>
@@ -945,9 +1216,22 @@ export default function Dashboard({ stats, recent_beehives = [] }: DashboardProp
                                             </div>
                                             <div className="flex-1 min-w-0">
                                                 <div className="flex items-start justify-between gap-1">
-                                                    <p className="text-xs font-semibold leading-tight" style={{ color: '#0d1b2a' }}>
-                                                        {alert.title}
-                                                    </p>
+                                                    <div className="flex flex-col gap-1">
+                                                        <p className="text-xs font-semibold leading-tight" style={{ color: '#0d1b2a' }}>
+                                                            {alert.title}
+                                                        </p>
+                                                        {'state' in alert && alert.state && (
+                                                            <span
+                                                                className="self-start text-[9px] font-bold px-1.5 py-0.5 rounded uppercase tracking-widest"
+                                                                style={{
+                                                                    backgroundColor: `${(alert as any).stateColor}20`,
+                                                                    color: (alert as any).stateColor,
+                                                                }}
+                                                            >
+                                                                {(alert as any).state}
+                                                            </span>
+                                                        )}
+                                                    </div>
                                                     <span className="text-[10px] text-gray-400 shrink-0 whitespace-nowrap">{alert.time}</span>
                                                 </div>
                                                 <p className="text-[11px] text-gray-500 mt-1 leading-snug">{alert.desc}</p>
@@ -1089,9 +1373,9 @@ export default function Dashboard({ stats, recent_beehives = [] }: DashboardProp
                                 </span>
                             </div>
                             <div>
-                                <p className="text-sm font-bold" style={{ color: '#0d1b2a' }}>Swarm Risk Factor</p>
+                                <p className="text-sm font-bold" style={{ color: '#0d1b2a' }}>Overall Swarm Confidence Score</p>
                                 <p className="text-xs text-gray-400 mt-1 leading-snug">
-                                    Regional aggregate based on current environmental pressure.
+                                    Aggregate ML classification confidence across all monitored hives
                                 </p>
                             </div>
                         </div>
@@ -1107,7 +1391,7 @@ export default function Dashboard({ stats, recent_beehives = [] }: DashboardProp
                             <div>
                                 <p className="text-base font-bold" style={{ color: '#f5a623' }}>Seasonal Forecast Active</p>
                                 <p className="text-sm text-slate-300 mt-2 leading-relaxed max-w-lg">
-                                    Our AI models predict a 20% increase in swarming events over the next 48 hours due to the upcoming high-pressure system.
+                                    ML acoustic analysis combined with environmental data indicates elevated swarming risk across 47 hives. Weather conditions over the next 48 hours may further increase colony activity.
                                 </p>
                             </div>
                             <div className="flex items-center gap-3">
@@ -1122,7 +1406,7 @@ export default function Dashboard({ stats, recent_beehives = [] }: DashboardProp
                                     onClick={() => setShowChecklistModal(true)}
                                     className="px-5 py-2 rounded-lg text-xs font-bold uppercase tracking-widest border border-slate-500 text-slate-300 hover:border-slate-300 transition-colors"
                                 >
-                                    Prepare Assets
+                                    Preparation Checklist
                                 </button>
                             </div>
                         </div>
