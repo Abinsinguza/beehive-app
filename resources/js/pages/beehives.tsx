@@ -1,5 +1,5 @@
-import { Head, Link, router, useForm } from '@inertiajs/react';
-import { Eye, Pencil, Plus, Trash2, X } from 'lucide-react';
+﻿import { Head, Link, router, useForm } from '@inertiajs/react';
+import { AlertTriangle, Eye, Pencil, Plus, Trash2, X } from 'lucide-react';
 import { useState } from 'react';
 
 type Owner = { id: string; name: string };
@@ -13,19 +13,19 @@ type Beehive = {
 };
 
 const statusConfig: Record<string, { label: string; bg: string; color: string }> = {
-    active:      { label: 'STABLE',       bg: '#0d1b2a', color: '#ffffff' },
+    active:      { label: 'NORMAL',    bg: '#f0fdf4', color: '#16a34a' },
     inactive:    { label: 'MAINTENANCE',  bg: '#0d1b2a', color: '#ffffff' },
-    migrated:    { label: 'TEMP WARNING', bg: '#fff7ed', color: '#f5a623' },
-    lost:        { label: 'SWARM LIKELY', bg: '#fff7ed', color: '#f5a623' },
+    migrated:    { label: 'PRE-SWARM', bg: '#fff7ed', color: '#f59e0b' },
+    lost:        { label: 'SWARM',     bg: '#fef2f2', color: '#ef4444' },
 };
 
 // Fake battery levels for demo when no real data
 const fakeBattery: Record<number, { pct: number; color: string }> = {
     0: { pct: 12,  color: '#ef4444' },
-    1: { pct: 88,  color: '#f5a623' },
-    2: { pct: 95,  color: '#f5a623' },
-    3: { pct: 64,  color: '#f5a623' },
-    4: { pct: 0,   color: '#94a3b8' },
+    1: { pct: 88,  color: '#22c55e' },
+    2: { pct: 95,  color: '#22c55e' },
+    3: { pct: 64,  color: '#22c55e' },
+    4: { pct: 22,  color: '#f59e0b' },
 };
 
 const deploymentLog = [
@@ -38,6 +38,8 @@ export default function Beehives({ beehives = [], owners = [], search: initialSe
     const [showModal, setShowModal]     = useState(false);
     const [viewTarget, setViewTarget]   = useState<Beehive | null>(null);
     const [editTarget, setEditTarget]   = useState<Beehive | null>(null);
+    const [otherHiveType, setOtherHiveType] = useState('');
+    const [riskFilter, setRiskFilter]   = useState(false);
 
     const { data, setData, post, reset, processing } = useForm({
         owner_id: '',
@@ -62,7 +64,10 @@ export default function Beehives({ beehives = [], owners = [], search: initialSe
 
     // Server already filters when search param is present; demo rows filtered client-side
     const allRows: Beehive[] = beehives.length > 0 || initialSearch ? beehives : demoRows;
-    const filteredHives = allRows;
+    const atRiskStates = ['lost', 'migrated'];
+    const filteredHives = riskFilter
+        ? allRows.filter((h) => atRiskStates.includes(h.current_state))
+        : allRows;
 
     // Export CSV
     const exportCSV = () => {
@@ -136,14 +141,20 @@ export default function Beehives({ beehives = [], owners = [], search: initialSe
                         </div>
                         <div className="mt-3 h-1 w-12 rounded-full bg-gray-200" />
                     </div>
-                    <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
-                        <p className="text-[11px] font-semibold uppercase tracking-widest text-gray-400">Honey Production</p>
-                        <div className="flex items-end gap-1 mt-2">
-                            <p className="text-4xl font-bold" style={{ color: '#0d1b2a' }}>1.2t</p>
-                            <span className="text-xs text-gray-400 mb-1">Est. Weight</span>
+                    <button
+                        onClick={() => setRiskFilter((v) => !v)}
+                        className={`bg-white rounded-xl border shadow-sm p-5 text-left transition-all ${riskFilter ? "border-amber-400 ring-2 ring-amber-200" : "border-gray-200 hover:border-amber-300"}`}
+                    >
+                        <div className="flex items-start justify-between">
+                            <p className="text-[11px] font-semibold uppercase tracking-widest text-gray-400">Hives at Risk</p>
+                            <AlertTriangle className="w-5 h-5 shrink-0" style={{ color: "#f5a623" }} />
                         </div>
-                        <div className="mt-3 h-1 w-12 rounded-full bg-gray-200" />
-                    </div>
+                        <div className="flex items-end gap-1 mt-2">
+                            <p className="text-4xl font-bold" style={{ color: "#f5a623" }}>3</p>
+                        </div>
+                        <p className="text-xs text-gray-400 mt-1">Pre-Swarm, Swarm or Abscondence detected</p>
+                        <div className="mt-3 h-1 w-12 rounded-full" style={{ backgroundColor: "#f5a623" }} />
+                    </button>
                 </div>
 
                 {/* Active Monitoring Registry table */}
@@ -170,6 +181,7 @@ export default function Beehives({ beehives = [], owners = [], search: initialSe
                                 <th className="text-left px-5 py-3 text-[10px] font-bold uppercase tracking-widest text-gray-400">Location</th>
                                 <th className="text-left px-5 py-3 text-[10px] font-bold uppercase tracking-widest text-gray-400">Status</th>
                                 <th className="text-left px-5 py-3 text-[10px] font-bold uppercase tracking-widest text-gray-400">Battery</th>
+
                                 <th className="text-left px-5 py-3 text-[10px] font-bold uppercase tracking-widest text-gray-400">Last Activity</th>
                                 <th className="text-left px-5 py-3 text-[10px] font-bold uppercase tracking-widest text-gray-400">Actions</th>
                             </tr>
@@ -185,7 +197,7 @@ export default function Beehives({ beehives = [], owners = [], search: initialSe
                                 filteredHives.map((hive) => {
                                 const sc = statusConfig[hive.current_state] ?? statusConfig.active;
                                 const origIdx = allRows.findIndex((h) => h.id === hive.id);
-                                const bat = fakeBattery[origIdx] ?? { pct: 75, color: '#f5a623' };
+
                                 return (
                                     <tr key={hive.id} className="border-b border-gray-50 hover:bg-gray-50 transition-colors">
                                         <td className="px-5 py-4">
@@ -200,17 +212,34 @@ export default function Beehives({ beehives = [], owners = [], search: initialSe
                                             </span>
                                         </td>
                                         <td className="px-5 py-4">
-                                            {bat.pct === 0 ? (
-                                                <span className="text-xs text-gray-400">Offline</span>
-                                            ) : (
-                                                <div className="flex items-center gap-2">
-                                                    <div className="w-16 h-1.5 rounded-full bg-gray-100">
-                                                        <div className="h-1.5 rounded-full" style={{ width: `${bat.pct}%`, backgroundColor: bat.color }} />
+                                            {(() => {
+                                                const bat = fakeBattery[origIdx] ?? { pct: 50, color: "#22c55e" };
+                                                const batColor = bat.pct <= 20 ? "#ef4444" : bat.pct <= 50 ? "#f59e0b" : "#22c55e";
+                                                return bat.pct === 0 ? (
+                                                    <span className="text-xs text-gray-400">N/A</span>
+                                                ) : (
+                                                    <div className="flex items-center gap-2">
+                                                        <div className="w-16 h-1.5 rounded-full bg-gray-100">
+                                                            <div className="h-1.5 rounded-full" style={{ width: `${bat.pct}%`, backgroundColor: batColor }} />
+                                                        </div>
+                                                        <span className="text-xs text-gray-500">{bat.pct}%</span>
                                                     </div>
-                                                    <span className="text-xs text-gray-500">{bat.pct}%</span>
-                                                </div>
-                                            )}
+                                                );
+                                            })()
+                                            }
                                         </td>
+
+
+
+
+
+
+
+
+
+
+
+
                                         <td className="px-5 py-4 text-xs text-gray-400">{hive.installation_date}</td>
                                         <td className="px-5 py-4">
                                             <div className="flex items-center gap-1.5">
@@ -257,10 +286,10 @@ export default function Beehives({ beehives = [], owners = [], search: initialSe
                     </div>
                 </div>
 
-                {/* Bottom: Map + Deployment Log */}
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+                {/* Bottom: Map */}
+                <div className="grid grid-cols-1 gap-4">
                     {/* Regional Hive Concentration map */}
-                    <div className="lg:col-span-2 bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+                    <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
                         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
                             <h2 className="font-semibold text-sm" style={{ color: '#0d1b2a' }}>Regional Hive Concentration</h2>
                             <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: '#f5a623' }}>Live Feed</span>
@@ -284,28 +313,6 @@ export default function Beehives({ beehives = [], owners = [], search: initialSe
                                 </div>
                             </div>
                         </div>
-                    </div>
-
-                    {/* Deployment Log */}
-                    <div className="rounded-xl p-5 flex flex-col gap-4" style={{ backgroundColor: '#0d1b2a' }}>
-                        <div>
-                            <p className="font-bold text-sm text-white">Deployment Log</p>
-                            <p className="text-[10px] text-slate-400 mt-0.5">Recent operational updates</p>
-                        </div>
-                        <div className="flex flex-col gap-4">
-                            {deploymentLog.map((log, i) => (
-                                <div key={i} className="flex items-start gap-3">
-                                    <div className="w-1 self-stretch rounded-full shrink-0" style={{ backgroundColor: log.color }} />
-                                    <div>
-                                        <p className="text-xs font-semibold text-white">{log.title}</p>
-                                        <p className="text-[10px] text-slate-400 mt-0.5">{log.sub}</p>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                        <Link href="/alerts" className="w-full py-2.5 rounded-lg border border-slate-600 text-xs font-bold uppercase tracking-widest text-slate-300 hover:border-slate-400 transition-colors mt-auto text-center block">
-                            View Full Audit Log
-                        </Link>
                     </div>
                 </div>
             </div>
@@ -336,20 +343,33 @@ export default function Beehives({ beehives = [], owners = [], search: initialSe
                                     className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-700 outline-none placeholder-gray-300" required />
                             </div>
                             <div>
-                                <label className="text-xs font-semibold uppercase tracking-widest text-gray-400 block mb-1.5">Hive Type</label>
-                                <input type="text" value={data.hive_type} onChange={(e) => setData('hive_type', e.target.value)}
-                                    placeholder="e.g. Langstroth, Top-bar"
-                                    className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-700 outline-none placeholder-gray-300" required />
+                                <select value={data.hive_type} onChange={(e) => { setData('hive_type', e.target.value); if (e.target.value !== 'Other') setOtherHiveType(''); }}
+                                    className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-700 outline-none bg-white" required>
+
+                                    <option value="">Select type</option>
+                                    <option value="Langstroth">Langstroth</option>
+                                    <option value="Top-bar">Top-bar</option>
+                                    <option value="Warre">Warre</option>
+                                    <option value="Log Hive">Log Hive</option>
+                                    <option value="Other">Other</option>
+                                </select>
+                            {data.hive_type === 'Other' && (
+                                <input type="text" value={otherHiveType} onChange={(e) => setOtherHiveType(e.target.value)}
+                                    placeholder="Please specify hive type"
+                                    className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-700 outline-none placeholder-gray-300 mt-2" />
+                            )}
                             </div>
                             <div>
                                 <label className="text-xs font-semibold uppercase tracking-widest text-gray-400 block mb-1.5">Current State</label>
                                 <select value={data.current_state} onChange={(e) => setData('current_state', e.target.value)}
                                     className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-700 outline-none bg-white" required>
                                     <option value="">Select state</option>
-                                    <option value="active">Active / Stable</option>
-                                    <option value="migrated">Temp Warning</option>
-                                    <option value="lost">Swarm Likely</option>
-                                    <option value="inactive">Maintenance</option>
+                                    <option value="active">Normal</option>
+                                    <option value="migrated">Pre-Swarm</option>
+                                    <option value="lost">Swarm</option>
+                                    <option value="abscondence">Abscondence</option>
+                                    <option value="pest">Pest/Disturbance</option>
+                                    <option value="uncertain">Uncertain</option>
                                 </select>
                             </div>
                             <div className="flex justify-end gap-3 pt-2">
@@ -442,6 +462,7 @@ function EditHiveModal({ hive, owners, onClose }: { hive: Beehive; owners: Owner
         installation_date: hive.installation_date,
         current_state:     hive.current_state,
     });
+    const [editOtherType, setEditOtherType] = useState(hive.hive_type === 'Other' ? '' : '');
 
     const submit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -476,9 +497,20 @@ function EditHiveModal({ hive, owners, onClose }: { hive: Beehive; owners: Owner
                     </div>
                     <div>
                         <label className="text-xs font-semibold uppercase tracking-widest text-gray-400 block mb-1.5">Hive Type</label>
-                        <input type="text" value={data.hive_type} onChange={(e) => setData('hive_type', e.target.value)}
-                            placeholder="e.g. Langstroth, Top-bar"
-                            className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-700 outline-none placeholder-gray-300" required />
+                        <select value={data.hive_type} onChange={(e) => { setData('hive_type', e.target.value); if (e.target.value !== 'Other') setEditOtherType(''); }}
+                            className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-700 outline-none bg-white" required>
+                            <option value="">Select type</option>
+                            <option value="Langstroth">Langstroth</option>
+                            <option value="Top-bar">Top-bar</option>
+                            <option value="Warre">Warre</option>
+                            <option value="Log Hive">Log Hive</option>
+                            <option value="Other">Other</option>
+                        </select>
+                        {data.hive_type === 'Other' && (
+                            <input type="text" value={editOtherType} onChange={(e) => setEditOtherType(e.target.value)}
+                                placeholder="Please specify hive type"
+                                className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-700 outline-none placeholder-gray-300 mt-2" />
+                        )}
                         {errors.hive_type && <p className="text-xs text-red-500 mt-1">{errors.hive_type}</p>}
                     </div>
                     <div>
@@ -492,10 +524,12 @@ function EditHiveModal({ hive, owners, onClose }: { hive: Beehive; owners: Owner
                         <select value={data.current_state} onChange={(e) => setData('current_state', e.target.value)}
                             className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-700 outline-none bg-white" required>
                             <option value="">Select state</option>
-                            <option value="active">Active / Stable</option>
-                            <option value="migrated">Temp Warning</option>
-                            <option value="lost">Swarm Likely</option>
-                            <option value="inactive">Maintenance</option>
+                            <option value="active">Normal</option>
+                            <option value="migrated">Pre-Swarm</option>
+                            <option value="lost">Swarm</option>
+                            <option value="abscondence">Abscondence</option>
+                            <option value="pest">Pest/Disturbance</option>
+                            <option value="uncertain">Uncertain</option>
                         </select>
                         {errors.current_state && <p className="text-xs text-red-500 mt-1">{errors.current_state}</p>}
                     </div>
@@ -505,7 +539,7 @@ function EditHiveModal({ hive, owners, onClose }: { hive: Beehive; owners: Owner
                         <button type="submit" disabled={processing}
                             className="px-4 py-2 rounded-lg text-sm font-semibold hover:opacity-90 disabled:opacity-60"
                             style={{ backgroundColor: '#f5a623', color: '#0d1b2a' }}>
-                            {processing ? 'Saving…' : 'Update Hive'}
+                            {processing ? 'Saving\u2026' : 'Save'}
                         </button>
                     </div>
                 </form>
