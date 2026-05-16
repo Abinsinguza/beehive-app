@@ -1,5 +1,5 @@
 ﻿import { Head, router, useForm } from '@inertiajs/react';
-import { ChevronDown, Download, Edit2, Eye, UserPlus, X, Zap } from 'lucide-react';
+import { ChevronDown, Download, Edit2, Eye, Shield, UserPlus, X } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 
 type Beekeeper = {
@@ -25,11 +25,6 @@ const statusConfig: Record<string, { dot: string; label: string; labelColor: str
     suspended: { dot: '#94a3b8', label: 'Suspended', labelColor: '#94a3b8' },
 };
 
-const auditLog = [
-    { color: '#f5a623', text: "Arthur Denton modified hive permissions for User 'Elena Markov'", meta: 'October 24, 2023 at 14:22 PM â€¢ IP: 192.168.1.1' },
-    { color: '#3b82f6', text: 'New system audit: Access tokens refreshed for all Beekeeper roles', meta: 'October 24, 2023 at 09:15 AM â€¢ Automatic System Task' },
-    { color: '#ef4444', text: 'Security Alert: Failed login attempt from unrecognized device (User: LHuang)', meta: 'October 23, 2023 at 23:59 PM â€¢ Device: Android 12' },
-];
 
 function getInitials(name: string) {
     return name.split(' ').map((n) => n[0]).slice(0, 2).join('').toUpperCase();
@@ -46,7 +41,7 @@ function getStatus(bk: Beekeeper): string {
     return 'pending';
 }
 
-// â”€â”€ Add Beekeeper form â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// •”€•”€ Add Beekeeper form •”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€
 function AddBeekeeperModal({ onClose }: { onClose: () => void }) {
     const { data, setData, post, processing, reset, errors } = useForm({
         name: '', phone: '', email: '', address: '', password: '',
@@ -88,7 +83,7 @@ function AddBeekeeperModal({ onClose }: { onClose: () => void }) {
     );
 }
 
-// â”€â”€ Edit Beekeeper form â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// •”€•”€ Edit Beekeeper form •”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€
 function EditBeekeeperModal({ beekeeper, onClose }: { beekeeper: Beekeeper; onClose: () => void }) {
     const { data, setData, patch, processing, errors } = useForm({
         name:     beekeeper.name,
@@ -128,13 +123,13 @@ function EditBeekeeperModal({ beekeeper, onClose }: { beekeeper: Beekeeper; onCl
                         )}
                     </div>
                 ))}
-                <ModalActions onCancel={onClose} processing={processing} label="Update Beekeeper" />
+                <ModalActions onCancel={onClose} processing={processing} label="Save" />
             </form>
         </ModalShell>
     );
 }
 
-// â”€â”€ View Beekeeper modal â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// •”€•”€ View Beekeeper modal •”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€
 function ViewBeekeeperModal({ beekeeper, onClose }: { beekeeper: Beekeeper; onClose: () => void }) {
     const role   = getRole(beekeeper);
     const status = getStatus(beekeeper);
@@ -168,7 +163,7 @@ function ViewBeekeeperModal({ beekeeper, onClose }: { beekeeper: Beekeeper; onCl
                     {/* Email */}
                     <div className="flex flex-col gap-0.5 py-2">
                         <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Email</span>
-                        <span className="text-sm text-gray-700">{beekeeper.email ?? 'â€”'}</span>
+                        <span className="text-sm text-gray-700">{beekeeper.email ?? '•€”'}</span>
                     </div>
                     {/* Phone */}
                     <div className="flex flex-col gap-0.5 py-2">
@@ -178,7 +173,7 @@ function ViewBeekeeperModal({ beekeeper, onClose }: { beekeeper: Beekeeper; onCl
                     {/* Address */}
                     <div className="flex flex-col gap-0.5 py-2">
                         <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Address</span>
-                        <span className="text-sm text-gray-700">{beekeeper.address ?? 'â€”'}</span>
+                        <span className="text-sm text-gray-700">{beekeeper.address ?? '•€”'}</span>
                     </div>
                     {/* Role */}
                     <div className="flex flex-col gap-0.5 py-2">
@@ -220,7 +215,7 @@ function ViewBeekeeperModal({ beekeeper, onClose }: { beekeeper: Beekeeper; onCl
                     {/* Last Login */}
                     <div className="flex flex-col gap-0.5 pt-2">
                         <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Last Login</span>
-                        <span className="text-sm text-gray-400">â€”</span>
+                        <span className="text-sm text-gray-400">•€”</span>
                     </div>
                 </div>
 
@@ -237,7 +232,7 @@ function ViewBeekeeperModal({ beekeeper, onClose }: { beekeeper: Beekeeper; onCl
     );
 }
 
-// â”€â”€ Shared modal shell â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// •”€•”€ Shared modal shell •”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€
 function ModalShell({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
     useEffect(() => {
         document.body.classList.add('overflow-hidden');
@@ -271,13 +266,72 @@ function ModalActions({ onCancel, processing, label }: { onCancel: () => void; p
             <button type="submit" disabled={processing}
                 className="px-4 py-2 rounded-lg text-sm font-semibold hover:opacity-90 disabled:opacity-60"
                 style={{ backgroundColor: '#f5a623', color: '#0d1b2a' }}>
-                {processing ? 'Savingâ€¦' : label}
+                {processing ? 'Saving•€¦' : label}
             </button>
         </div>
     );
 }
 
-// â”€â”€ Main page â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
+// •”€•”€ Main page •”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€•”€
+
+//  Account Status Overview card 
+function AccountStatusCard() {
+    const [toastVisible, setToastVisible] = useState(false);
+
+    const sendReminder = () => {
+        setToastVisible(true);
+        setTimeout(() => setToastVisible(false), 3000);
+    };
+
+    const stats = [
+        { label: 'Never Logged In', value: 4, sub: 'Pending first login',       color: '#f59e0b' },
+        { label: 'Logged In Today', value: 2, sub: 'Active this session',        color: '#22c55e' },
+        { label: 'Hives Assigned',  value: 3, sub: 'Beekeepers with hives',      color: '#0d1b2a' },
+        { label: 'No Hives Yet',    value: 3, sub: 'Awaiting hive assignment',   color: '#94a3b8' },
+    ];
+
+    return (
+        <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5 flex flex-col gap-4 relative">
+            {/* Toast */}
+            {toastVisible && (
+                <div className="absolute top-4 right-4 z-10 flex items-center gap-2 px-4 py-2.5 rounded-lg shadow-lg text-sm font-semibold text-white"
+                    style={{ backgroundColor: '#0d1b2a' }}>
+                    <span style={{ color: '#f5a623' }}></span> Reminder sent to 4 beekeepers
+                </div>
+            )}
+
+            {/* Header */}
+            <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-full flex items-center justify-center shrink-0"
+                    style={{ backgroundColor: '#fff7ed' }}>
+                    <Shield className="w-4 h-4" style={{ color: '#f5a623' }} />
+                </div>
+                <h2 className="font-semibold text-sm" style={{ color: '#0d1b2a' }}>Account Status Overview</h2>
+            </div>
+
+            {/* 2x2 stats grid */}
+            <div className="grid grid-cols-2 gap-3 flex-1">
+                {stats.map((s) => (
+                    <div key={s.label} className="rounded-xl border border-gray-100 p-4 flex flex-col gap-1">
+                        <p className="text-3xl font-bold" style={{ color: s.color }}>{s.value}</p>
+                        <p className="text-xs font-semibold" style={{ color: '#0d1b2a' }}>{s.label}</p>
+                        <p className="text-[10px] text-gray-400">{s.sub}</p>
+                    </div>
+                ))}
+            </div>
+
+            {/* Reminder link */}
+            <button
+                onClick={sendReminder}
+                className="self-start text-xs font-semibold hover:underline mt-auto"
+                style={{ color: '#f5a623' }}
+            >
+                Send reminder to inactive beekeepers 
+            </button>
+        </div>
+    );
+}
+
 export default function Beekeepers({
     beekeepers = [],
     search: initialSearch = '',
@@ -401,14 +455,14 @@ export default function Beekeepers({
                         <p className="text-[11px] font-semibold uppercase tracking-widest text-gray-400">Total Beekeepers</p>
                         <div className="flex items-end gap-2 mt-2">
                             <p className="text-4xl font-bold" style={{ color: '#0d1b2a' }}>{beekeepers.length}</p>
-                            <span className="text-xs font-semibold text-emerald-500 mb-1">â†— +3</span>
+                            <span className="text-xs font-semibold text-emerald-500 mb-1">•†— +3</span>
                         </div>
                         <div className="mt-3 h-1 w-16 rounded-full" style={{ backgroundColor: '#f5a623' }} />
                     </div>
                     <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
                         <p className="text-[11px] font-semibold uppercase tracking-widest text-gray-400">Active Sessions</p>
                         <div className="flex items-end gap-2 mt-2">
-                            <p className="text-4xl font-bold" style={{ color: '#0d1b2a' }}>12</p>
+                            <p className="text-4xl font-bold" style={{ color: '#0d1b2a' }}>4</p>
                             <span className="text-xs text-gray-400 mb-1">Currently Online</span>
                         </div>
                         <div className="mt-3 h-1 w-16 rounded-full bg-gray-200" />
@@ -628,42 +682,6 @@ export default function Beekeepers({
                                 </button>
                             ))}
                         </div>
-                    </div>
-                </div>
-
-                {/* Bottom section */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    {/* Audit log */}
-                    <div className="md:col-span-2 bg-white rounded-xl border border-gray-200 shadow-sm p-5">
-                        <div className="flex items-center justify-between mb-4">
-                            <h2 className="font-semibold text-sm" style={{ color: '#0d1b2a' }}>Recent Administrative Actions</h2>
-                            <Zap className="w-4 h-4 text-gray-300" />
-                        </div>
-                        <div className="flex flex-col gap-4">
-                            {auditLog.map((log, i) => (
-                                <div key={i} className="flex items-start gap-3">
-                                    <span className="w-2 h-2 rounded-full mt-1.5 shrink-0" style={{ backgroundColor: log.color }} />
-                                    <div>
-                                        <p className="text-sm text-gray-700">{log.text}</p>
-                                        <p className="text-xs text-gray-400 mt-0.5">{log.meta}</p>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-
-                    {/* Access Guidelines */}
-                    <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5 flex flex-col gap-3">
-                        <div className="w-9 h-9 rounded-full flex items-center justify-center" style={{ backgroundColor: '#eff6ff' }}>
-                            <span className="text-blue-500 font-bold text-sm">i</span>
-                        </div>
-                        <h2 className="font-semibold text-sm" style={{ color: '#0d1b2a' }}>Access Guidelines</h2>
-                        <p className="text-xs text-gray-500 leading-relaxed">
-                            Administrators have full read/write access to hive data and swarm records. Beekeepers are limited to their assigned apiaries.
-                        </p>
-                        <button className="flex items-center gap-1 text-xs font-semibold mt-auto" style={{ color: '#0d1b2a' }}>
-                            View Security Protocols â†’
-                        </button>
                     </div>
                 </div>
             </div>
