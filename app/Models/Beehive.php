@@ -17,6 +17,8 @@ class Beehive extends Model
         'hive_type',
         'installation_date',
         'current_state',
+        'latitude',
+        'longitude',
     ];
     //  * Relationship: Beehive belongs to Beekeeper
 

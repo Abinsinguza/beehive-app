@@ -1,6 +1,8 @@
 ﻿import { Head, Link, router, useForm } from '@inertiajs/react';
 import { AlertTriangle, Eye, Pencil, Plus, Trash2, X } from 'lucide-react';
 import { useState } from 'react';
+import 'leaflet/dist/leaflet.css';
+import React from 'react';
 
 type Owner = { id: string; name: string };
 type Beehive = {
@@ -10,6 +12,8 @@ type Beehive = {
     installation_date: string;
     current_state: string;
     owner: { id: string; name: string };
+    latitude?: number | null;
+    longitude?: number | null;
 };
 
 const statusConfig: Record<string, { label: string; bg: string; color: string }> = {
@@ -34,18 +38,109 @@ const deploymentLog = [
     { color: '#f5a623', title: 'Swarm Alert Threshold Adjusted',   sub: 'System Global • 8h ago' },
 ];
 
+
+const stateColorMap: Record<string, string> = {
+    active:      '#22c55e',
+    migrated:    '#f59e0b',
+    lost:        '#ef4444',
+    abscondence: '#991b1b',
+    pest:        '#f97316',
+    uncertain:   '#9ca3af',
+};
+
+const stateLabelMap: Record<string, string> = {
+    active:      'NORMAL',
+    migrated:    'PRE-SWARM',
+    lost:        'SWARM',
+    abscondence: 'ABSCONDENCE',
+    pest:        'PEST/DISTURBANCE',
+    uncertain:   'UNCERTAIN',
+};
+
+function HiveMap({ hives }: { hives: Beehive[] }) {
+    const { useEffect, useRef } = React;
+    const mapRef = useRef<HTMLDivElement>(null);
+    const mapInstanceRef = useRef<any>(null);
+
+    useEffect(() => {
+        if (!mapRef.current || mapInstanceRef.current) return;
+
+        import('leaflet').then((L) => {
+            // Fix default marker icon paths broken by bundlers
+            delete (L.Icon.Default.prototype as any)._getIconUrl;
+            L.Icon.Default.mergeOptions({
+                iconRetinaUrl: 'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon-2x.png',
+                iconUrl:       'https://unpkg.com/leaflet@1.9.4/dist/images/marker-icon.png',
+                shadowUrl:     'https://unpkg.com/leaflet@1.9.4/dist/images/marker-shadow.png',
+            });
+
+            const map = L.map(mapRef.current!, { zoomControl: true, scrollWheelZoom: false })
+                .setView([0.3476, 32.5825], 7);
+
+            L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                attribution: ' OpenStreetMap contributors',
+            }).addTo(map);
+
+            hives.forEach((hive, idx) => {
+                const lat = hive.latitude;
+                const lng = hive.longitude;
+                // Skip hives with missing or invalid coordinates
+                if (lat == null || lng == null || isNaN(lat) || isNaN(lng)) return;
+
+                const statusColor = stateColorMap[hive.current_state] ?? '#94a3b8';
+                const statusLabel = stateLabelMap[hive.current_state] ?? hive.current_state.toUpperCase();
+
+                const icon = L.divIcon({
+                    className: '',
+                    html: `<div style="width:14px;height:14px;border-radius:50%;background:${statusColor};border:2px solid white;box-shadow:0 1px 4px rgba(0,0,0,0.4)"></div>`,
+                    iconSize: [14, 14],
+                    iconAnchor: [7, 7],
+                });
+
+                const bat = fakeBattery[idx] ?? { pct: 75, color: '#f5a623' };
+                const batColor = bat.pct <= 20 ? '#ef4444' : bat.pct <= 50 ? '#f59e0b' : '#22c55e';
+                const popup = `
+                    <div style="font-family:sans-serif;min-width:160px;padding:4px 0">
+                        <p style="font-weight:700;font-size:13px;color:#0d1b2a;margin:0 0 6px">${hive.id}</p>
+                        <p style="font-size:11px;color:#64748b;margin:0 0 4px"> ${hive.hive_location}</p>
+                        <span style="font-size:10px;font-weight:700;padding:2px 8px;border-radius:4px;background:${statusColor}20;color:${statusColor};text-transform:uppercase">${statusLabel}</span>
+                        <p style="font-size:11px;color:#64748b;margin:6px 0 2px">🔋 Battery: <strong style="color:${batColor}">${bat.pct}%</strong></p>
+                        <p style="font-size:11px;color:#64748b;margin:0 0 6px">📅 Last Activity: ${hive.installation_date}</p>
+                        <a href="/beehives" style="font-size:11px;color:#f5a623;font-weight:600;text-decoration:none">View Details →</a>
+                    </div>`;
+
+                L.marker([lat, lng], { icon }).addTo(map).bindPopup(popup);
+            });
+
+            mapInstanceRef.current = map;
+        });
+
+        return () => {
+            if (mapInstanceRef.current) {
+                mapInstanceRef.current.remove();
+                mapInstanceRef.current = null;
+            }
+        };
+    }, []);
+
+    return <div ref={mapRef} style={{ height: '224px', width: '100%' }} />;
+}
+
 export default function Beehives({ beehives = [], owners = [], search: initialSearch = '' }: { beehives?: Beehive[]; owners?: Owner[]; search?: string }) {
     const [showModal, setShowModal]     = useState(false);
     const [viewTarget, setViewTarget]   = useState<Beehive | null>(null);
     const [editTarget, setEditTarget]   = useState<Beehive | null>(null);
     const [otherHiveType, setOtherHiveType] = useState('');
     const [riskFilter, setRiskFilter]   = useState(false);
+    const [geoStatus, setGeoStatus] = useState<'idle' | 'loading' | 'found' | 'notfound'>('idle');
 
     const { data, setData, post, reset, processing } = useForm({
         owner_id: '',
         hive_location: '',
         hive_type: '',
         current_state: '',
+        latitude: '',
+        longitude: '',
     });
 
     const submit = (e: React.FormEvent) => {
@@ -55,11 +150,11 @@ export default function Beehives({ beehives = [], owners = [], search: initialSe
 
     // Static demo rows used only when no real data exists
     const demoRows: Beehive[] = [
-        { id: 'HV-9421-A', hive_location: 'North Orchard – Plot 4', hive_type: 'Langstroth 10-Frame', installation_date: '2 mins ago',  current_state: 'lost',     owner: { id: '1', name: 'Admin' } },
-        { id: 'HV-8812-B', hive_location: 'East Valley Ridge',       hive_type: 'Flow Hive Classic',   installation_date: '14 mins ago', current_state: 'active',   owner: { id: '2', name: 'Admin' } },
-        { id: 'HV-7701-C', hive_location: 'Riverside Apiary',        hive_type: 'Warre Hive',          installation_date: '42 mins ago', current_state: 'active',   owner: { id: '3', name: 'Admin' } },
-        { id: 'HV-2234-D', hive_location: 'North Orchard – Plot 2',  hive_type: 'Top Bar Hive',        installation_date: '1 hr ago',    current_state: 'migrated', owner: { id: '4', name: 'Admin' } },
-        { id: 'HV-1002-K', hive_location: 'South Meadow B',          hive_type: 'Langstroth 10-Frame', installation_date: '2 days ago',  current_state: 'inactive', owner: { id: '5', name: 'Admin' } },
+        { id: 'HV-9421-A', hive_location: 'North Orchard – Plot 4', hive_type: 'Langstroth 10-Frame', installation_date: '2 mins ago',  current_state: 'lost',     owner: { id: '1', name: 'Admin' }, latitude: -0.3136, longitude: 31.7333 },
+        { id: 'HV-8812-B', hive_location: 'East Valley Ridge',       hive_type: 'Flow Hive Classic',   installation_date: '14 mins ago', current_state: 'active',   owner: { id: '2', name: 'Admin' }, latitude: -0.3736, longitude: 31.7833 },
+        { id: 'HV-7701-C', hive_location: 'Riverside Apiary',        hive_type: 'Warre Hive',          installation_date: '42 mins ago', current_state: 'active',   owner: { id: '3', name: 'Admin' }, latitude:  0.3476, longitude: 32.5825 },
+        { id: 'HV-2234-D', hive_location: 'North Orchard – Plot 2',  hive_type: 'Top Bar Hive',        installation_date: '1 hr ago',    current_state: 'migrated', owner: { id: '4', name: 'Admin' }, latitude:  0.3163, longitude: 32.5822 },
+        { id: 'HV-1002-K', hive_location: 'South Meadow B',          hive_type: 'Langstroth 10-Frame', installation_date: '2 days ago',  current_state: 'inactive', owner: { id: '5', name: 'Admin' }, latitude:  0.0512, longitude: 32.4637 },
     ];
 
     // Server already filters when search param is present; demo rows filtered client-side
@@ -285,36 +380,6 @@ export default function Beehives({ beehives = [], owners = [], search: initialSe
                         </div>
                     </div>
                 </div>
-
-                {/* Bottom: Map */}
-                <div className="grid grid-cols-1 gap-4">
-                    {/* Regional Hive Concentration map */}
-                    <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-                        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
-                            <h2 className="font-semibold text-sm" style={{ color: '#0d1b2a' }}>Regional Hive Concentration</h2>
-                            <span className="text-[10px] font-bold uppercase tracking-widest" style={{ color: '#f5a623' }}>Live Feed</span>
-                        </div>
-                        <div className="relative h-56" style={{ backgroundColor: '#c8d6c0' }}>
-                            {/* Satellite-style map placeholder */}
-                            <div className="absolute inset-0 opacity-60"
-                                style={{
-                                    background: 'linear-gradient(135deg, #8fa882 0%, #a8b89e 30%, #7a9470 60%, #6b8560 100%)',
-                                }}
-                            />
-                            <div className="absolute inset-0 opacity-20"
-                                style={{
-                                    backgroundImage: 'repeating-linear-gradient(0deg, #4a6741 0px, #4a6741 1px, transparent 1px, transparent 30px), repeating-linear-gradient(90deg, #4a6741 0px, #4a6741 1px, transparent 1px, transparent 30px)',
-                                }}
-                            />
-                            {/* Pin */}
-                            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
-                                <div className="w-10 h-10 rounded-full border-2 flex items-center justify-center" style={{ borderColor: '#f5a623', backgroundColor: 'rgba(245,166,35,0.2)' }}>
-                                    <div className="w-4 h-4 rounded-full" style={{ backgroundColor: '#f5a623' }} />
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                </div>
             </div>
 
             {/* Add Hive Modal */}
@@ -338,9 +403,34 @@ export default function Beehives({ beehives = [], owners = [], search: initialSe
                             </div>
                             <div>
                                 <label className="text-xs font-semibold uppercase tracking-widest text-gray-400 block mb-1.5">Location</label>
-                                <input type="text" value={data.hive_location} onChange={(e) => setData('hive_location', e.target.value)}
-                                    placeholder="e.g. North Field, Sector B"
-                                    className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-700 outline-none placeholder-gray-300" required />
+                                <div className="relative">
+                                    <input type="text" value={data.hive_location}
+                                        onChange={(e) => { setData('hive_location', e.target.value); setGeoStatus('idle'); }}
+                                        onBlur={async (e) => {
+                                            const loc = e.target.value.trim();
+                                            if (!loc) return;
+                                            setGeoStatus('loading');
+                                            try {
+                                                const res = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(loc + ',Uganda')}&format=json&limit=1`);
+                                                const json = await res.json();
+                                                if (json.length > 0) {
+                                                    setData('latitude', json[0].lat);
+                                                    setData('longitude', json[0].lon);
+                                                    setGeoStatus('found');
+                                                } else {
+                                                    setGeoStatus('notfound');
+                                                }
+                                            } catch {
+                                                setGeoStatus('notfound');
+                                            }
+                                        }}
+                                        placeholder="e.g. Masaka, Uganda"
+                                        className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-700 outline-none placeholder-gray-300 pr-8" required />
+                                    {geoStatus === 'loading' && <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-gray-400">...</span>}
+                                    {geoStatus === 'found'   && <span className="absolute right-3 top-1/2 -translate-y-1/2 text-green-500 text-sm"></span>}
+                                    {geoStatus === 'notfound' && <span className="absolute right-3 top-1/2 -translate-y-1/2 text-amber-500 text-sm"></span>}
+                                </div>
+                                {geoStatus === 'notfound' && <p className="text-[10px] text-amber-500 mt-1">Location not found. Coordinates will not be set.</p>}
                             </div>
                             <div>
                                 <select value={data.hive_type} onChange={(e) => { setData('hive_type', e.target.value); if (e.target.value !== 'Other') setOtherHiveType(''); }}
@@ -461,6 +551,8 @@ function EditHiveModal({ hive, owners, onClose }: { hive: Beehive; owners: Owner
         hive_type:         hive.hive_type,
         installation_date: hive.installation_date,
         current_state:     hive.current_state,
+        latitude:          hive.latitude ?? '',
+        longitude:         hive.longitude ?? '',
     });
     const [editOtherType, setEditOtherType] = useState(hive.hive_type === 'Other' ? '' : '');
 
@@ -495,6 +587,21 @@ function EditHiveModal({ hive, owners, onClose }: { hive: Beehive; owners: Owner
                             className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-700 outline-none placeholder-gray-300" required />
                         {errors.hive_location && <p className="text-xs text-red-500 mt-1">{errors.hive_location}</p>}
                     </div>
+                    <div className="grid grid-cols-2 gap-3">
+                        <div>
+                            <label className="text-xs font-semibold uppercase tracking-widest text-gray-400 block mb-1.5">Latitude</label>
+                            <input type="number" step="any" value={data.latitude as string | number} onChange={(e) => setData('latitude', e.target.value)}
+                                placeholder="e.g. 0.3476"
+                                className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-700 outline-none placeholder-gray-300" />
+                        </div>
+                        <div>
+                            <label className="text-xs font-semibold uppercase tracking-widest text-gray-400 block mb-1.5">Longitude</label>
+                            <input type="number" step="any" value={data.longitude as string | number} onChange={(e) => setData('longitude', e.target.value)}
+                                placeholder="e.g. 32.5825"
+                                className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-700 outline-none placeholder-gray-300" />
+                        </div>
+                    </div>
+                    <p className="text-[10px] text-gray-400 -mt-2">You can get coordinates from Google Maps by right-clicking your location</p>
                     <div>
                         <label className="text-xs font-semibold uppercase tracking-widest text-gray-400 block mb-1.5">Hive Type</label>
                         <select value={data.hive_type} onChange={(e) => { setData('hive_type', e.target.value); if (e.target.value !== 'Other') setEditOtherType(''); }}

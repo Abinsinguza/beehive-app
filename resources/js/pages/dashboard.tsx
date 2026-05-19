@@ -1,4 +1,4 @@
-import { Head, Link, router, usePage } from '@inertiajs/react';
+﻿import { Head, Link, router, usePage } from '@inertiajs/react';
 import {
     Activity,
     AlertTriangle,
@@ -1339,15 +1339,15 @@ export default function Dashboard({ stats, recent_beehives = [] }: DashboardProp
                                     </svg>
                                     <span className="text-[10px] font-semibold uppercase tracking-widest text-gray-400">Export Report</span>
                                 </div>
-                                <div
-                                    onClick={() => setShowLocatorModal(true)}
+                                <Link
+                                    href="/hive-locator"
                                     className="bg-white rounded-xl border border-gray-200 shadow-sm flex flex-col items-center justify-center py-4 gap-2 cursor-pointer hover:bg-gray-50 transition-colors"
                                 >
                                     <svg xmlns="http://www.w3.org/2000/svg" className="w-6 h-6 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
                                         <path strokeLinecap="round" strokeLinejoin="round" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
                                     </svg>
                                     <span className="text-[10px] font-semibold uppercase tracking-widest text-gray-400">Hive Locator</span>
-                                </div>
+                                </Link>
                             </div>
                         </div>
                     </div>

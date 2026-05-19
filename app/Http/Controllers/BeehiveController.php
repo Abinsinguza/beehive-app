@@ -50,7 +50,9 @@ class BeehiveController extends Controller
             'owner_id'      => ['required', 'string', 'exists:beekeepers,id'],
             'hive_location' => ['required', 'string', 'max:255'],
             'hive_type'     => ['required', 'string', 'max:255'],
-            'current_state' => ['required', 'in:active,inactive,migrated,lost'],
+            'current_state' => ['required', 'in:active,inactive,migrated,lost,abscondence,pest,uncertain'],
+            'latitude'      => ['nullable', 'numeric', 'between:-90,90'],
+            'longitude'     => ['nullable', 'numeric', 'between:-180,180'],
         ]);
 
         $last   = Beehive::orderBy('id', 'desc')->first();
@@ -64,6 +66,8 @@ class BeehiveController extends Controller
             'hive_type'         => $request->hive_type,
             'installation_date' => now()->toDateString(),
             'current_state'     => $request->current_state,
+            'latitude'          => $request->latitude,
+            'longitude'         => $request->longitude,
         ]);
 
         return redirect()->back()->with('success', 'Hive added successfully');
@@ -95,7 +99,9 @@ class BeehiveController extends Controller
             'hive_location'     => 'required|string|max:255',
             'hive_type'         => 'required|string|max:255',
             'installation_date' => 'required|date',
-            'current_state'     => 'required|in:active,inactive,migrated,lost',
+            'current_state'     => 'required|in:active,inactive,migrated,lost,abscondence,pest,uncertain',
+            'latitude'          => 'nullable|numeric|between:-90,90',
+            'longitude'         => 'nullable|numeric|between:-180,180',
         ]));
 
         return redirect()->back()->with('success', 'Hive updated successfully');

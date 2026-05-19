@@ -1,4 +1,4 @@
-import { Link } from '@inertiajs/react';
+﻿import { Link } from '@inertiajs/react';
 import { BarChart2, Bell, HelpCircle, Hexagon, LayoutGrid, MessageSquareWarning, Radio, Settings, Users } from 'lucide-react';
 import { NavUser } from '@/components/nav-user';
 import {

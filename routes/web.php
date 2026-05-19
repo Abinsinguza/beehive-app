@@ -29,6 +29,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('system-config', [SystemConfigController::class, 'update'])->name('system-config.update');
     Route::inertia('notifications', 'notifications')->name('notifications');
     Route::inertia('help', 'help')->name('help');
+    Route::inertia('hive-locator', 'hive-locator')->name('hive-locator');
 });
 
 require __DIR__.'/settings.php';
