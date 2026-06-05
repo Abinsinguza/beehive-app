@@ -1,10 +1,10 @@
-import { Head } from '@inertiajs/react';
+﻿import { Head, Link } from '@inertiajs/react';
 
 const clusterNodes = [
-    { id: 'Hive 104-A', status: 'Stable Condition',  temp: '34.1°C', hum: '62% Hum', color: '#22c55e', alert: false },
-    { id: 'Hive 109-B', status: 'ALERT: SWARM RISK', temp: '36.8°C', hum: '45% Hum', color: '#f5a623', alert: true },
-    { id: 'Hive 112-C', status: 'Stable Condition',  temp: '33.9°C', hum: '68% Hum', color: '#22c55e', alert: false },
-    { id: 'Hive 115-A', status: 'Stable Condition',  temp: '34.4°C', hum: '60% Hum', color: '#22c55e', alert: false },
+    { id: 'Hive 104-A', status: 'Normal',  temp: '34.1°C', hum: '62% Hum', color: '#22c55e', alert: false },
+    { id: 'Hive 109-B', status: 'PRE-SWARM DETECTED', temp: '36.8°C', hum: '45% Hum', color: '#f5a623', alert: true },
+    { id: 'Hive 112-C', status: 'Normal',  temp: '33.9°C', hum: '68% Hum', color: '#22c55e', alert: false },
+    { id: 'Hive 115-A', status: 'Normal',  temp: '34.4°C', hum: '60% Hum', color: '#22c55e', alert: false },
 ];
 
 export default function Monitoring() {
@@ -27,7 +27,7 @@ export default function Monitoring() {
                     {/* Stat cards */}
                     <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                         <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
-                            <p className="text-[11px] font-semibold uppercase tracking-widest text-gray-400">Active Hive Clusters</p>
+                            <p className="text-[11px] font-semibold uppercase tracking-widest text-gray-400">Active Hives</p>
                             <p className="text-3xl font-bold mt-2" style={{ color: '#0d1b2a' }}>124</p>
                             <p className="mt-2 text-xs font-medium text-emerald-500">↑ 4% vs last week</p>
                         </div>
@@ -46,10 +46,15 @@ export default function Monitoring() {
                                 <span>▲</span> Immediate Inspection Req.
                             </p>
                         </div>
-                        <div className="rounded-xl p-5 shadow-sm" style={{ backgroundColor: '#0d1b2a' }}>
-                            <p className="text-[11px] font-semibold uppercase tracking-widest text-slate-400">System Health</p>
-                            <p className="text-3xl font-bold mt-2 text-white">99.2%</p>
-                            <p className="mt-2 text-xs text-slate-400">↔ All nodes reporting</p>
+                        <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
+                            <div className="flex items-start justify-between">
+                                <p className="text-[11px] font-semibold uppercase tracking-widest text-gray-400">Mean Humidity</p>
+                                <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 text-blue-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 3C12 3 6 10 6 14a6 6 0 0012 0c0-4-6-11-6-11z" />
+                                </svg>
+                            </div>
+                            <p className="text-3xl font-bold mt-2" style={{ color: "#0d1b2a" }}>64%</p>
+                            <p className="mt-2 text-xs text-gray-400">Average across all active hives</p>
                         </div>
                     </div>
 
@@ -57,176 +62,78 @@ export default function Monitoring() {
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
 
                         {/* Acoustic Analysis */}
-                        <div className="lg:col-span-2 bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden flex flex-col">
-                            <div className="flex items-center gap-3 px-5 py-4 border-b border-gray-100">
-                                <span className="text-sm font-semibold" style={{ color: '#0d1b2a' }}>Real-time Acoustic Frequency Analysis</span>
-                                <span className="text-[10px] font-bold px-2 py-0.5 rounded border border-gray-300 text-gray-500 uppercase tracking-wide ml-auto">Node: Alpha-09</span>
-                                <span className="text-[10px] font-bold px-2 py-0.5 rounded text-white uppercase tracking-wide" style={{ backgroundColor: '#f5a623' }}>Streaming Live</span>
+                        <div className="lg:col-span-2 bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden flex flex-col lg:row-span-2">
+                            <div className="flex items-center gap-3 px-5 py-4 border-b border-gray-100 flex-wrap">
+                                <div className="flex flex-col gap-0.5 flex-1">
+                                    <span className="text-sm font-semibold" style={{ color: "#0d1b2a" }}>Real-time Acoustic Frequency Analysis</span>
+                                    <p className="text-[10px] text-gray-400">FFT spectrum analysis of live hive acoustic signal</p>
+                                </div>
+                                <span className="text-[10px] font-bold px-2 py-0.5 rounded text-white uppercase tracking-wide ml-auto" style={{ backgroundColor: "#f5a623" }}>Live Data</span>
                             </div>
 
-                            <div className="relative flex-1" style={{ backgroundColor: '#0d1b2a', minHeight: '220px' }}>
-                                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-10 rounded-lg px-6 py-4 text-center" style={{ backgroundColor: 'rgba(13,27,42,0.92)', border: '1px solid #f5a623' }}>
+                            <div className="relative flex-1" style={{ backgroundColor: "#0d1b2a", minHeight: "260px" }}>
+                                <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 z-10 rounded-lg px-6 py-4 text-center" style={{ backgroundColor: "rgba(13,27,42,0.92)", border: "1px solid #f5a623" }}>
                                     <div className="flex items-center justify-center gap-2 mb-1">
-                                        <span style={{ color: '#f5a623' }}>⚠</span>
-                                        <span className="text-sm font-bold uppercase tracking-wide" style={{ color: '#f5a623' }}>High-Pitch Piping Detected</span>
+                                        <span style={{ color: "#f5a623" }}>!</span>
+                                        <span className="text-sm font-bold uppercase tracking-wide" style={{ color: "#f5a623" }}>High-Pitch Piping Detected</span>
                                     </div>
-                                    <p className="text-xs text-slate-300">Frequency shift to 450Hz matches pre-swarm signature.</p>
+                                    <p className="text-xs text-slate-300">Acoustic frequency spike detected at 452Hz. Exceeds swarm threshold of 420Hz. Classification: Pre-Swarm</p>
                                 </div>
-                                <svg viewBox="0 0 460 180" className="w-full h-full" preserveAspectRatio="none">
-                                    {Array.from({ length: 30 }).map((_, i) => {
-                                        const heights = [25,30,28,35,32,38,40,36,42,45,50,55,70,75,80,78,72,68,60,55,48,42,38,35,32,30,28,26,24,22];
-                                        const h = heights[i] ?? 30;
-                                        const isHigh = i > 11 && i < 20;
-                                        return (
-                                            <rect key={i} x={i * 16 + 5} y={180 - h} width={10} height={h} rx="2"
-                                                fill={isHigh ? '#f5a623' : '#1e3a5f'} opacity={isHigh ? 0.9 : 0.6} />
-                                        );
-                                    })}
-                                    <line x1="0" y1="60" x2="460" y2="60" stroke="#f5a623" strokeWidth="1" strokeDasharray="6 4" opacity="0.4" />
+                                <svg viewBox="0 0 560 230" className="w-full h-full" preserveAspectRatio="xMidYMid meet">
+                                    <text x="10" y="120" fontSize="8" fill="#64748b" transform="rotate(-90,10,120)" textAnchor="middle">Amplitude (dB)</text>
+                                    {[0,25,50,75,100].map((v) => { const y = 20 + (100 - v) * 1.6; return (<g key={v}><line x1="48" y1={y} x2="545" y2={y} stroke="#1e3a5f" strokeWidth="0.5" /><text x="44" y={y + 3} fontSize="7" fill="#64748b" textAnchor="end">{v}</text></g>); })}
+                                    {[{hz:200,amp:20},{hz:250,amp:35},{hz:300,amp:45},{hz:350,amp:60},{hz:400,amp:55},{hz:410,amp:48}].map(({hz,amp}) => { const x=48+((hz-200)/400)*497; const h=amp*1.6; return <rect key={hz} x={x-7} y={20+(100-amp)*1.6} width={13} height={h} rx="2" fill="#3b82f6" opacity="0.75" />; })}
+                                    {[{hz:420,amp:65},{hz:452,amp:85},{hz:470,amp:82},{hz:490,amp:75},{hz:510,amp:68},{hz:530,amp:55},{hz:550,amp:40},{hz:570,amp:30}].map(({hz,amp}) => { const x=48+((hz-200)/400)*497; const h=amp*1.6; return <rect key={hz} x={x-7} y={20+(100-amp)*1.6} width={13} height={h} rx="2" fill="#f5a623" opacity="0.85" />; })}
+                                    {(()=>{ const tx=48+((420-200)/400)*497; return (<g><line x1={tx} y1="15" x2={tx} y2="180" stroke="#ef4444" strokeWidth="1.5" strokeDasharray="5 3"/><text x={tx+3} y="24" fontSize="7" fill="#ef4444" fontWeight="bold">420Hz Threshold</text></g>); })()}
+                                    <line x1="48" y1="180" x2="545" y2="180" stroke="#334155" strokeWidth="1"/>
+                                    {[200,250,300,350,400,420,450,500,550,600].map((hz)=>{ const x=48+((hz-200)/400)*497; return(<g key={hz}><line x1={x} y1="180" x2={x} y2="184" stroke="#64748b" strokeWidth="1"/><text x={x} y="193" fontSize="6.5" fill="#64748b" textAnchor="middle">{hz}</text></g>); })}
+                                    <text x="296" y="207" fontSize="8" fill="#94a3b8" textAnchor="middle">Frequency (Hz)</text>
+                                    <rect x="370" y="10" width="8" height="8" rx="1" fill="#3b82f6" opacity="0.75"/>
+                                    <text x="382" y="17" fontSize="7" fill="#94a3b8">Normal range (below 420Hz)</text>
+                                    <rect x="370" y="22" width="8" height="8" rx="1" fill="#f5a623" opacity="0.85"/>
+                                    <text x="382" y="29" fontSize="7" fill="#94a3b8">Above swarm threshold (420Hz+)</text>
                                 </svg>
                             </div>
-
-                            <div className="flex items-center gap-8 px-5 py-4 border-t border-gray-100">
-                                <div>
-                                    <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-400">Base Frequency</p>
-                                    <p className="text-sm font-bold mt-0.5" style={{ color: '#0d1b2a' }}>225 Hz</p>
-                                </div>
-                                <div>
-                                    <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-400">Peak Frequency</p>
-                                    <p className="text-sm font-bold mt-0.5" style={{ color: '#f5a623' }}>452 Hz</p>
-                                </div>
-                                <div>
-                                    <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-400">Vibration Index</p>
-                                    <p className="text-sm font-bold mt-0.5" style={{ color: '#0d1b2a' }}>0.88 RMS</p>
-                                </div>
-                                <button className="ml-auto flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold hover:opacity-90 transition-opacity"
-                                    style={{ backgroundColor: '#f5a623', color: '#0d1b2a' }}>
-                                    🔊 Listen Live
-                                </button>
-                            </div>
                         </div>
 
-                        {/* Right column */}
-                        <div className="flex flex-col gap-4">
-                            {/* Cluster nodes */}
-                            <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
-                                <div className="flex items-center justify-between mb-3">
-                                    <p className="text-xs font-bold uppercase tracking-widest" style={{ color: '#0d1b2a' }}>Cluster: North Sector</p>
-                                    <button className="text-gray-400 hover:text-gray-600">⋮</button>
-                                </div>
-                                <div className="flex flex-col divide-y divide-gray-50">
-                                    {clusterNodes.map((node) => (
-                                        <div key={node.id} className="flex items-center gap-3 py-2.5">
-                                            <div className="w-1 h-8 rounded-full shrink-0" style={{ backgroundColor: node.color }} />
-                                            <div className="flex-1 min-w-0">
+                        {/* Hive list panel */}
+                        <div className="bg-white rounded-xl border border-gray-200 shadow-sm flex flex-col overflow-hidden">
+                            <div className="px-5 py-4 border-b border-gray-100">
+                                <p className="text-sm font-semibold" style={{ color: '#0d1b2a' }}>Active Hives</p>
+                            </div>
+                            <div className="flex flex-col divide-y divide-gray-100 flex-1">
+                                {clusterNodes.map((node) => (
+                                    <div key={node.id} className="flex items-center justify-between px-5 py-3 gap-3">
+                                        <div className="flex items-center gap-3">
+                                            <span
+                                                className="w-2.5 h-2.5 rounded-full shrink-0"
+                                                style={{ backgroundColor: node.color }}
+                                            />
+                                            <div>
                                                 <p className="text-xs font-semibold" style={{ color: '#0d1b2a' }}>{node.id}</p>
-                                                <p className="text-[10px]" style={{ color: node.alert ? '#f5a623' : '#94a3b8' }}>{node.status}</p>
-                                            </div>
-                                            <div className="text-right shrink-0">
-                                                <p className="text-xs font-bold" style={{ color: node.alert ? '#f5a623' : '#0d1b2a' }}>{node.temp}</p>
-                                                <p className="text-[10px] text-gray-400">{node.hum}</p>
+                                                <p className="text-[10px] mt-0.5" style={{ color: node.alert ? '#f5a623' : '#94a3b8' }}>
+                                                    {node.status}
+                                                </p>
                                             </div>
                                         </div>
-                                    ))}
-                                </div>
-                                <button className="w-full mt-2 py-2 rounded-lg border border-gray-200 text-[10px] font-bold uppercase tracking-widest text-gray-500 hover:bg-gray-50 transition-colors">
-                                    View All Cluster Nodes
-                                </button>
-                            </div>
-
-                            {/* Hive Population Density */}
-                            <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4">
-                                <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-3">Hive Population Density</p>
-                                <div className="flex items-center justify-center my-2 gap-4">
-                                    <div className="relative w-24 h-24">
-                                        <svg viewBox="0 0 36 36" className="w-24 h-24 -rotate-90">
-                                            <circle cx="18" cy="18" r="15.9" fill="none" stroke="#f1f5f9" strokeWidth="3" />
-                                            <circle cx="18" cy="18" r="15.9" fill="none" stroke="#f5a623" strokeWidth="3"
-                                                strokeDasharray="82 18" strokeLinecap="round" />
-                                        </svg>
-                                        <div className="absolute inset-0 flex flex-col items-center justify-center">
-                                            <span className="text-xl font-bold" style={{ color: '#0d1b2a' }}>82%</span>
-                                            <span className="text-[9px] text-gray-400 uppercase tracking-widest">Capacity</span>
+                                        <div className="text-right shrink-0">
+                                            <p className="text-xs font-bold" style={{ color: node.alert ? '#f5a623' : '#0d1b2a' }}>{node.temp}</p>
+                                            <p className="text-[10px] text-gray-400">{node.hum}</p>
                                         </div>
-                                    </div>
-                                    <div className="w-10 h-10 rounded-lg flex items-center justify-center" style={{ backgroundColor: '#f5a623' }}>
-                                        <span className="text-white font-bold text-lg">✳</span>
-                                    </div>
-                                </div>
-                                <div className="mt-2 flex flex-col gap-2">
-                                    <div className="flex items-center justify-between text-xs">
-                                        <span className="text-gray-500">Foraging Activity</span>
-                                    </div>
-                                    <div className="flex items-center justify-between text-xs">
-                                        <span className="text-gray-500">Internal CO2 Level</span>
-                                        <span className="font-semibold text-gray-600">Normal</span>
-                                    </div>
-                                    <div className="w-full h-1.5 rounded-full bg-gray-100">
-                                        <div className="h-1.5 rounded-full w-3/4" style={{ backgroundColor: '#0d1b2a' }} />
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Bottom row */}
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-                        <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
-                            <div className="flex items-center gap-2 mb-4">
-                                <span className="text-gray-400">🌡</span>
-                                <p className="text-sm font-semibold" style={{ color: '#0d1b2a' }}>Temperature Variance (24h)</p>
-                            </div>
-                            <svg viewBox="0 0 200 80" className="w-full" preserveAspectRatio="none">
-                                {[20, 40, 60].map((y) => <line key={y} x1="0" y1={y} x2="200" y2={y} stroke="#f1f5f9" strokeWidth="1" />)}
-                                {[10,30,50,70,90,110,130,150,170,190].map((x, i) => {
-                                    const h = [30,35,40,55,65,70,50,45,38,32][i];
-                                    return <rect key={x} x={x-7} y={80-h} width={14} height={h} rx="2"
-                                        fill={(i===4||i===5) ? '#f5a623' : '#e2e8f0'} />;
-                                })}
-                            </svg>
-                            <div className="flex justify-between text-[10px] text-gray-400 mt-2">
-                                <span>06:00 AM</span><span>12:00 PM</span><span>06:00 PM</span>
-                            </div>
-                        </div>
-
-                        <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
-                            <div className="flex items-center gap-2 mb-4">
-                                <span className="text-gray-400">💧</span>
-                                <p className="text-sm font-semibold" style={{ color: '#0d1b2a' }}>Humidity Trends</p>
-                            </div>
-                            <svg viewBox="0 0 200 80" className="w-full" preserveAspectRatio="none">
-                                {[20,40,60].map((y) => <line key={y} x1="0" y1={y} x2="200" y2={y} stroke="#f1f5f9" strokeWidth="1" />)}
-                                <path d="M0,70 C30,65 50,55 80,45 C110,35 140,30 170,25 C185,22 195,20 200,18"
-                                    fill="none" stroke="#0d1b2a" strokeWidth="2" />
-                                <circle cx="170" cy="25" r="4" fill="#f5a623" />
-                            </svg>
-                            <div className="flex justify-between text-[10px] text-gray-400 mt-2">
-                                <span>Avg: 64%</span><span>Current: 58%</span>
-                            </div>
-                        </div>
-
-                        <div className="rounded-xl p-5 flex flex-col gap-3" style={{ backgroundColor: '#0d1b2a' }}>
-                            <div className="flex items-center gap-2">
-                                <span style={{ color: '#f5a623' }}>✳</span>
-                                <p className="text-sm font-semibold text-white">Network Gateway Status</p>
-                            </div>
-                            <div className="flex flex-col gap-2.5">
-                                {[
-                                    { label: 'Main Gateway (London_N)', value: 'CONNECTED', color: '#22c55e' },
-                                    { label: 'Satellite Link',           value: 'STANDBY',   color: '#94a3b8' },
-                                    { label: 'Packet Loss',              value: '0.002%',    color: '#22c55e' },
-                                ].map((row) => (
-                                    <div key={row.label} className="flex items-center justify-between">
-                                        <span className="text-xs text-slate-400">{row.label}</span>
-                                        <span className="text-xs font-bold" style={{ color: row.color }}>{row.value}</span>
                                     </div>
                                 ))}
                             </div>
-                            <div className="border-t border-slate-700 pt-3 mt-1">
-                                <p className="text-[10px] text-slate-500 uppercase tracking-widest">Last Sync</p>
-                                <p className="text-xs font-mono text-slate-300 mt-0.5">2023-10-27 14:32:05 UTC</p>
+                            <div className="px-5 py-3 border-t border-gray-100">
+                                <Link
+                                    href="/beehives"
+                                    className="w-full block text-center py-2 rounded-lg text-xs font-bold uppercase tracking-widest border border-gray-200 text-gray-500 hover:bg-gray-50 transition-colors"
+                                >
+                                    View All Hives
+                                </Link>
                             </div>
                         </div>
+
+
                     </div>
                 </div>
             </div>

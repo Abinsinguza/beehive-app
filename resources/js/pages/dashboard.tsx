@@ -149,9 +149,10 @@ const criticalAlerts = [
 
 // ── Pure-SVG Donut Chart component ──────────────────────────────────────────
 type DonutSlice = { state: string; count: number; color: string; desc: string };
+type ComputedSlice = DonutSlice & { path: string; midAngle: number; pct: string };
 
 function DonutChart({ data, total }: { data: DonutSlice[]; total: number }) {
-    const [tooltip, setTooltip] = useState<{ slice: DonutSlice; x: number; y: number } | null>(null);
+    const [tooltip, setTooltip] = useState<{ slice: ComputedSlice; x: number; y: number } | null>(null);
 
     const cx = 90, cy = 90, R = 72, r = 44;
     let cumAngle = -Math.PI / 2; // start at top
@@ -177,7 +178,7 @@ function DonutChart({ data, total }: { data: DonutSlice[]; total: number }) {
         ].join(' ');
 
         const midAngle = start + angle / 2;
-        return { ...d, path, midAngle, pct: ((d.count / total) * 100).toFixed(1) };
+        return { ...d, path, midAngle, pct: ((d.count / total) * 100).toFixed(1) } as ComputedSlice;
     });
 
     return (
