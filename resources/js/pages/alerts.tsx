@@ -1,5 +1,5 @@
 import { Head, router, useForm, usePage } from '@inertiajs/react';
-import { BellRing, CheckCircle, AlertCircle, Download, Plus, X } from 'lucide-react';
+import { BellRing, CheckCircle, AlertCircle, Download, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 type Inference = { id: number; prediction: string; beehive?: { hive_location: string } };
@@ -25,12 +25,30 @@ const severityConfig: Record<string, { label: string; bg: string; color: string 
 };
 
 const staticLogs = [
-    { ts: '2026-10-27 14:52:10', hive: 'HIVE-A102', severity: 'Critical', desc: 'Acoustic frequency spike detected (>450Hz). Swarm imminent.', action: 'ACKNOWLEDGE' },
-    { ts: '2026-10-27 14:15:05', hive: 'HIVE-B204', severity: 'Warning',  desc: 'Internal temperature deviation +2.5°C above baseline.',       action: 'MONITOR' },
-    { ts: '2026-10-27 13:58:44', hive: 'HIVE-C301', severity: 'Info',     desc: 'Automatic health scan completed. All metrics stable.',          action: 'DETAILS' },
-    { ts: '2026-10-27 13:42:12', hive: 'HIVE-A102', severity: 'Critical', desc: 'Queen piping sounds detected. Prepare for secondary swarm.',    action: 'ACKNOWLEDGE' },
-    { ts: '2026-10-27 13:30:00', hive: 'SYSTEM',    severity: 'Info',     desc: 'Cloud sync successful. 4 nodes updated.',                       action: 'DETAILS' },
-    { ts: '2026-10-27 12:45:10', hive: 'HIVE-B109', severity: 'Warning',  desc: 'Battery level critical on Node B109 (3%).',                     action: 'MONITOR' },
+    { ts: '2026-10-27 14:52:10', hive: 'HIVE-A102', severity: 'Critical', desc: 'Acoustic frequency spike detected (>450Hz). Swarm imminent.',                                                             action: 'ACKNOWLEDGE', mlBadge: { label: 'SWARM',     bg: '#fef2f2', color: '#ef4444' } },
+    { ts: '2026-10-27 14:15:05', hive: 'HIVE-B204', severity: 'Warning',  desc: 'Internal temperature deviation +2.5°C above baseline.',                                                                   action: 'MONITOR',     mlBadge: { label: 'PRE-SWARM', bg: '#fff7ed', color: '#f5a623' } },
+    { ts: '2026-10-27 13:58:44', hive: 'HIVE-C301', severity: 'Info',     desc: 'Automatic health scan completed. All metrics stable.',                                                                     action: 'DETAILS',     mlBadge: { label: 'NORMAL',    bg: '#f0fdf4', color: '#16a34a' } },
+    { ts: '2026-10-27 13:42:12', hive: 'HIVE-A102', severity: 'Critical', desc: 'Queen piping sounds detected. Prepare for secondary swarm.',                                                               action: 'ACKNOWLEDGE', mlBadge: { label: 'SWARM',     bg: '#fef2f2', color: '#ef4444' } },
+    { ts: '2026-10-27 13:30:00', hive: 'HIVE-B109', severity: 'Info',     desc: 'Acoustic baseline scan completed. Frequency within normal range (280-350Hz).',                                             action: 'DETAILS',     mlBadge: { label: 'NORMAL',    bg: '#f0fdf4', color: '#16a34a' } },
+    { ts: '2026-10-27 12:45:10', hive: 'HIVE-B109', severity: 'Warning',  desc: 'Battery level critical (3%). Microphone may go offline. Audio recording and classification at risk.',                     action: 'MONITOR',     mlBadge: { label: 'NORMAL',    bg: '#f0fdf4', color: '#16a34a' } },
+];
+
+const staticLogsPage2 = [
+    { ts: '2026-10-27 12:10:33', hive: 'HIVE-D401', severity: 'Critical', desc: 'Sustained high-frequency piping at 438Hz for >10 minutes. Swarm preparation likely.',                                    action: 'ACKNOWLEDGE', mlBadge: { label: 'SWARM',     bg: '#fef2f2', color: '#ef4444' } },
+    { ts: '2026-10-27 11:55:20', hive: 'HIVE-C301', severity: 'Warning',  desc: 'Humidity reading 91% RH. Condensation risk detected inside brood chamber.',                                               action: 'MONITOR',     mlBadge: { label: 'NORMAL',          bg: '#f0fdf4', color: '#16a34a' } },
+    { ts: '2026-10-27 11:30:08', hive: 'HIVE-A205', severity: 'Info',     desc: 'Scheduled audio classification completed. 12 recordings processed, all normal.',                                          action: 'DETAILS',     mlBadge: { label: 'NORMAL',    bg: '#f0fdf4', color: '#16a34a' } },
+    { ts: '2026-10-27 11:14:45', hive: 'HIVE-B204', severity: 'Critical', desc: 'Acoustic signature matches active swarming pattern. Colony exit behavior detected.',                                      action: 'ACKNOWLEDGE', mlBadge: { label: 'SWARM',     bg: '#fef2f2', color: '#ef4444' } },
+    { ts: '2026-10-27 10:58:00', hive: 'HIVE-D401', severity: 'Info',     desc: 'Temperature stabilised at 34.6°C. Hive returned to baseline after morning activity.',                                     action: 'DETAILS',     mlBadge: { label: 'NORMAL',    bg: '#f0fdf4', color: '#16a34a' } },
+    { ts: '2026-10-27 10:32:17', hive: 'HIVE-A102', severity: 'Warning',  desc: 'Vibration anomaly detected in acoustic recording. Possible external disturbance pattern near hive.',                     action: 'MONITOR',     mlBadge: { label: 'PEST/DISTURBANCE', bg: '#fff3e0', color: '#f97316' } },
+];
+
+const staticLogsPage3 = [
+    { ts: '2026-10-27 10:05:50', hive: 'HIVE-C301', severity: 'Info',     desc: 'Acoustic preprocessing pipeline completed. All frequency filters calibrated successfully.',                               action: 'DETAILS',     mlBadge: { label: 'NORMAL',    bg: '#f0fdf4', color: '#16a34a' } },
+    { ts: '2026-10-27 09:48:22', hive: 'HIVE-A205', severity: 'Warning',  desc: 'Ambient temperature outside hive dropped to 11°C. Colony may cluster to conserve heat.',                                 action: 'MONITOR',     mlBadge: { label: 'NORMAL',    bg: '#f0fdf4', color: '#16a34a' } },
+    { ts: '2026-10-27 09:20:05', hive: 'HIVE-B109', severity: 'Info',     desc: 'Daily acoustic summary: 48 recordings classified, 46 normal, 2 flagged for review.',                                     action: 'DETAILS',     mlBadge: { label: 'NORMAL',    bg: '#f0fdf4', color: '#16a34a' } },
+    { ts: '2026-10-27 08:55:33', hive: 'HIVE-D401', severity: 'Critical', desc: 'Peak frequency 461Hz recorded at dawn. High swarm-risk window. Deploy inspection team.',                                  action: 'ACKNOWLEDGE', mlBadge: { label: 'SWARM',     bg: '#fef2f2', color: '#ef4444' } },
+    { ts: '2026-10-27 08:30:11', hive: 'HIVE-A102', severity: 'Info',     desc: 'Acoustic recording completed. Classification: Normal. Confidence score 96%.',                                            action: 'DETAILS',     mlBadge: { label: 'NORMAL',    bg: '#f0fdf4', color: '#16a34a' } },
+    { ts: '2026-10-27 08:00:00', hive: 'HIVE-B204', severity: 'Warning',  desc: 'Humidity level risen to 89%. Possible moisture accumulation in brood chamber.',                                          action: 'MONITOR',     mlBadge: { label: 'NORMAL',    bg: '#f0fdf4', color: '#16a34a' } },
 ];
 
 export default function AlertsPage({
@@ -54,7 +72,24 @@ export default function AlertsPage({
     const [severityFilter, setSeverityFilter] = useState('All Levels');
     const [dateFrom, setDateFrom] = useState('');
     const [dateTo, setDateTo]     = useState('');
+    const [severityTab, setSeverityTab] = useState<'ALL' | 'NORMAL' | 'ELEVATED' | 'CRITICAL'>('ALL');
+    const [currentPage, setCurrentPage] = useState(1);
 
+    const initialChecklist = [
+        { id: 1, text: 'Inspect Hive-A102 for queen cells',       done: false },
+        { id: 2, text: 'Add super to Hive-A102 to reduce congestion', done: false },
+        { id: 3, text: 'Set swarm trap near Hive-A102',           done: false },
+        { id: 4, text: 'Check ventilation on Hive-A102',          done: false },
+        { id: 5, text: 'Prepare nucleus colony box',              done: false },
+        { id: 6, text: 'Brief field team on swarm protocol',      done: false },
+    ];
+    const [showChecklist, setShowChecklist] = useState(false);
+    const [checklist, setChecklist] = useState(initialChecklist);
+    const doneCount = checklist.filter((i) => i.done).length;
+    const donePct   = Math.round((doneCount / checklist.length) * 100);
+    const toggleCheck = (id: number) => setChecklist((prev) => prev.map((i) => i.id === id ? { ...i, done: !i.done } : i));
+    const markAllDone = () => setChecklist((prev) => prev.map((i) => ({ ...i, done: true })));
+    const closeChecklist = () => { setShowChecklist(false); setChecklist(initialChecklist); };
     const { data, setData, post, reset, processing, errors } = useForm({
         inference_id: '',
         advisory_id: '',
@@ -75,6 +110,8 @@ export default function AlertsPage({
     const criticalCount = alerts.filter((a) => a.alert_type === 'Critical' || a.alert_type === 'Threat').length || 4;
     const elevatedCount = alerts.filter((a) => a.alert_type === 'Warning').length || 12;
 
+    const pageStaticLogs = currentPage === 2 ? staticLogsPage2 : currentPage === 3 ? staticLogsPage3 : staticLogs;
+
     // Use real alerts if available, otherwise show static demo logs
     const logs = alerts.length > 0
         ? alerts.map((a) => ({
@@ -87,13 +124,16 @@ export default function AlertsPage({
             action:     a.status === 'pending' ? 'NOTIFY' : 'SENT',
             alertObj:   a,
         }))
-        : staticLogs.map((l) => ({ ...l, beekeeper: null, status: null, alertObj: null }));
+        : pageStaticLogs.map((l) => ({ ...l, beekeeper: null, status: null, alertObj: null }));
 
     // Filter logs by date range using local date string comparison
     const filteredLogs = logs.filter((log) => {
         const datePart = log.ts.slice(0, 10); // "YYYY-MM-DD"
         if (dateFrom && datePart < dateFrom) return false;
         if (dateTo   && datePart > dateTo)   return false;
+        if (severityTab === 'NORMAL'   && (severityConfig[log.severity] ?? severityConfig.Info).label !== 'NORMAL')   return false;
+        if (severityTab === 'ELEVATED' && (severityConfig[log.severity] ?? severityConfig.Info).label !== 'ELEVATED') return false;
+        if (severityTab === 'CRITICAL' && (severityConfig[log.severity] ?? severityConfig.Info).label !== 'CRITICAL') return false;
         return true;
     });
 
@@ -122,33 +162,13 @@ export default function AlertsPage({
                 {/* Sub-header */}
                 <div className="flex items-center gap-3 px-6 py-3 bg-white border-b border-gray-200">
                     <span className="font-semibold text-sm" style={{ color: '#0d1b2a' }}>Alerts and Logs</span>
-                    <span className="text-sm text-gray-400">System Health:</span>
-                    <span className="text-sm font-semibold" style={{ color: '#f5a623' }}>Active Monitoring</span>
                     <div className="ml-auto flex items-center gap-3">
-                        <button
-                            onClick={() => setShowModal(true)}
-                            className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold hover:opacity-90 transition-opacity"
-                            style={{ backgroundColor: '#0d1b2a', color: '#ffffff' }}
-                        >
-                            <Plus className="w-4 h-4" /> Add Alert
-                        </button>
                         <button
                             onClick={exportLog}
                             className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold hover:opacity-90 transition-opacity"
                             style={{ backgroundColor: '#f5a623', color: '#0d1b2a' }}
                         >
                             <Download className="w-4 h-4" /> Export Log
-                        </button>
-                        <button
-                            onClick={() => {
-                                setHiveFilter('All Hives');
-                                setSeverityFilter('All Levels');
-                                setDateFrom('');
-                                setDateTo('');
-                            }}
-                            className="px-4 py-2 rounded-lg text-sm font-semibold border border-gray-300 text-gray-600 hover:bg-gray-50 transition-colors"
-                        >
-                            Clear All
                         </button>
                     </div>
                 </div>
@@ -251,32 +271,30 @@ export default function AlertsPage({
                             <p className="text-xs text-gray-400 mt-1">Acoustic Shifts</p>
                         </div>
 
-                        <div className="rounded-xl overflow-hidden shadow-sm border border-gray-200">
-                            <div className="relative h-32" style={{ backgroundColor: '#0a1628' }}>
-                                <svg viewBox="0 0 200 80" className="w-full h-full" preserveAspectRatio="none">
-                                    {[20, 40, 60].map((y) => (
-                                        <line key={y} x1="0" y1={y} x2="200" y2={y} stroke="#1e3a5f" strokeWidth="0.5" />
-                                    ))}
-                                    <path d="M0,60 C20,55 30,20 50,30 C70,40 80,55 100,50 C120,45 130,15 150,25 C170,35 180,55 200,45"
-                                        fill="none" stroke="#f5a623" strokeWidth="2" />
-                                    <path d="M0,65 C30,60 60,40 90,50 C120,60 150,30 200,35"
-                                        fill="none" stroke="#3b82f6" strokeWidth="1" strokeDasharray="4 3" opacity="0.5" />
-                                </svg>
-                            </div>
-                            <div className="bg-white p-3">
-                                <p className="text-xs font-semibold" style={{ color: '#0d1b2a' }}>Frequency Pulse</p>
-                                <p className="text-[10px] text-gray-400 mt-0.5">Real-time hive vibration log for HIVE-A102</p>
-                            </div>
-                        </div>
+
                     </div>
 
                     {/* System Activity Logs table — full width */}
                     <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
                             <div className="flex items-center gap-3 px-5 py-4 border-b border-gray-100">
                                 <span className="font-semibold text-sm" style={{ color: '#0d1b2a' }}>System Activity Logs</span>
-                                <div className="ml-auto flex items-center gap-2">
-                                    <span className="text-[10px] font-bold px-2 py-1 rounded border border-gray-300 text-gray-500 uppercase tracking-widest">Normal</span>
-                                    <span className="text-[10px] font-bold px-2 py-1 rounded text-white uppercase tracking-widest" style={{ backgroundColor: '#f5a623' }}>Alert</span>
+                                <div className="ml-auto flex items-center gap-1">
+                                    {(['ALL', 'NORMAL', 'ELEVATED', 'CRITICAL'] as const).map((tab) => {
+                                        const active = severityTab === tab;
+                                        return (
+                                            <button
+                                                key={tab}
+                                                onClick={() => { setSeverityTab(tab); setCurrentPage(1); }}
+                                                className="text-[10px] font-bold px-3 py-1.5 rounded uppercase tracking-widest transition-colors"
+                                                style={active
+                                                    ? { backgroundColor: '#f5a623', color: '#0d1b2a' }
+                                                    : { border: '1px solid #e5e7eb', color: '#9ca3af', backgroundColor: 'transparent' }
+                                                }
+                                            >
+                                                {tab}
+                                            </button>
+                                        );
+                                    })}
                                 </div>
                             </div>
 
@@ -284,7 +302,7 @@ export default function AlertsPage({
                                 <thead>
                                     <tr className="border-b border-gray-100">
                                         <th className="text-left px-4 py-3 text-[10px] font-bold uppercase tracking-widest text-gray-400">Timestamp</th>
-                                        <th className="text-left px-4 py-3 text-[10px] font-bold uppercase tracking-widest text-gray-400">Hive / Beekeeper</th>
+                                        <th className="text-left px-4 py-3 text-[10px] font-bold uppercase tracking-widest text-gray-400">Hive ID</th>
                                         <th className="text-left px-4 py-3 text-[10px] font-bold uppercase tracking-widest text-gray-400">Severity</th>
                                         <th className="text-left px-4 py-3 text-[10px] font-bold uppercase tracking-widest text-gray-400">Event Description</th>
                                         <th className="text-left px-4 py-3 text-[10px] font-bold uppercase tracking-widest text-gray-400">Status</th>
@@ -323,6 +341,11 @@ export default function AlertsPage({
                                                         <span className="text-[10px] font-bold px-2 py-1 rounded uppercase tracking-widest"
                                                             style={{ backgroundColor: '#fff7ed', color: '#c2410c' }}>
                                                             Pending
+                                                        </span>
+                                                    ) : isStatic && (log as any).mlBadge ? (
+                                                        <span className="text-[10px] font-bold px-2 py-1 rounded uppercase tracking-widest"
+                                                            style={{ backgroundColor: (log as any).mlBadge.bg, color: (log as any).mlBadge.color }}>
+                                                            {(log as any).mlBadge.label}
                                                         </span>
                                                     ) : (
                                                         <span className="text-[10px] text-gray-400">—</span>
@@ -363,17 +386,28 @@ export default function AlertsPage({
 
                             {/* Pagination */}
                             <div className="flex items-center justify-between px-5 py-4 border-t border-gray-100">
-                                <span className="text-xs text-gray-400">Showing 1 to 6 of 142 events</span>
-                                <div className="flex items-center gap-1">
-                                    <button className="w-7 h-7 rounded text-xs text-gray-400 hover:bg-gray-100">‹</button>
-                                    {[1, 2, 3].map((p) => (
-                                        <button key={p} className="w-7 h-7 rounded text-xs font-semibold transition-colors"
-                                            style={p === 1 ? { backgroundColor: '#f5a623', color: '#0d1b2a' } : { color: '#6b7280' }}>
-                                            {p}
-                                        </button>
-                                    ))}
-                                    <button className="w-7 h-7 rounded text-xs text-gray-400 hover:bg-gray-100">›</button>
-                                </div>
+                                <span className="text-xs text-gray-400">
+                                    {severityTab === 'ALL'
+                                        ? `Showing ${(currentPage - 1) * 6 + 1} to ${(currentPage - 1) * 6 + filteredLogs.length} of 142 events`
+                                        : `Showing ${filteredLogs.length} ${severityTab.toLowerCase()} event${filteredLogs.length !== 1 ? 's' : ''}`
+                                    }
+                                </span>
+                                {severityTab === 'ALL' && (
+                                    <div className="flex items-center gap-1">
+                                        <button onClick={() => setCurrentPage((p) => Math.max(1, p - 1))} className="w-7 h-7 rounded text-xs text-gray-400 hover:bg-gray-100">‹</button>
+                                        {[1, 2, 3].map((p) => (
+                                            <button
+                                                key={p}
+                                                onClick={() => setCurrentPage(p)}
+                                                className="w-7 h-7 rounded text-xs font-semibold transition-colors"
+                                                style={p === currentPage ? { backgroundColor: '#f5a623', color: '#0d1b2a' } : { color: '#6b7280' }}
+                                            >
+                                                {p}
+                                            </button>
+                                        ))}
+                                        <button onClick={() => setCurrentPage((p) => Math.min(3, p + 1))} className="w-7 h-7 rounded text-xs text-gray-400 hover:bg-gray-100">›</button>
+                                    </div>
+                                )}
                             </div>
                         </div>
 
@@ -388,21 +422,38 @@ export default function AlertsPage({
                                 <p className="text-xs text-gray-500 leading-relaxed">
                                     System analysis suggests HIVE-A102 has entered pre-swarm behavior. Immediate physical inspection is recommended to verify queen cells.
                                 </p>
-                                <button className="self-start mt-1 px-4 py-2 rounded-lg border border-gray-300 text-xs font-bold uppercase tracking-widest text-gray-700 hover:bg-gray-50 transition-colors">
+                                <button onClick={() => setShowChecklist(true)} className="self-start mt-1 px-4 py-2 rounded-lg border border-gray-300 text-xs font-bold uppercase tracking-widest text-gray-700 hover:bg-gray-50 transition-colors">
                                     View Protocol Checklist
                                 </button>
                             </div>
                         </div>
 
-                        <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5 flex gap-4">
-                            <div className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0" style={{ backgroundColor: '#eff6ff' }}>
-                                <span className="text-blue-500 font-bold text-lg">↺</span>
+                        <div className="rounded-xl p-5 flex flex-col gap-4" style={{ backgroundColor: '#0d1b2a' }}>
+                            <div className="flex items-center gap-3">
+                                <div className="w-10 h-10 rounded-lg flex items-center justify-center shrink-0" style={{ backgroundColor: '#f5a623' }}>
+                                    <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5" fill="none" viewBox="0 0 24 24" stroke="#0d1b2a" strokeWidth={2}>
+                                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z" />
+                                    </svg>
+                                </div>
+                                <p className="font-semibold text-sm text-white">ML Classification Summary</p>
+                            </div>
+                            <p className="text-xs text-slate-400 leading-relaxed">
+                                Based on today's acoustic analysis across all active hives:
+                            </p>
+                            <div className="flex flex-col gap-2">
+                                {[
+                                    { label: 'Total recordings processed',           value: '47' },
+                                    { label: 'Classifications above 80% confidence', value: '38' },
+                                    { label: 'Flagged as Uncertain',                 value: '5'  },
+                                    { label: 'Awaiting expert review',               value: '5'  },
+                                ].map(({ label, value }) => (
+                                    <div key={label} className="flex items-center justify-between">
+                                        <span className="text-xs text-slate-400">{label}</span>
+                                        <span className="text-xs font-bold" style={{ color: '#f5a623' }}>{value}</span>
+                                    </div>
+                                ))}
                             </div>
                             <div className="flex flex-col gap-2">
-                                <p className="font-semibold text-sm" style={{ color: '#0d1b2a' }}>Predictive Drift Analysis</p>
-                                <p className="text-xs text-gray-500 leading-relaxed">
-                                    Based on the last 72 hours of acoustic data, the colony health trend is shifting from foraging stability to overcrowding states across Yard B.
-                                </p>
                                 <button
                                     onClick={() => {
                                         const sc = (sev: string) => (severityConfig[sev] ?? severityConfig.Info).label;
@@ -466,8 +517,7 @@ export default function AlertsPage({
                                         const win = window.open('', '_blank');
                                         if (win) { win.document.write(html); win.document.close(); }
                                     }}
-                                    className="self-start mt-1 px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-widest text-white hover:opacity-90 transition-opacity"
-                                    style={{ backgroundColor: '#0d1b2a' }}
+                                    className="w-full px-4 py-2 rounded-lg text-xs font-bold uppercase tracking-widest border border-slate-600 text-slate-300 hover:border-slate-400 transition-colors"
                                 >
                                     Generate Full Report
                                 </button>
@@ -476,6 +526,73 @@ export default function AlertsPage({
                     </div>
                 </div>
             </div>
+
+            {/* Swarm Preparation Checklist Modal */}
+            {showChecklist && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+                    <div className="w-full max-w-lg rounded-2xl bg-white shadow-2xl">
+                        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+                            <div>
+                                <h2 className="text-base font-bold" style={{ color: '#0d1b2a' }}>Swarm Preparation Checklist</h2>
+                                <p className="text-xs text-gray-400 mt-0.5">Recommended actions based on current risk level — HIVE-A102</p>
+                            </div>
+                            <button onClick={closeChecklist} className="text-gray-400 hover:text-gray-600 transition-colors">
+                                <X className="w-5 h-5" />
+                            </button>
+                        </div>
+                        <div className="p-6 flex flex-col gap-4">
+                            {/* Progress */}
+                            <div>
+                                <div className="flex items-center justify-between mb-2">
+                                    <span className="text-xs font-semibold text-gray-400">{doneCount} / {checklist.length} completed</span>
+                                    <span className="text-xs font-bold" style={{ color: '#f5a623' }}>{donePct}%</span>
+                                </div>
+                                <div className="w-full h-2 bg-gray-100 rounded-full overflow-hidden">
+                                    <div
+                                        className="h-full rounded-full transition-all duration-300"
+                                        style={{ width: `${donePct}%`, backgroundColor: '#f5a623' }}
+                                    />
+                                </div>
+                            </div>
+                            {/* Items */}
+                            <div className="flex flex-col gap-2">
+                                {checklist.map((item) => (
+                                    <label key={item.id} className="flex items-start gap-3 cursor-pointer">
+                                        <input
+                                            type="checkbox"
+                                            checked={item.done}
+                                            onChange={() => toggleCheck(item.id)}
+                                            className="mt-0.5 accent-amber-500 w-4 h-4 shrink-0"
+                                        />
+                                        <span
+                                            className="text-sm transition-colors"
+                                            style={{ color: item.done ? '#94a3b8' : '#0d1b2a', textDecoration: item.done ? 'line-through' : 'none' }}
+                                        >
+                                            {item.text}
+                                        </span>
+                                    </label>
+                                ))}
+                            </div>
+                            {/* Actions */}
+                            <div className="flex gap-3 pt-2">
+                                <button
+                                    onClick={markAllDone}
+                                    className="flex-1 py-2.5 rounded-lg text-sm font-semibold hover:opacity-90 transition-opacity"
+                                    style={{ backgroundColor: '#f5a623', color: '#0d1b2a' }}
+                                >
+                                    Mark All Done
+                                </button>
+                                <button
+                                    onClick={closeChecklist}
+                                    className="flex-1 py-2.5 rounded-lg text-sm font-semibold border border-gray-200 text-gray-500 hover:bg-gray-50 transition-colors"
+                                >
+                                    Close
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             {/* Add Alert Modal */}
             {showModal && (
