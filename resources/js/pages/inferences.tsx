@@ -1,16 +1,139 @@
-import { Head } from '@inertiajs/react';
+import { Head, Link } from '@inertiajs/react';
+import { useState } from 'react';
 
-const eventLog = [
-    { time: 'Oct 24, 09:12:04', hive: 'HV-4922-A', type: 'Acoustic Shift', measurement: '294 Hz',   status: 'SWARM PROB.', statusColor: '#f5a623', statusBg: '#fff7ed', action: 'View Spectra' },
-    { time: 'Oct 24, 08:45:12', hive: 'HV-1288-C', type: 'Temp Spike',     measurement: '38.4 °C',  status: 'CRITICAL',    statusColor: '#ffffff', statusBg: '#0d1b2a', action: 'View Spectra' },
-    { time: 'Oct 24, 07:22:58', hive: 'HV-3310-B', type: 'Weight Loss',    measurement: '-1.2 kg',  status: 'NORMAL',      statusColor: '#374151', statusBg: '#f3f4f6', action: 'View Spectra' },
+const trendData = [
+    { day: 'Mon', normal: 85, preSwarm: 32, swarm: 8,  abscondence: 3, pest: 9,  uncertain: 5 },
+    { day: 'Tue', normal: 88, preSwarm: 28, swarm: 6,  abscondence: 2, pest: 13, uncertain: 5 },
+    { day: 'Wed', normal: 80, preSwarm: 35, swarm: 10, abscondence: 3, pest: 9,  uncertain: 5 },
+    { day: 'Thu', normal: 75, preSwarm: 42, swarm: 12, abscondence: 3, pest: 5,  uncertain: 5 },
+    { day: 'Fri', normal: 82, preSwarm: 38, swarm: 9,  abscondence: 2, pest: 6,  uncertain: 5 },
+    { day: 'Sat', normal: 90, preSwarm: 25, swarm: 5,  abscondence: 2, pest: 15, uncertain: 5 },
+    { day: 'Sun', normal: 87, preSwarm: 30, swarm: 7,  abscondence: 3, pest: 10, uncertain: 5 },
 ];
 
 export default function Inferences() {
+    const [toast, setToast] = useState(false);
+
+    const showToast = () => {
+        setToast(true);
+        setTimeout(() => setToast(false), 3000);
+    };
+
+    const handleExportCSV = () => {
+        const headers = ['Day', 'Normal', 'Pre-Swarm', 'Swarm/Abscondence', 'Pest/Disturbance', 'Uncertain'];
+        const rows = trendData.map((d) =>
+            [d.day, d.normal, d.preSwarm, d.swarm, d.pest, d.uncertain].join(',')
+        );
+        const csv  = [headers.join(','), ...rows].join('\r\n');
+        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+        const url  = URL.createObjectURL(blob);
+        const a    = document.createElement('a');
+        a.href     = url;
+        a.download = 'BSADS_Analytics_Report.csv';
+        a.click();
+        URL.revokeObjectURL(url);
+        showToast();
+    };
+
+    const handleExportPDF = async () => {
+        const { jsPDF } = await import('jspdf');
+        const doc = new jsPDF();
+
+        // Title
+        doc.setFontSize(14);
+        doc.setTextColor(13, 27, 42);
+        doc.text('BSADS Acoustic & Environmental Analytics Report', 14, 18);
+
+        doc.setFontSize(9);
+        doc.setTextColor(100, 116, 139);
+        doc.text(`Generated: ${new Date().toLocaleString()}`, 14, 26);
+
+        // Stat cards
+        doc.setFontSize(11);
+        doc.setTextColor(13, 27, 42);
+        doc.text('Summary Statistics', 14, 36);
+
+        const stats = [
+            ['Average ML Confidence Score', '84.2%'],
+            ['Acoustic Peak (Hz)',           '248 Hz — Within Normal Range'],
+            ['Mean Hive Temp',               '35.2°C — Stable within range'],
+            ['Monitoring Hives',             '142 — Active audio classifications'],
+        ];
+        doc.setFontSize(9);
+        stats.forEach(([label, value], i) => {
+            const y = 44 + i * 8;
+            doc.setTextColor(100, 116, 139);
+            doc.text(label, 14, y);
+            doc.setTextColor(13, 27, 42);
+            doc.text(value, 90, y);
+        });
+
+        // Health Profile
+        doc.setFontSize(11);
+        doc.setTextColor(13, 27, 42);
+        doc.text('Health Profile', 14, 84);
+
+        const health = [
+            ['Normal State',      '82 Hives', '51%'],
+            ['Pre-Swarm',         '48 Hives', '30%'],
+            ['Swarm/Abscondence', '12 Hives', '8%' ],
+            ['Pest/Disturbance',  '14 Hives', '9%' ],
+            ['Uncertain',         '5 Hives',  '3%' ],
+        ];
+        doc.setFontSize(9);
+        doc.setFillColor(13, 27, 42);
+        doc.rect(14, 88, 182, 7, 'F');
+        doc.setTextColor(255, 255, 255);
+        ['State', 'Count', 'Share'].forEach((h, i) => doc.text(h, 16 + i * 55, 93));
+        health.forEach(([state, count, share], i) => {
+            const y = 100 + i * 8;
+            if (i % 2 === 0) { doc.setFillColor(248, 249, 250); doc.rect(14, y - 4, 182, 8, 'F'); }
+            doc.setTextColor(13, 27, 42);
+            doc.text(state, 16, y);
+            doc.text(count, 71, y);
+            doc.text(share, 126, y);
+        });
+
+        // 7-Day Trend Table
+        const trendY = 148;
+        doc.setFontSize(11);
+        doc.setTextColor(13, 27, 42);
+        doc.text('7-Day Classification Trend', 14, trendY);
+
+        doc.setFontSize(9);
+        doc.setFillColor(13, 27, 42);
+        doc.rect(14, trendY + 4, 182, 7, 'F');
+        doc.setTextColor(255, 255, 255);
+        const tHeaders = ['Day', 'Normal', 'Pre-Swarm', 'Swarm', 'Pest/Dist.', 'Uncertain'];
+        tHeaders.forEach((h, i) => doc.text(h, 16 + i * 30, trendY + 9));
+
+        trendData.forEach((d, i) => {
+            const y = trendY + 18 + i * 8;
+            if (i % 2 === 0) { doc.setFillColor(248, 249, 250); doc.rect(14, y - 4, 182, 8, 'F'); }
+            doc.setTextColor(13, 27, 42);
+            [d.day, d.normal, d.preSwarm, d.swarm, d.pest, d.uncertain].forEach((v, j) => doc.text(String(v), 16 + j * 30, y));
+        });
+
+        doc.setFontSize(8);
+        doc.setTextColor(148, 163, 184);
+        doc.text('BSADS — Bee Swarm Acoustic Detection System — Confidential', 14, 285);
+
+        doc.save('BSADS_Analytics_Report.pdf');
+        showToast();
+    };
+
     return (
         <>
             <Head title="Analytics & Reports" />
             <div className="min-h-screen p-6 flex flex-col gap-6" style={{ backgroundColor: '#f8f9fa' }}>
+
+                {/* Toast */}
+                {toast && (
+                    <div className="fixed bottom-6 right-6 z-50 flex items-center gap-3 px-4 py-3 rounded-xl shadow-xl text-white text-xs font-semibold" style={{ backgroundColor: '#0d1b2a' }}>
+                        <span className="w-2 h-2 rounded-full bg-emerald-400 shrink-0" />
+                        Report exported successfully
+                    </div>
+                )}
 
                 {/* Page heading */}
                 <div className="flex items-start justify-between gap-4 flex-wrap">
@@ -23,11 +146,11 @@ export default function Inferences() {
                         </p>
                     </div>
                     <div className="flex items-center gap-3">
-                        <button className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold hover:opacity-90 transition-opacity" style={{ backgroundColor: '#f5a623', color: '#0d1b2a' }}>
+                        <button onClick={handleExportPDF} className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold hover:opacity-90 transition-opacity" style={{ backgroundColor: '#f5a623', color: '#0d1b2a' }}>
                             <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
                             Export PDF
                         </button>
-                        <button className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold hover:opacity-90 transition-opacity" style={{ backgroundColor: '#f5a623', color: '#0d1b2a' }}>
+                        <button onClick={handleExportCSV} className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold hover:opacity-90 transition-opacity" style={{ backgroundColor: '#f5a623', color: '#0d1b2a' }}>
                             <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
                             Export CSV
                         </button>
@@ -37,14 +160,14 @@ export default function Inferences() {
                 {/* Stat cards */}
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                     <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
-                        <p className="text-[11px] font-semibold uppercase tracking-widest text-gray-400 leading-tight">Total Colony<br />Activity</p>
+                        <p className="text-[11px] font-semibold uppercase tracking-widest text-gray-400 leading-tight">Average ML<br />Confidence Score</p>
                         <p className="text-4xl font-bold mt-3" style={{ color: '#0d1b2a' }}>84.2%</p>
                         <p className="mt-2 text-xs font-medium text-emerald-500">↗ +12% vs last month</p>
                     </div>
                     <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
                         <p className="text-[11px] font-semibold uppercase tracking-widest text-gray-400 leading-tight">Acoustic Peak<br />(Hz)</p>
-                        <p className="text-4xl font-bold mt-3" style={{ color: '#f5a623' }}>248</p>
-                        <p className="mt-2 text-xs font-medium" style={{ color: '#f5a623' }}>▲ Elevated – Swarm risk</p>
+                        <p className="text-4xl font-bold mt-3" style={{ color: '#22c55e' }}>248</p>
+                        <p className="mt-2 text-xs font-medium text-emerald-500">↔ Within Normal Range</p>
                     </div>
                     <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
                         <p className="text-[11px] font-semibold uppercase tracking-widest text-gray-400">Mean Hive Temp</p>
@@ -57,7 +180,7 @@ export default function Inferences() {
                     <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
                         <p className="text-[11px] font-semibold uppercase tracking-widest text-gray-400">Monitoring Hives</p>
                         <p className="text-4xl font-bold mt-3" style={{ color: '#0d1b2a' }}>142</p>
-                        <p className="mt-2 text-xs text-gray-400">↔ 98% Data Integrity</p>
+                        <p className="mt-2 text-xs text-gray-400">↔ Active audio classifications</p>
                     </div>
                 </div>
 
@@ -72,27 +195,63 @@ export default function Inferences() {
                             <span className="text-[10px] font-bold border border-gray-300 rounded px-2 py-0.5 text-gray-500 uppercase tracking-wide">Periodic</span>
                         </div>
                         <div className="relative" style={{ backgroundColor: '#0d1b2a' }}>
-                            <svg viewBox="0 0 660 280" className="w-full" preserveAspectRatio="none">
-                                {/* Grid lines */}
-                                {[40, 100, 160, 220].map((y) => (
-                                    <line key={y} x1="0" y1={y} x2="660" y2={y} stroke="#1e3a5f" strokeWidth="1" />
+                            <svg viewBox="0 0 660 310" className="w-full" preserveAspectRatio="xMidYMid meet">
+
+                                {/* ── Y-axis label (rotated) ── */}
+                                <text x="-122" y="12" fontSize="8" fill="#94a3b8" fontWeight="600"
+                                    transform="rotate(-90)" textAnchor="middle">Frequency (Hz)</text>
+
+                                {/* ── Y-axis ticks + grid lines ── */}
+                                {/* y = 230 - ((hz-200)/300)*215 */}
+                                {[
+                                    { hz: 500, y: 15  },
+                                    { hz: 420, y: 72  },
+                                    { hz: 400, y: 86  },
+                                    { hz: 300, y: 158 },
+                                    { hz: 200, y: 230 },
+                                ].map(({ hz, y }) => (
+                                    <g key={hz}>
+                                        <line x1="50" y1={y} x2="640" y2={y} stroke="#1e3a5f" strokeWidth="0.8" />
+                                        <text x="46" y={y + 3} fontSize="7.5" fill="#64748b" textAnchor="end">{hz}</text>
+                                    </g>
                                 ))}
-                                {/* Orange wave */}
+
+                                {/* ── 420Hz swarm threshold dashed red line ── */}
+                                <line x1="50" y1={72} x2="640" y2={72} stroke="#ef4444" strokeWidth="1.2" strokeDasharray="5 3" opacity="0.9" />
+                                <text x="642" y={75} fontSize="7.5" fill="#ef4444" fontWeight="600">⚠ Swarm Threshold</text>
+
+                                {/* ── Orange wave (remapped to new plot area) ── */}
                                 <path
-                                    d="M0,220 C60,215 100,200 150,180 C200,160 220,130 260,110 C300,90 320,95 360,120 C400,145 420,170 460,160 C500,150 540,120 600,100 C630,90 650,85 660,80"
+                                    d="M50,220 C110,214 155,198 205,177 C255,156 275,128 318,108 C360,88 383,93 426,119 C469,145 491,170 534,160 C577,150 614,122 635,102"
                                     fill="none" stroke="#f5a623" strokeWidth="2.5"
                                 />
-                                {/* Peak tooltip */}
-                                <rect x="370" y="60" width="130" height="38" rx="4" fill="#f5a623" />
-                                <text x="435" y="76" fontSize="10" fill="#0d1b2a" textAnchor="middle" fontWeight="bold">Peak: 285Hz (Pre-</text>
-                                <text x="435" y="90" fontSize="10" fill="#0d1b2a" textAnchor="middle" fontWeight="bold">Swarm)</text>
+
+                                {/* ── Peak tooltip (green, Normal Range) ── */}
+                                <rect x="370" y="55" width="148" height="38" rx="4" fill="#16a34a" />
+                                <text x="444" y="71" fontSize="10" fill="white" textAnchor="middle" fontWeight="bold">Peak: 285Hz</text>
+                                <text x="444" y="85" fontSize="10" fill="white" textAnchor="middle" fontWeight="bold">(Normal Range)</text>
                                 {/* Dot on curve */}
-                                <circle cx="360" cy="120" r="5" fill="#f5a623" />
+                                <circle cx="426" cy="119" r="5" fill="#f5a623" />
+
+                                {/* ── X-axis baseline ── */}
+                                <line x1="50" y1="230" x2="640" y2="230" stroke="#334155" strokeWidth="0.8" />
+
+                                {/* ── X-axis tick labels ── */}
+                                {[
+                                    { label: '00:00', x: 50  },
+                                    { label: '04:00', x: 148 },
+                                    { label: '08:00', x: 247 },
+                                    { label: '12:00', x: 345 },
+                                    { label: '16:00', x: 443 },
+                                    { label: '20:00', x: 542 },
+                                    { label: '24:00', x: 640 },
+                                ].map(({ label, x }) => (
+                                    <text key={label} x={x} y="244" fontSize="7.5" fill="#64748b" textAnchor="middle">{label}</text>
+                                ))}
+
+                                {/* ── X-axis label ── */}
+                                <text x="345" y="260" fontSize="8" fill="#94a3b8" fontWeight="600" textAnchor="middle">Time</text>
                             </svg>
-                            {/* X-axis labels */}
-                            <div className="flex justify-between px-4 pb-3 text-[10px] text-slate-500">
-                                {['06:00','10:00','14:00','18:00','22:00','02:00'].map((t) => <span key={t}>{t}</span>)}
-                            </div>
                         </div>
                     </div>
 
@@ -104,9 +263,11 @@ export default function Inferences() {
                                 <div className="h-0.5 w-8 mt-1 rounded-full" style={{ backgroundColor: '#f5a623' }} />
                             </div>
                             {[
-                                { label: 'Normal State',      count: '82 Hives', pct: 58, color: '#0d1b2a' },
-                                { label: 'Elevated State',    count: '48 Hives', pct: 34, color: '#f5a623' },
-                                { label: 'Critical / Swarming', count: '12 Hives', pct: 8,  color: '#ef4444' },
+                                { label: 'Normal State',       count: '82 Hives', pct: 51, color: '#22c55e' },
+                                { label: 'Pre-Swarm',          count: '48 Hives', pct: 30, color: '#f5a623' },
+                                { label: 'Swarm/Abscondence',  count: '12 Hives', pct: 8,  color: '#ef4444' },
+                                { label: 'Pest/Disturbance',   count: '14 Hives', pct: 9,  color: '#f97316' },
+                                { label: 'Uncertain',          count: '5 Hives',  pct: 3,  color: '#9ca3af' },
                             ].map((row) => (
                                 <div key={row.label} className="flex flex-col gap-1">
                                     <div className="flex items-center justify-between text-xs">
@@ -118,84 +279,133 @@ export default function Inferences() {
                                     </div>
                                 </div>
                             ))}
-                            <button className="w-full py-2.5 rounded-lg border border-gray-300 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors mt-1">
+                            <Link href="/beehives" className="w-full block text-center py-2.5 rounded-lg border border-gray-300 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors mt-1">
                                 Detailed Hive Audit
-                            </button>
+                            </Link>
                         </div>
 
-                        {/* Live Environment */}
+                        {/* Latest Environment Readings */}
                         <div className="rounded-xl p-5 flex flex-col gap-4" style={{ backgroundColor: '#0d1b2a' }}>
-                            <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: '#f5a623' }}>Live Environment</p>
+                            <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: '#f5a623' }}>Latest Environment Readings</p>
                             <div className="flex items-center gap-3">
+                                {/* Thermometer icon */}
                                 <svg xmlns="http://www.w3.org/2000/svg" className="w-6 h-6 text-slate-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M14 14.76V3.5a2.5 2.5 0 00-5 0v11.26a4.5 4.5 0 105 0z" />
                                 </svg>
                                 <div>
                                     <p className="text-[10px] text-slate-400">Avg. Internal Temperature</p>
                                     <p className="text-2xl font-bold text-white">34.8°C</p>
+                                    <p className="text-[10px] text-slate-500 mt-0.5">Average across 142 active hives</p>
+                                    <p className="text-[10px] text-slate-500">Range: 31.2°C — 38.4°C</p>
                                 </div>
                             </div>
                             <div className="flex items-center gap-3">
+                                {/* Water droplet icon */}
                                 <svg xmlns="http://www.w3.org/2000/svg" className="w-6 h-6 text-slate-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                                    <path strokeLinecap="round" strokeLinejoin="round" d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z" />
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M12 3C12 3 5 10.5 5 15a7 7 0 0014 0c0-4.5-7-12-7-12z" />
                                 </svg>
                                 <div>
                                     <p className="text-[10px] text-slate-400">Relative Humidity</p>
                                     <p className="text-2xl font-bold text-white">58.2%</p>
+                                    <p className="text-[10px] text-slate-500 mt-0.5">Average across 142 active hives</p>
+                                    <p className="text-[10px] text-slate-500">Range: 45% — 91%</p>
                                 </div>
+                            </div>
+                            <div className="border-t border-slate-700 pt-3 mt-1">
+                                <p className="text-[10px] text-slate-500">Last updated: June 6, 2026 at 10:33 AM</p>
                             </div>
                         </div>
                     </div>
                 </div>
 
-                {/* Significant Event Log */}
+                {/* 7-Day Classification Trend */}
                 <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-                    <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 flex-wrap gap-3">
-                        <h2 className="font-semibold text-sm" style={{ color: '#0d1b2a' }}>Significant Event Log</h2>
-                        <div className="flex items-center gap-3">
-                            <select className="text-xs border border-gray-200 rounded-lg px-3 py-2 text-gray-600 outline-none bg-white">
-                                <option>All Types</option>
-                                <option>Acoustic Shift</option>
-                                <option>Temp Spike</option>
-                                <option>Weight Loss</option>
-                            </select>
-                            <select className="text-xs border border-gray-200 rounded-lg px-3 py-2 text-gray-600 outline-none bg-white">
-                                <option>Last 30 Days</option>
-                                <option>Last 7 Days</option>
-                                <option>Last 24 Hours</option>
-                            </select>
+                    <div className="px-6 py-4 border-b border-gray-100">
+                        <h2 className="font-semibold text-sm" style={{ color: '#0d1b2a' }}>7-Day Classification Trend</h2>
+                        <p className="text-[11px] text-gray-400 mt-0.5">Daily ML classification results across all active hives</p>
+                    </div>
+                    <div className="p-6">
+                        {/*
+                            SVG bar chart — viewBox 660×220
+                            Plot area: x=40..620, y=10..160
+                            Y range 0–100 → y = 160 - (val/100)*150
+                            7 groups, each group 3 bars (w=10) + gap, group width ~82px
+                        */}
+                        <svg viewBox="0 0 660 220" className="w-full" preserveAspectRatio="xMidYMid meet">
+
+                            {/* Y-axis label */}
+                            <text x="-90" y="12" fontSize="8" fill="#94a3b8" fontWeight="600"
+                                transform="rotate(-90)" textAnchor="middle">Number of Hives</text>
+
+                            {/* Y-axis ticks + grid lines */}
+                            {[0, 25, 50, 75, 100].map((v) => {
+                                const y = 160 - (v / 100) * 150;
+                                return (
+                                    <g key={v}>
+                                        <line x1="40" y1={y} x2="625" y2={y} stroke="#f1f5f9" strokeWidth="1" />
+                                        <text x="36" y={y + 3} fontSize="8" fill="#94a3b8" textAnchor="end">{v}</text>
+                                    </g>
+                                );
+                            })}
+
+                            {/* Bars */}
+                            {trendData.map((d, i) => {
+                                // 7 groups across x=40..625, group width = 585/7 ≈ 83.6
+                                // 6 bars per group, barW=8, gap=2 → span = 6*8 + 5*2 = 58
+                                const groupW = 585 / 7;
+                                const groupX = 40 + i * groupW;
+                                const barW   = 8;
+                                const gap    = 2;
+                                const spanW  = 6 * barW + 5 * gap;
+                                const bx1    = groupX + (groupW - spanW) / 2;
+                                const bx2    = bx1 + barW + gap;
+                                const bx3    = bx2 + barW + gap;
+                                const bx4    = bx3 + barW + gap;
+                                const bx5    = bx4 + barW + gap;
+                                const bx6    = bx5 + barW + gap;
+                                const yN  = 160 - (d.normal      / 100) * 150;
+                                const yPS = 160 - (d.preSwarm    / 100) * 150;
+                                const yS  = 160 - (d.swarm       / 100) * 150;
+                                const yA  = 160 - (d.abscondence / 100) * 150;
+                                const yP  = 160 - (d.pest        / 100) * 150;
+                                const yU  = 160 - (d.uncertain   / 100) * 150;
+                                return (
+                                    <g key={d.day}>
+                                        <rect x={bx1} y={yN}  width={barW} height={160 - yN}  rx="2" fill="#22c55e" opacity="0.85" />
+                                        <rect x={bx2} y={yPS} width={barW} height={160 - yPS} rx="2" fill="#f5a623" opacity="0.85" />
+                                        <rect x={bx3} y={yS}  width={barW} height={160 - yS}  rx="2" fill="#ef4444" opacity="0.85" />
+                                        <rect x={bx4} y={yA}  width={barW} height={160 - yA}  rx="2" fill="#991b1b" opacity="0.85" />
+                                        <rect x={bx5} y={yP}  width={barW} height={160 - yP}  rx="2" fill="#f97316" opacity="0.85" />
+                                        <rect x={bx6} y={yU}  width={barW} height={160 - yU}  rx="2" fill="#9ca3af" opacity="0.85" />
+                                        <text x={groupX + groupW / 2} y={176} fontSize="8.5" fill="#64748b" textAnchor="middle">{d.day}</text>
+                                    </g>
+                                );
+                            })}
+
+                            {/* X-axis baseline */}
+                            <line x1="40" y1="160" x2="625" y2="160" stroke="#e2e8f0" strokeWidth="1" />
+
+                            {/* X-axis label */}
+                            <text x="332" y="192" fontSize="8" fill="#94a3b8" fontWeight="600" textAnchor="middle">Day</text>
+                        </svg>
+
+                        {/* Legend */}
+                        <div className="flex items-center gap-4 mt-2 justify-center flex-wrap">
+                            {[
+                                { color: '#22c55e', label: 'Normal'           },
+                                { color: '#f5a623', label: 'Pre-Swarm'        },
+                                { color: '#ef4444', label: 'Swarm'            },
+                                { color: '#991b1b', label: 'Abscondence'      },
+                                { color: '#f97316', label: 'Pest/Disturbance' },
+                                { color: '#9ca3af', label: 'Uncertain'        },
+                            ].map(({ color, label }) => (
+                                <div key={label} className="flex items-center gap-2">
+                                    <span className="w-3 h-3 rounded-sm inline-block" style={{ backgroundColor: color }} />
+                                    <span className="text-[11px] font-semibold text-gray-500">{label}</span>
+                                </div>
+                            ))}
                         </div>
                     </div>
-                    <table className="w-full text-sm">
-                        <thead>
-                            <tr className="border-b border-gray-100">
-                                {['Timestamp','Hive ID','Event Type','Measurement','Status','Action'].map((h) => (
-                                    <th key={h} className="text-left px-6 py-3 text-xs font-semibold text-gray-400 uppercase tracking-widest">{h}</th>
-                                ))}
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {eventLog.map((row, i) => (
-                                <tr key={i} className="border-b border-gray-50 hover:bg-gray-50 transition-colors">
-                                    <td className="px-6 py-4 text-xs text-gray-500 whitespace-nowrap">{row.time}</td>
-                                    <td className="px-6 py-4 text-xs font-medium" style={{ color: '#0d1b2a' }}>{row.hive}</td>
-                                    <td className="px-6 py-4 text-xs text-gray-600">{row.type}</td>
-                                    <td className="px-6 py-4 text-xs text-gray-600">{row.measurement}</td>
-                                    <td className="px-6 py-4">
-                                        <span className="text-[10px] font-bold px-2 py-1 rounded uppercase tracking-wide"
-                                            style={{ backgroundColor: row.statusBg, color: row.statusColor }}>
-                                            {row.status}
-                                        </span>
-                                    </td>
-                                    <td className="px-6 py-4">
-                                        <button className="text-xs font-semibold hover:underline" style={{ color: '#f5a623' }}>
-                                            {row.action}
-                                        </button>
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
-                    </table>
                 </div>
 
             </div>
