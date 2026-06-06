@@ -261,14 +261,14 @@ export default function AlertsPage({
                             <p className="text-5xl font-bold mt-3" style={{ color: '#f5a623' }}>
                                 {String(criticalCount).padStart(2, '0')}
                             </p>
-                            <p className="text-xs text-gray-400 mt-1">Active Alerts</p>
+                            <p className="text-xs text-gray-400 mt-1">Require Immediate Action</p>
                         </div>
 
                         <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
-                            <p className="font-semibold text-sm" style={{ color: '#0d1b2a' }}>Elevated Drift</p>
+                            <p className="font-semibold text-sm" style={{ color: '#0d1b2a' }}>Pre-Swarm Detections</p>
                             <div className="h-0.5 w-8 mt-1 rounded-full" style={{ backgroundColor: '#f5a623' }} />
-                            <p className="text-5xl font-bold mt-3" style={{ color: '#0d1b2a' }}>{elevatedCount}</p>
-                            <p className="text-xs text-gray-400 mt-1">Acoustic Shifts</p>
+                            <p className="text-5xl font-bold mt-3" style={{ color: '#f5a623' }}>47</p>
+                            <p className="text-xs text-gray-400 mt-1">Hives approaching swarm threshold</p>
                         </div>
 
 
