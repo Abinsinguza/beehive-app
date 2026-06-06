@@ -126,7 +126,7 @@ const criticalAlerts = [
     {
         id: 2,
         color: '#9ca3af',
-        title: 'Hive Node 04: Uncertain',
+        title: 'Hive-B04: Uncertain',
         time: '14m ago',
         desc: 'Low confidence ML classification. Audio quality insufficient for reliable detection.',
         actions: [],
@@ -1120,82 +1120,7 @@ export default function Dashboard({ stats, recent_beehives = [] }: DashboardProp
                     </div>
 
                     {/* ── Bottom two-column section ── */}
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 flex-1">
-
-                        {/* Frequency chart panel */}
-                        <div id="section-chart" className="lg:col-span-2 bg-white rounded-xl border border-gray-200 shadow-sm flex flex-col overflow-hidden">
-                            <div className="flex items-center gap-3 px-5 py-4 border-b border-gray-100">
-                                <div>
-                                    <span className="font-semibold text-sm" style={{ color: '#0d1b2a' }}>
-                                        Acoustic Swarm Frequency Analysis
-                                    </span>
-                                    <p className="text-[10px] text-gray-400 mt-0.5">
-                                        Baseline hive frequency vs live swarm intensity score over time
-                                    </p>
-                                </div>
-                                <span className="text-[10px] font-semibold border border-gray-300 rounded px-2 py-0.5 text-gray-500 uppercase tracking-wide ml-2">
-                                    Live Data
-                                </span>
-                                <span className="text-[10px] font-semibold rounded px-2 py-0.5 text-white uppercase tracking-wide ml-auto" style={{ backgroundColor: '#0d1b2a' }}>
-                                    250Hz – 450Hz Range
-                                </span>
-                            </div>
-
-                            {/* SVG chart */}
-                            <div className="flex-1 relative p-4">
-                                <svg viewBox="0 0 640 360" className="w-full h-full" preserveAspectRatio="xMidYMid meet">
-
-                                    {/* ── Y-axis title (rotated) ── */}
-                                    <text
-                                        x="-180" y="12"
-                                        fontSize="9" fill="#64748b" fontWeight="600"
-                                        transform="rotate(-90)"
-                                        textAnchor="middle"
-                                    >
-                                        Frequency (Hz)
-                                    </text>
-
-                                    {/* ── Y-axis labels + grid lines ── */}
-                                    {[
-                                        { label: 'MAX',   y: 20  },
-                                        { label: '800Hz', y: 78  },
-                                        { label: '600Hz', y: 136 },
-                                        { label: '400Hz', y: 194 },
-                                        { label: '200Hz', y: 252 },
-                                        { label: '0Hz',   y: 310 },
-                                    ].map(({ label, y }) => (
-                                        <g key={label}>
-                                            <text x="44" y={y + 3} fontSize="8" fill="#94a3b8" textAnchor="end">{label}</text>
-                                            <line x1="50" y1={y} x2="610" y2={y} stroke="#f1f5f9" strokeWidth="1" />
-                                        </g>
-                                    ))}
-
-                                    {/* ── Swarm threshold line at 420Hz (y≈188) ── */}
-                                    <line x1="50" y1={188} x2="610" y2={188} stroke="#ef4444" strokeWidth="1.5" strokeDasharray="5 3" opacity="0.7" />
-                                    <text x="612" y={192} fontSize="8" fill="#ef4444" fontWeight="600">⚠ 420Hz</text>
-
-                                    {/* ── Data paths ── */}
-                                    <path d={chartPaths[activeRange].dark}   fill="none" stroke="#0d1b2a" strokeWidth="2.5" />
-                                    <path d={chartPaths[activeRange].orange} fill="none" stroke="#f5a623" strokeWidth="2" strokeDasharray="6 4" />
-
-                                    {/* ── Alert tooltip ── */}
-                                    <rect x="330" y="110" width="90" height="36" rx="4" fill="#0d1b2a" />
-                                    <text x="375" y="126" fontSize="9" fill="white" textAnchor="middle" fontWeight="bold">ALERT: 432 Hz</text>
-                                    <text x="375" y="139" fontSize="8" fill="#f5a623" textAnchor="middle">▲ threshold</text>
-
-                                    {/* ── X-axis baseline ── */}
-                                    <line x1="50" y1="310" x2="610" y2="310" stroke="#e2e8f0" strokeWidth="1" />
-
-                                    {/* ── X-axis tick labels ── */}
-                                    {xLabels[activeRange].map(({ label, x }) => (
-                                        <text key={label} x={x} y="325" fontSize="8" fill="#94a3b8" textAnchor="middle">{label}</text>
-                                    ))}
-
-                                    {/* ── X-axis title ── */}
-                                    <text x="330" y="345" fontSize="9" fill="#64748b" fontWeight="600" textAnchor="middle">Time</text>
-                                </svg>
-                            </div>
-                        </div>
+                    <div className="grid grid-cols-1 gap-4 flex-1">
 
                         {/* Critical Alerts panel */}
                         <div id="section-alerts" className="bg-white rounded-xl border border-gray-200 shadow-sm flex flex-col overflow-hidden">
@@ -1295,31 +1220,8 @@ export default function Dashboard({ stats, recent_beehives = [] }: DashboardProp
                         </div>
                     </div>
 
-                    {/* ── Bottom section: legend + actions row ── */}
+                    {/* ── Bottom section: actions row ── */}
                     <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-
-                        {/* Chart legend + time controls */}
-                        <div className="lg:col-span-2 bg-white rounded-xl border border-gray-200 shadow-sm px-5 py-4 flex items-center gap-6 flex-wrap">
-                            <div className="flex items-center gap-2">
-                                <span className="w-3 h-3 rounded-sm inline-block" style={{ backgroundColor: '#0d1b2a' }} />
-                                <span className="text-[11px] font-semibold uppercase tracking-widest text-gray-500">Baseline Activity</span>
-                            </div>
-                            <div className="flex items-center gap-2">
-                                <span className="w-3 h-3 rounded-sm border-2 border-dashed inline-block" style={{ borderColor: '#f5a623' }} />
-                                <span className="text-[11px] font-semibold uppercase tracking-widest text-gray-500">Swarm Intensity Score</span>
-                            </div>
-                            <div className="flex items-center gap-2 ml-auto">
-                                {(['1H', '24H', '7D'] as const).map((t) => (
-                                    <button
-                                        key={t}
-                                        onClick={() => setActiveRange(t)}
-                                        className={`text-xs font-bold px-3 py-1.5 rounded border transition-colors ${activeRange === t ? 'border-gray-800 text-gray-800 bg-gray-100' : 'border-gray-300 text-gray-400 hover:border-gray-500'}`}
-                                    >
-                                        {t}
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
 
                         {/* View All Incidents + quick actions */}
                         <div className="flex flex-col gap-3">
