@@ -18,23 +18,13 @@ const todayNotifications: NotificationItem[] = [
     {
         id: 1,
         type: 'alert',
-        title: 'Critical Swarm Warning: Hive B-04',
-        body: 'Acoustic frequency analysis indicates imminent swarming behavior (285Hz detected). Temperature has risen by 2.4°C in the last 15 minutes.',
+        title: 'Critical Swarm Warning: BH0004',
+        body: 'Acoustic frequency analysis indicates imminent swarming behavior (452Hz detected). Temperature has risen by 2.4°C in the last 15 minutes.',
         time: '2 mins ago',
         actions: [
             { label: 'Dispatch Team', style: 'primary' },
         ],
         borderColor: '#ef4444',
-    },
-    {
-        id: 2,
-        type: 'team',
-        title: 'Team Update: Hive Maintenance',
-        body: 'Marcus Thorne marked inspection as completed for Apiary Sector 7. All queens verified healthy.',
-        time: '1 hour ago',
-        user: 'Marcus Thorne',
-        userRole: 'Technical Team',
-        borderColor: '#64748b',
     },
 ];
 
@@ -43,7 +33,7 @@ const yesterdayNotifications: NotificationItem[] = [
         id: 3,
         type: 'system',
         title: 'System Update: v4.2',
-        body: 'Gateways 12-24 successfully updated to v4.2.0. Expected performance improvement across all monitoring nodes.',
+        body: 'BSADS system successfully updated to v4.2.0. ML classification model performance improved by 12%.',
         time: '22 hours ago',
         tag: 'SYSTEM LOG',
         borderColor: '#94a3b8',
@@ -51,8 +41,8 @@ const yesterdayNotifications: NotificationItem[] = [
     {
         id: 4,
         type: 'battery',
-        title: 'Battery Alert: Hive Node A-89',
-        body: 'Power level at 15%. Recommend replacement during the next scheduled maintenance cycle to prevent data loss.',
+        title: 'Battery Alert: BH0005',
+        body: 'Microphone battery at 15%. Audio recording at risk. Replace battery soon to maintain hive monitoring.',
         time: 'Yesterday at 4:30 PM',
         actions: [{ label: 'Schedule Replacement', style: 'link' }],
         borderColor: '#f5a623',
@@ -60,9 +50,8 @@ const yesterdayNotifications: NotificationItem[] = [
 ];
 
 const categories = [
-    { label: 'All Activities', count: 24, icon: Bell, active: true },
+    { label: 'All Activities', count: 12, icon: Bell, active: true },
     { label: 'Alerts', count: 3, icon: AlertTriangle, active: false },
-    { label: 'Team', count: 12, icon: Users, active: false },
     { label: 'System', count: 9, icon: Settings2, active: false },
 ];
 
@@ -134,7 +123,7 @@ export default function Notifications() {
                         <div>
                             <h1 className="text-lg font-semibold" style={{ color: '#0d1b2a' }}>Notifications</h1>
                             <p className="text-sm text-gray-500 mt-0.5">
-                                Manage and track all hive alerts, team updates, and system messages.
+                                Manage and track all hive alerts and system messages.
                             </p>
                         </div>
                         <div className="flex items-center gap-3">
@@ -185,14 +174,14 @@ export default function Notifications() {
                                 <div>
                                     <div className="flex items-center justify-between text-xs mb-1">
                                         <span className="text-slate-300">High Priority Response</span>
-                                        <span className="font-bold text-white">85%</span>
+                                        <span className="font-bold text-white">3 of 3 urgent alerts acknowledged</span>
                                     </div>
                                     <div className="w-full h-1.5 rounded-full bg-slate-700">
                                         <div className="h-1.5 rounded-full" style={{ width: '85%', backgroundColor: '#f5a623' }} />
                                     </div>
                                 </div>
                                 <p className="text-xs text-slate-400 leading-relaxed">
-                                    3 critical swarm alerts require immediate technician dispatch.
+                                    3 critical swarm alerts require immediate beekeeper inspection.
                                 </p>
                                 <button className="w-full py-2 rounded-lg border border-white text-white text-xs font-bold uppercase tracking-widest hover:bg-white hover:text-gray-900 transition-colors">
                                     View Priority
@@ -205,7 +194,7 @@ export default function Notifications() {
 
                             {/* Today */}
                             <div>
-                                <p className="text-sm font-semibold text-gray-500 mb-3">Today, October 24</p>
+                                <p className="text-sm font-semibold text-gray-500 mb-3">Today, June 6, 2026</p>
                                 <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
                                     {todayNotifications.map((n) => <NotifCard key={n.id} n={n} />)}
                                 </div>
@@ -213,7 +202,7 @@ export default function Notifications() {
 
                             {/* Yesterday */}
                             <div>
-                                <p className="text-sm font-semibold text-gray-500 mb-3">Yesterday, October 23</p>
+                                <p className="text-sm font-semibold text-gray-500 mb-3">Yesterday, June 5, 2026</p>
                                 <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
                                     {yesterdayNotifications.map((n) => <NotifCard key={n.id} n={n} />)}
                                 </div>
