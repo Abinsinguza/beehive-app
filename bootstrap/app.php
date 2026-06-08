@@ -15,6 +15,11 @@ return Application::configure(basePath: dirname(__DIR__))
         health: '/up',
     )
     ->withMiddleware(function (Middleware $middleware): void {
+        // Railway terminates SSL at its edge proxy and forwards plain HTTP —
+        // trust that proxy so Laravel knows the original request was HTTPS
+        // and generates https:// URLs for assets, redirects, etc.
+        $middleware->trustProxies(at: '*');
+
         $middleware->encryptCookies(except: ['appearance', 'sidebar_state']);
 
         $middleware->web(append: [
