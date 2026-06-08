@@ -6,12 +6,14 @@ use Illuminate\Support\Facades\Route;
 use App\Http\Controllers\AdvisoryController;
 use App\Http\Controllers\AlertsController;
 use App\Http\Controllers\InferenceController;
+use App\Http\Controllers\AudioSourceController;
+use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\SystemConfigController;
 
 Route::redirect('/', '/login')->name('home');
 
 Route::middleware(['auth', 'verified'])->group(function () {
-    Route::inertia('dashboard', 'dashboard')->name('dashboard');
+    Route::get('dashboard', [DashboardController::class, 'index'])->name('dashboard');
     Route::inertia('analytics', 'inferences')->name('analytics');
     Route::inertia('monitoring', 'monitoring')->name('monitoring');
     Route::get('alerts', [AlertsController::class, 'index'])->name('alerts.index');
@@ -27,6 +29,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::resource('inferences', InferenceController::class)->only(['index', 'store']);
     Route::get('system-config',  [SystemConfigController::class, 'index'])->name('system-config');
     Route::post('system-config', [SystemConfigController::class, 'update'])->name('system-config.update');
+    Route::get('audio-recordings', [AudioSourceController::class, 'index'])->name('audio-recordings.index');
+    Route::post('audio-recordings', [AudioSourceController::class, 'store'])->name('audio-recordings.store');
+    Route::inertia('database-schema', 'database-schema')->name('database-schema');
     Route::inertia('notifications', 'notifications')->name('notifications');
     Route::inertia('help', 'help')->name('help');
 });

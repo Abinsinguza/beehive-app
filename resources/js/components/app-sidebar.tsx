@@ -1,5 +1,5 @@
 import { Link } from '@inertiajs/react';
-import { BarChart2, Bell, HelpCircle, Hexagon, LayoutGrid, MessageSquareWarning, Radio, Settings, Users } from 'lucide-react';
+import { BarChart2, Bell, Database, HelpCircle, Hexagon, LayoutGrid, MessageSquareWarning, Mic, Radio, Settings, Users } from 'lucide-react';
 import { NavUser } from '@/components/nav-user';
 import {
     Sidebar,
@@ -16,17 +16,19 @@ import type { NavItem } from '@/types';
 const mainNavItems: NavItem[] = [
     { title: 'Dashboard',  href: dashboard(),      icon: LayoutGrid },
     { title: 'Beekeepers', href: '/beekeepers',    icon: Users },
-    { title: 'Hives',      href: '/beehives',      icon: Hexagon },
-    { title: 'Monitoring', href: '/monitoring', icon: Radio },
+    { title: 'Hives',            href: '/beehives',          icon: Hexagon },
+    { title: 'Audio Recordings', href: '/audio-recordings',  icon: Mic },
+    { title: 'Monitoring',       href: '/monitoring',        icon: Radio },
     { title: 'Alerts & Logs', href: '/alerts', icon: Bell },
     { title: 'Advisories',   href: '/advisories', icon: MessageSquareWarning },
     { title: 'Analytics & Reports', href: '/analytics', icon: BarChart2 },
 ];
 
 const bottomNavItems: NavItem[] = [
-    { title: 'Settings',      href: '/system-config',  icon: Settings },
-    { title: 'Notifications', href: '/notifications',  icon: Bell },
-    { title: 'Help',          href: '/help',           icon: HelpCircle },
+    { title: 'Database Schema', href: '/database-schema', icon: Database },
+    { title: 'Settings',        href: '/system-config',   icon: Settings },
+    { title: 'Notifications',   href: '/notifications',   icon: Bell },
+    { title: 'Help',            href: '/help',            icon: HelpCircle },
 ];
 
 function SidebarNavItem({ item }: { item: NavItem }) {

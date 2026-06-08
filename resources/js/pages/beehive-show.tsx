@@ -1,0 +1,365 @@
+import { Head, router } from '@inertiajs/react';
+import { Activity, AlertTriangle, Calendar, ChevronLeft, ClipboardList, Droplets, Leaf, MapPin, Mic, Play, Thermometer, Users } from 'lucide-react';
+
+type Beehive = {
+    id: string;
+    hive_id: string;
+    hive_name: string;
+    hive_location: string;
+    hive_type: string;
+    installation_date: string;
+    current_state: string;
+    latitude: number | null;
+    longitude: number | null;
+    owner: { name: string } | null;
+};
+
+type EnvData = {
+    temperature: number | null;
+    humidity: number | null;
+    population_k_bees: number | null;
+    nectar_flow_kg_per_day: number | null;
+    recorded_at: string | null;
+} | null;
+
+type InferenceItem = { state: string; percentage: number };
+
+type Advisory = {
+    advisory_id: string;
+    condition_label: string | null;
+    advisory_text: string | null;
+    severity: string;
+    created_at: string;
+};
+
+type AudioSource = {
+    audio_id: string;
+    source_url: string;
+    file_format: string;
+    duration_seconds: number | null;
+    captured_at: string | null;
+    status: string;
+};
+
+type LatestInference = {
+    hive_state: string;
+    confidence_score: number;
+    inference_latency_ms: number | null;
+    analyzed_at: string;
+} | null;
+
+const stateColors: Record<string, string> = {
+    'Swarming':    '#ef4444',
+    'Swarm':       '#ef4444',
+    'Pre-swarm':   '#f59e0b',
+    'Normal':      '#22c55e',
+    'Abscondment': '#94a3b8',
+    'Uncertain':   '#3b82f6',
+};
+
+const severityDot: Record<string, string> = {
+    Critical: '#ef4444',
+    Warning:  '#f59e0b',
+    Info:     '#22c55e',
+};
+
+function fmt(dateStr: string | null | undefined): string {
+    if (!dateStr) return '—';
+    const d = new Date(dateStr);
+    return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+}
+
+function fmtTime(dateStr: string | null | undefined): string {
+    if (!dateStr) return '—';
+    const d = new Date(dateStr);
+    const today = new Date();
+    const isToday = d.toDateString() === today.toDateString();
+    const yesterday = new Date(today);
+    yesterday.setDate(today.getDate() - 1);
+    const isYesterday = d.toDateString() === yesterday.toDateString();
+    const time = d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+    if (isToday) return `Today ${time}`;
+    if (isYesterday) return `Yesterday ${time}`;
+    return fmt(dateStr);
+}
+
+function filename(url: string): string {
+    return url.split('/').pop() ?? url;
+}
+
+export default function BeehiveShow({
+    beehive,
+    latestEnv,
+    inferenceDistribution,
+    latestInference,
+    recentAdvisories,
+    audioSources,
+}: {
+    beehive: Beehive;
+    latestEnv: EnvData;
+    inferenceDistribution: InferenceItem[];
+    latestInference: LatestInference;
+    recentAdvisories: Advisory[];
+    audioSources: AudioSource[];
+}) {
+    const stateBadgeColor = stateColors[beehive.current_state] ?? '#94a3b8';
+    const isRisk = ['Swarming', 'Swarm', 'Pre-swarm', 'Abscondment'].includes(beehive.current_state);
+
+    return (
+        <>
+            <Head title={`${beehive.hive_name ?? 'Hive'} — Profile`} />
+            <div className="min-h-screen p-6 flex flex-col gap-5" style={{ backgroundColor: '#f8f9fa' }}>
+
+                {/* Back */}
+                <button
+                    onClick={() => router.visit('/beehives')}
+                    className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-800 w-fit"
+                >
+                    <ChevronLeft className="w-4 h-4" /> Back to Hive Inventory
+                </button>
+
+                {/* ── Header card ─────────────────────────────────── */}
+                <div className="bg-white rounded-2xl border border-gray-200 shadow-sm px-6 py-5 flex items-start justify-between gap-4">
+                    <div className="flex items-start gap-4">
+                        {/* Icon */}
+                        <div className="w-12 h-12 rounded-xl flex items-center justify-center shrink-0 text-xl"
+                            style={{ backgroundColor: '#fef3c7' }}>
+                            🐝
+                        </div>
+                        <div className="flex flex-col gap-1">
+                            <div className="flex items-center gap-2 flex-wrap">
+                                <h1 className="text-xl font-bold" style={{ color: '#0d1b2a' }}>
+                                    {beehive.hive_name ?? '—'} — {beehive.hive_type}
+                                </h1>
+                                {isRisk && (
+                                    <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full"
+                                        style={{ backgroundColor: '#fef3c7', color: '#92400e' }}>
+                                        {beehive.current_state} risk
+                                    </span>
+                                )}
+                            </div>
+                            <div className="flex items-center gap-4 flex-wrap text-xs text-gray-500 mt-0.5">
+                                <span className="flex items-center gap-1">
+                                    <MapPin className="w-3.5 h-3.5" /> {beehive.hive_location}
+                                </span>
+                                <span className="flex items-center gap-1">
+                                    <Calendar className="w-3.5 h-3.5" /> Installed {fmt(beehive.installation_date)}
+                                </span>
+                            </div>
+                        </div>
+                    </div>
+                    <button
+                        onClick={() => router.visit(`/beehives/${beehive.id}/edit`)}
+                        className="shrink-0 px-4 py-2 rounded-lg border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-50"
+                    >
+                        Edit
+                    </button>
+                </div>
+
+                {/* ── Stat cards ──────────────────────────────────── */}
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                    {[
+                        {
+                            icon: <Thermometer className="w-4 h-4" style={{ color: '#f5a623' }} />,
+                            label: 'Temperature',
+                            value: latestEnv?.temperature != null ? `${latestEnv.temperature}°C` : '—',
+                            sub: latestEnv?.recorded_at ? `Recorded ${fmtTime(latestEnv.recorded_at)}` : 'No sensor data yet',
+                        },
+                        {
+                            icon: <Droplets className="w-4 h-4 text-blue-400" />,
+                            label: 'Humidity',
+                            value: latestEnv?.humidity != null ? `${latestEnv.humidity}%` : '—',
+                            sub: latestEnv?.recorded_at ? `Recorded ${fmtTime(latestEnv.recorded_at)}` : 'No sensor data yet',
+                        },
+                        {
+                            icon: <Users className="w-4 h-4 text-amber-500" />,
+                            label: 'Population',
+                            value: latestEnv?.population_k_bees != null ? `${latestEnv.population_k_bees}k bees` : '—',
+                            sub: 'Estimated colony size',
+                        },
+                        {
+                            icon: <Leaf className="w-4 h-4 text-green-500" />,
+                            label: 'Nectar Flow',
+                            value: latestEnv?.nectar_flow_kg_per_day != null ? `${latestEnv.nectar_flow_kg_per_day} kg/day` : '—',
+                            sub: '~ stable',
+                        },
+                    ].map((s) => (
+                        <div key={s.label} className="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
+                            <div className="flex items-center gap-2 mb-2">
+                                {s.icon}
+                                <p className="text-[11px] font-semibold uppercase tracking-widest text-gray-400">{s.label}</p>
+                            </div>
+                            <p className="text-2xl font-bold" style={{ color: '#0d1b2a' }}>{s.value}</p>
+                            <p className="text-xs text-gray-400 mt-1">{s.sub}</p>
+                        </div>
+                    ))}
+                </div>
+
+                {/* ── Advisories + Inference ──────────────────────── */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+
+                    {/* Relevant advisories */}
+                    <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5 flex flex-col gap-4">
+                        <div className="flex items-center justify-between">
+                            <div className="flex items-center gap-2">
+                                <AlertTriangle className="w-4 h-4 text-amber-500" />
+                                <h2 className="font-semibold text-sm" style={{ color: '#0d1b2a' }}>Relevant Advisories</h2>
+                            </div>
+                            <button className="text-xs font-semibold" style={{ color: '#f5a623' }}>View all</button>
+                        </div>
+                        {recentAdvisories.length === 0 ? (
+                            <p className="text-xs text-gray-400 italic">No advisories for this hive yet.</p>
+                        ) : (
+                            <div className="flex flex-col gap-3">
+                                {recentAdvisories.map((adv) => (
+                                    <div key={adv.advisory_id} className="flex items-start gap-2.5">
+                                        <span className="w-2 h-2 rounded-full mt-1 shrink-0"
+                                            style={{ backgroundColor: severityDot[adv.severity] ?? '#94a3b8' }} />
+                                        <div>
+                                            <p className="text-sm text-gray-700">{adv.condition_label ?? adv.advisory_text ?? '—'}</p>
+                                            <p className="text-xs text-gray-400 mt-0.5">
+                                                {fmtTime(adv.created_at)} · {adv.severity} severity
+                                            </p>
+                                        </div>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+
+                    {/* Latest inference */}
+                    <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5 flex flex-col gap-4">
+                        <div className="flex items-center justify-between">
+                            <div>
+                                <div className="flex items-center gap-2">
+                                    <Activity className="w-4 h-4 text-blue-500" />
+                                    <h2 className="font-semibold text-sm" style={{ color: '#0d1b2a' }}>Latest Inference</h2>
+                                </div>
+                                <p className="text-[10px] text-gray-400 mt-0.5">
+                                    {latestInference
+                                        ? `Analysed ${fmtTime(latestInference.analyzed_at)}${latestInference.inference_latency_ms ? ` · ${latestInference.inference_latency_ms} ms latency` : ''}`
+                                        : 'No inference data yet'}
+                                </p>
+                            </div>
+                        </div>
+                        {inferenceDistribution.length === 0 ? (
+                            <p className="text-xs text-gray-400 italic">No inference results for this hive yet.</p>
+                        ) : (
+                            <div className="flex flex-col gap-3">
+                                {inferenceDistribution.map((item) => (
+                                    <div key={item.state} className="flex items-center gap-3">
+                                        <span className="text-xs text-gray-600 w-28 shrink-0">{item.state}</span>
+                                        <div className="flex-1 h-2 rounded-full bg-gray-100">
+                                            <div
+                                                className="h-2 rounded-full transition-all"
+                                                style={{
+                                                    width: `${item.percentage}%`,
+                                                    backgroundColor: stateColors[item.state] ?? '#94a3b8',
+                                                }}
+                                            />
+                                        </div>
+                                        <span className="text-xs font-semibold text-gray-500 w-8 text-right">{item.percentage}%</span>
+                                    </div>
+                                ))}
+                            </div>
+                        )}
+                    </div>
+                </div>
+
+                {/* ── Audio recordings ────────────────────────────── */}
+                <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5 flex flex-col gap-4">
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                            <Mic className="w-4 h-4 text-purple-500" />
+                            <h2 className="font-semibold text-sm" style={{ color: '#0d1b2a' }}>Audio Recordings</h2>
+                        </div>
+                        <button className="text-xs font-semibold" style={{ color: '#f5a623' }}>View all</button>
+                    </div>
+                    {audioSources.length === 0 ? (
+                        <p className="text-xs text-gray-400 italic">No audio recordings for this hive yet.</p>
+                    ) : (
+                        <div className="flex flex-col divide-y divide-gray-50">
+                            {audioSources.map((audio) => (
+                                <div key={audio.audio_id} className="flex items-center gap-3 py-3">
+                                    {/* Play button */}
+                                    <button className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 border border-gray-200 hover:bg-gray-50">
+                                        <Play className="w-3.5 h-3.5 text-gray-500" />
+                                    </button>
+                                    <div className="flex-1 min-w-0">
+                                        <p className="text-sm font-medium text-gray-700 truncate">{filename(audio.source_url)}</p>
+                                        <p className="text-xs text-gray-400">
+                                            {fmtTime(audio.captured_at)}
+                                            {audio.duration_seconds ? ` · ${audio.duration_seconds}s` : ''} · {audio.file_format.toUpperCase()}
+                                        </p>
+                                    </div>
+                                    <span className="text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-widest shrink-0"
+                                        style={{
+                                            backgroundColor: audio.status === 'processed' ? '#fef3c7' : '#f1f5f9',
+                                            color: audio.status === 'processed' ? '#92400e' : '#64748b',
+                                        }}>
+                                        {audio.status}
+                                    </span>
+                                </div>
+                            ))}
+                        </div>
+                    )}
+                </div>
+
+                {/* ── Hive details card ───────────────────────────── */}
+                <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5 flex flex-col gap-4">
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                            <ClipboardList className="w-4 h-4 text-gray-500" />
+                            <h2 className="font-semibold text-sm" style={{ color: '#0d1b2a' }}>Hive Details</h2>
+                        </div>
+                        <button
+                            onClick={() => router.visit(`/beehives/${beehive.id}/edit`)}
+                            className="text-xs font-semibold text-gray-500 hover:text-gray-800 flex items-center gap-1"
+                        >
+                            ✎ Edit
+                        </button>
+                    </div>
+                    <div className="divide-y divide-gray-50">
+                        {[
+                            { label: 'Hive type',         value: beehive.hive_type },
+                            { label: 'Location',          value: beehive.hive_location },
+                            {
+                                label: 'GPS',
+                                value: beehive.latitude != null && beehive.longitude != null
+                                    ? `${beehive.latitude},  ${beehive.longitude}`
+                                    : '—',
+                            },
+                            { label: 'Owner',             value: beehive.owner?.name ?? '—' },
+                            { label: 'Installation date', value: fmt(beehive.installation_date) },
+                            { label: 'Current state',     value: beehive.current_state },
+                        ].map((row) => (
+                            <div key={row.label} className="flex items-start py-3 gap-4">
+                                <span className="text-xs text-gray-400 w-36 shrink-0 pt-0.5">{row.label}</span>
+                                {row.label === 'Current state' ? (
+                                    <span className="text-xs font-bold px-2.5 py-1 rounded"
+                                        style={{
+                                            backgroundColor: isRisk ? '#fef3c7' : '#f0fdf4',
+                                            color: isRisk ? '#92400e' : '#166534',
+                                        }}>
+                                        {row.value}
+                                    </span>
+                                ) : (
+                                    <span className="text-sm text-gray-700">{row.value}</span>
+                                )}
+                            </div>
+                        ))}
+                    </div>
+                </div>
+
+            </div>
+        </>
+    );
+}
+
+BeehiveShow.layout = {
+    breadcrumbs: [
+        { title: 'Admin Dashboard', href: '/dashboard' },
+        { title: 'Hive Inventory',  href: '/beehives' },
+        { title: 'Hive Profile',    href: '#' },
+    ],
+};

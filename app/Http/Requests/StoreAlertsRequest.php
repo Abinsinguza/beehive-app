@@ -2,14 +2,10 @@
 
 namespace App\Http\Requests;
 
-use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 
 class StoreAlertsRequest extends FormRequest
 {
-    /**
-     * Determine if the user is authorized to make this request.
-     */
     public function authorize(): bool
     {
         return true;
@@ -18,10 +14,13 @@ class StoreAlertsRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'inference_id'    => ['required', 'integer', 'exists:inferences,id'],
-            'advisory_id'     => ['required', 'integer', 'exists:advisories,id'],
-            'alert_type'      => ['required', 'string', 'in:Info,Warning,Critical,Threat'],
-            'alert_timestamp' => ['required', 'date'],
+            'hive_id'            => ['required', 'string', 'exists:hives,hive_id'],
+            'inference_id'       => ['required', 'string', 'exists:inference_results,inference_id'],
+            'advisory_id'        => ['nullable', 'string', 'exists:advisories,advisory_id'],
+            'severity_level'     => ['required', 'string', 'max:20'],
+            'recommended_action' => ['nullable', 'string'],
+            'action_status'      => ['required', 'string', 'max:20'],
+            'alert_timestamp'    => ['required', 'date'],
         ];
     }
 }

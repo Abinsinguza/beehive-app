@@ -2,7 +2,7 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\Advisory;
+use App\Models\AdvisoryTemplate;
 use App\Models\Alerts;
 use App\Models\Inference;
 use App\Services\SmsService;
@@ -17,24 +17,22 @@ class AlertsController extends Controller
             'alerts'     => Alerts::with(['inference.beehive.owner', 'advisory'])
                                 ->latest()
                                 ->get(),
-            'inferences' => Inference::with('beehive')->get(['id', 'hive_id', 'prediction']),
-            'advisories' => Advisory::get(['id', 'condition_label', 'advisory_text']),
+            'inferences' => Inference::with('beehive')->get(['inference_id', 'hive_id', 'hive_state']),
+            'advisories' => AdvisoryTemplate::orderBy('prediction_code')->get(['template_id', 'condition_label', 'advisory_text', 'advisory_type', 'severity']),
         ]);
     }
 
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'inference_id'    => ['required', 'integer', 'exists:inferences,id'],
-            'advisory_id'     => ['required', 'integer', 'exists:advisories,id'],
-            'alert_type'      => ['required', 'string', 'in:Info,Warning,Critical,Threat'],
-            'alert_timestamp' => ['required', 'date'],
+            'hive_id'            => ['required', 'string', 'exists:hives,hive_id'],
+            'inference_id'       => ['required', 'string', 'exists:inference_results,inference_id'],
+            'advisory_id'        => ['nullable', 'string', 'exists:advisories,advisory_id'],
+            'severity_level'     => ['required', 'string', 'max:20'],
+            'recommended_action' => ['nullable', 'string'],
+            'action_status'      => ['required', 'string', 'max:20'],
+            'alert_timestamp'    => ['required', 'date'],
         ]);
-
-        $last   = Alerts::orderBy('id', 'desc')->first();
-        $number = $last ? ((int) substr($last->alert_id, 2)) + 1 : 1;
-        $validated['alert_id'] = 'AL' . str_pad($number, 4, '0', STR_PAD_LEFT);
-        $validated['status']   = 'pending';
 
         Alerts::create($validated);
 
@@ -64,19 +62,19 @@ class AlertsController extends Controller
         );
 
         $message = strtr($template, [
-            '#alertType'    => $alert->alert_type,
-            '#beeHive'      => $alert->inference?->beehive?->id       ?? '—',
+            '#alertType'    => $alert->severity_level,
+            '#beeHive'      => $alert->inference?->beehive?->hive_name ?? $alert->inference?->beehive?->hive_id ?? '—',
             '#hiveLocation' => $alert->inference?->beehive?->hive_location ?? '—',
             '#beekeeper'    => $beekeeper->name,
-            '#prediction'   => $alert->inference?->prediction         ?? '—',
+            '#prediction'   => $alert->inference?->hive_state ?? '—',
             '#confidence'   => '—',
-            '#alertMessage' => $advisory?->advisory_text              ?? '—',
+            '#alertMessage' => $advisory?->advisory_text ?? $alert->recommended_action ?? '—',
             '#timestamp'    => now()->format('Y-m-d H:i'),
         ]);
 
         try {
             $sms->send($beekeeper->phone, $message);
-            $alert->update(['status' => 'sent']);
+            $alert->update(['action_status' => 'sent']);
 
             return redirect()->route('alerts.index')
                 ->with('success', "SMS sent to {$beekeeper->name} ({$beekeeper->phone}).");

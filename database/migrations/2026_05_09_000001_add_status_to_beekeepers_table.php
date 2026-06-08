@@ -6,17 +6,6 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    public function up(): void
-    {
-        Schema::table('beekeepers', function (Blueprint $table) {
-            $table->string('status')->default('active')->after('password');
-        });
-    }
-
-    public function down(): void
-    {
-        Schema::table('beekeepers', function (Blueprint $table) {
-            $table->dropColumn('status');
-        });
-    }
+    public function up(): void {}
+    public function down(): void {}
 };

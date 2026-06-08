@@ -5,40 +5,45 @@ namespace App\Models;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
 
-class Inference extends Model
+class SystemLog extends Model
 {
     use HasUuids;
 
-    protected $table = 'inference_results';
-    protected $primaryKey = 'inference_id';
+    protected $primaryKey = 'log_id';
     public $incrementing = false;
     protected $keyType = 'string';
+    public $timestamps = false;
 
-    const UPDATED_AT = null;
-
+    // Supported event_type values: audio_ingestion, inference_complete,
+    // advisory_generated, alert_triggered, http_api, beekeeper_registered, system
     protected $fillable = [
+        'level',
+        'event_type',
+        'message',
+        'details',
         'hive_id',
+        'user_id',
         'audio_id',
-        'hive_state',
-        'confidence_score',
-        'inference_latency_ms',
-        'analyzed_at',
     ];
 
     protected $casts = [
-        'analyzed_at'          => 'datetime',
-        'confidence_score'     => 'float',
-        'inference_latency_ms' => 'float',
+        'details'    => 'array',
+        'created_at' => 'datetime',
     ];
 
     public function uniqueIds(): array
     {
-        return ['inference_id'];
+        return ['log_id'];
     }
 
-    public function beehive()
+    public function hive()
     {
         return $this->belongsTo(Beehive::class, 'hive_id', 'hive_id');
+    }
+
+    public function user()
+    {
+        return $this->belongsTo(User::class, 'user_id', 'user_id');
     }
 
     public function audioSource()

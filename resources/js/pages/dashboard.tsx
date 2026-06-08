@@ -1,357 +1,478 @@
-import { Head, usePage } from '@inertiajs/react';
+import { Head, router } from '@inertiajs/react';
 import {
-    Activity,
     AlertTriangle,
-    BarChart2,
-    CheckCircle2,
+    Bell,
+    CheckSquare,
+    Clock,
+    ExternalLink,
+    Hexagon,
+    Mic,
+    Terminal,
     Users,
 } from 'lucide-react';
 import { dashboard } from '@/routes';
 
-type DashboardProps = {
-    stats?: {
-        total_beekeepers: number;
-        total_beehives: number;
-        active_beehives: number;
-        inactive_beehives: number;
-    };
-    recent_beehives?: Array<{
-        id: string;
-        hive_location: string;
-        hive_type: string;
-        current_state: string;
-        owner: { name: string };
-    }>;
+type Stats = {
+    total_hives: number;
+    hives_this_month: number;
+    total_beekeepers: number;
+    active_alerts: number;
+    alerts_yesterday: number;
+    recordings_today: number;
+    recordings_yesterday: number;
+    need_attention: number;
 };
 
-const criticalAlerts = [
-    {
-        id: 1,
-        color: '#f5a623',
-        title: 'Hive-A12: Pre-Swarm Detected',
-        time: '2m ago',
-        desc: 'Acoustic signature exceeded 420Hz threshold. Temperature spike of 2.4°C.',
-        actions: ['DEPLOY TEAM', 'DISMISS'],
-    },
-    {
-        id: 2,
-        color: '#94a3b8',
-        title: 'Hive Node 04: Offline',
-        time: '14m ago',
-        desc: 'Low battery detected before connection timeout at Sector 4-B.',
-        actions: [],
-    },
-    {
-        id: 3,
-        color: '#f5a623',
-        title: 'Hive-C08: Humidity Alert',
-        time: '45m ago',
-        desc: 'Relative humidity above 85%. Possible moisture accumulation in brood chamber.',
-        actions: ['CHECK HIVE'],
-    },
-];
+type HiveItem = {
+    id: string;
+    name: string;
+    type: string;
+    location: string;
+    hive_state: string;
+    confidence: number | null;
+};
 
-export default function Dashboard({ stats, recent_beehives = [] }: DashboardProps) {
-    const { auth } = usePage().props;
+type HiveCategories = { normal: number; at_risk: number; critical: number };
+type InferenceRow   = { state: string; percentage: number };
+
+type AlertItem = {
+    id: string;
+    hive_name: string;
+    hive_location: string;
+    severity_level: string;
+    recommended_action: string;
+    action_status: string;
+    alert_timestamp: string | null;
+};
+
+type ActionItem     = { description: string; hive_name: string | null };
+type ActionCounts   = Record<string, number>;
+type LogItem        = { level: string; message: string; created_at: string | null };
+
+type DashboardProps = {
+    stats: Stats;
+    greeting_name: string;
+    hives_list: HiveItem[];
+    hive_categories: HiveCategories;
+    inference_distribution: InferenceRow[];
+    recent_alerts: AlertItem[];
+    action_counts: ActionCounts;
+    high_priority_actions: ActionItem[];
+    system_logs: LogItem[];
+};
+
+// ── Helpers ──────────────────────────────────────────────────────
+function getDayLabel() {
+    return new Date().toLocaleDateString('en-US', {
+        weekday: 'long', day: 'numeric', month: 'long', year: 'numeric',
+    });
+}
+
+const STATE_META: Record<string, { label: string; bg: string; text: string }> = {
+    normal:     { label: 'Normal',     bg: '#dcfce7', text: '#15803d' },
+    healthy:    { label: 'Normal',     bg: '#dcfce7', text: '#15803d' },
+    swarming:   { label: 'Swarming',   bg: '#ffedd5', text: '#c2410c' },
+    critical:   { label: 'Critical',   bg: '#fee2e2', text: '#b91c1c' },
+    queen_risk: { label: 'Queen risk', bg: '#fef3c7', text: '#b45309' },
+    queenless:  { label: 'Queenless',  bg: '#fef3c7', text: '#b45309' },
+    high_temp:  { label: 'High temp',  bg: '#fef3c7', text: '#b45309' },
+    at_risk:    { label: 'At risk',    bg: '#fef3c7', text: '#b45309' },
+    unknown:    { label: 'Unknown',    bg: '#f1f5f9', text: '#64748b' },
+};
+
+function stateMeta(state: string) {
+    return STATE_META[state] ?? {
+        label: state.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()),
+        bg: '#f1f5f9', text: '#64748b',
+    };
+}
+
+const SEVERITY_DOT: Record<string, string> = {
+    critical: '#dc2626', high: '#dc2626',
+    medium: '#f59e0b', low: '#3b82f6',
+};
+function severityDot(s: string) { return SEVERITY_DOT[s?.toLowerCase()] ?? '#94a3b8'; }
+
+const SEVERITY_BADGE: Record<string, { bg: string; text: string; label: string }> = {
+    critical: { bg: '#fee2e2', text: '#b91c1c', label: 'Critical' },
+    high:     { bg: '#fee2e2', text: '#b91c1c', label: 'High'     },
+    medium:   { bg: '#fef3c7', text: '#b45309', label: 'Medium'   },
+    low:      { bg: '#eff6ff', text: '#1d4ed8', label: 'Low'      },
+};
+function severityBadge(s: string) {
+    return SEVERITY_BADGE[s?.toLowerCase()] ?? { bg: '#f1f5f9', text: '#64748b', label: s };
+}
+
+function timeAgo(iso: string | null) {
+    if (!iso) return '';
+    const d = new Date(iso);
+    const now = new Date();
+    const diff = Math.floor((now.getTime() - d.getTime()) / 1000);
+    if (diff < 60)   return 'Just now';
+    if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+    if (diff < 86400) return d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
+    return 'Yesterday ' + d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
+}
+
+const LOG_STYLE: Record<string, { bg: string; text: string }> = {
+    ERROR: { bg: '#fee2e2', text: '#b91c1c' },
+    WARN:  { bg: '#fef3c7', text: '#92400e' },
+    INFO:  { bg: '#eff6ff', text: '#1e40af' },
+};
+function logStyle(level: string) { return LOG_STYLE[level] ?? { bg: '#f1f5f9', text: '#475569' }; }
+
+// ── Donut chart ──────────────────────────────────────────────────
+function polar(cx: number, cy: number, r: number, deg: number) {
+    const rad = ((deg - 90) * Math.PI) / 180;
+    return { x: cx + r * Math.cos(rad), y: cy + r * Math.sin(rad) };
+}
+function donutArc(cx: number, cy: number, outerR: number, innerR: number, startDeg: number, endDeg: number) {
+    const gap = 2; const s = startDeg + gap / 2; const e = endDeg - gap / 2;
+    if (e <= s) return '';
+    const o1 = polar(cx, cy, outerR, s), o2 = polar(cx, cy, outerR, e);
+    const i1 = polar(cx, cy, innerR, e), i2 = polar(cx, cy, innerR, s);
+    const large = e - s > 180 ? 1 : 0;
+    return [
+        `M ${o1.x.toFixed(2)} ${o1.y.toFixed(2)}`,
+        `A ${outerR} ${outerR} 0 ${large} 1 ${o2.x.toFixed(2)} ${o2.y.toFixed(2)}`,
+        `L ${i1.x.toFixed(2)} ${i1.y.toFixed(2)}`,
+        `A ${innerR} ${innerR} 0 ${large} 0 ${i2.x.toFixed(2)} ${i2.y.toFixed(2)}`, 'Z',
+    ].join(' ');
+}
+const DONUT_COLORS = { normal: '#3d7a3d', at_risk: '#b45309', critical: '#dc2626' };
+
+function DonutChart({ categories }: { categories: HiveCategories }) {
+    const total = categories.normal + categories.at_risk + categories.critical;
+    const cx = 80, cy = 80, outerR = 68, innerR = 42;
+    const segments = [
+        { key: 'normal'   as const, count: categories.normal   },
+        { key: 'at_risk'  as const, count: categories.at_risk  },
+        { key: 'critical' as const, count: categories.critical },
+    ];
+    let cursor = 0;
+    const arcs = segments.map((seg) => {
+        const sweep = total > 0 ? (seg.count / total) * 360 : 0;
+        const path  = donutArc(cx, cy, outerR, innerR, cursor, cursor + sweep);
+        cursor += sweep;
+        return { ...seg, path };
+    });
+    return (
+        <svg viewBox="0 0 160 160" className="w-full h-full">
+            {total === 0
+                ? <circle cx={cx} cy={cy} r={outerR} fill="none" stroke="#e5e7eb" strokeWidth={outerR - innerR} />
+                : arcs.map((arc) => arc.path ? <path key={arc.key} d={arc.path} fill={DONUT_COLORS[arc.key]} /> : null)
+            }
+        </svg>
+    );
+}
+
+const INF_COLORS: Record<string, string> = {
+    normal: '#3d7a3d', healthy: '#3d7a3d', swarming: '#dc2626',
+    critical: '#dc2626', queenless: '#b45309', queen_risk: '#b45309',
+    high_temp: '#f59e0b', at_risk: '#b45309',
+};
+function infColor(s: string) { return INF_COLORS[s] ?? '#94a3b8'; }
+
+// ── Main component ───────────────────────────────────────────────
+export default function Dashboard({
+    stats, greeting_name,
+    hives_list, hive_categories, inference_distribution,
+    recent_alerts, action_counts, high_priority_actions, system_logs,
+}: DashboardProps) {
+    const alertDiff  = stats.active_alerts - stats.alerts_yesterday;
+    const recDiff    = stats.recordings_today - stats.recordings_yesterday;
+    const donutTotal = hive_categories.normal + hive_categories.at_risk + hive_categories.critical;
+
+    const pendingCount    = action_counts['pending']     ?? 0;
+    const inProgressCount = action_counts['in_progress'] ?? 0;
+    const resolvedCount   = action_counts['resolved']    ?? 0;
+    const actionTotal     = pendingCount + inProgressCount + resolvedCount || 1;
 
     return (
         <>
             <Head title="Dashboard" />
             <div className="flex flex-col min-h-screen" style={{ backgroundColor: '#f8f9fa' }}>
-                <div className="flex-1 p-6 flex flex-col gap-5">
+                <div className="flex-1 p-6 flex flex-col gap-6">
 
-                    {/* ── Page heading ── */}
-                    <div className="flex items-start justify-between gap-4">
-                        <div>
-                            <h1 className="text-3xl font-bold" style={{ color: '#0d1b2a' }}>
-                                Operational Overview
-                            </h1>
-                            <p className="mt-1 text-sm text-gray-500">
-                                Real-time acoustic signatures and environmental telemetry.
-                            </p>
-                        </div>
+                    {/* ── Greeting ── */}
+                    <div>
+                        <h1 className="text-2xl font-bold" style={{ color: '#0d1b2a' }}>
+                            Good morning, {greeting_name}
+                        </h1>
+                        <p className="text-sm text-gray-500 mt-0.5">
+                            {getDayLabel()}
+                            {stats.need_attention > 0 && (
+                                <> · <span className="text-red-500 font-medium">
+                                    {stats.need_attention} hive{stats.need_attention !== 1 ? 's' : ''} need attention today
+                                </span></>
+                            )}
+                        </p>
                     </div>
 
-                    {/* ── Stat cards ── */}
+                    {/* ── Summary stat cards ── */}
                     <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-
-                        {/* Total Active Hives */}
-                        <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm flex flex-col gap-1">
-                            <div className="flex items-start justify-between">
-                                <p className="text-[11px] font-semibold uppercase tracking-widest text-gray-400 leading-tight">
-                                    Total Active<br />Hives
-                                </p>
-                                <BarChart2 className="w-5 h-5 text-gray-300 shrink-0" />
+                        <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm flex flex-col gap-1">
+                            <div className="flex items-center justify-between">
+                                <p className="text-xs text-gray-500">Total hives</p>
+                                <Clock className="w-4 h-4 text-gray-400" />
                             </div>
-                            <p className="text-4xl font-bold mt-2" style={{ color: '#0d1b2a' }}>
-                                {(stats?.active_beehives ?? 1284).toLocaleString()}
+                            <p className="text-3xl font-bold mt-1" style={{ color: '#0d1b2a' }}>{stats.total_hives}</p>
+                            <p className={`text-xs font-medium mt-1 ${stats.hives_this_month > 0 ? 'text-emerald-500' : 'text-gray-400'}`}>
+                                {stats.hives_this_month > 0 ? `↑ +${stats.hives_this_month} this month` : '— no change'}
                             </p>
-                            <div className="mt-2 flex items-center gap-1 text-emerald-500 text-xs font-medium">
-                                <Activity className="w-3 h-3" />
-                                +12% vs last month
+                        </div>
+                        <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm flex flex-col gap-1">
+                            <div className="flex items-center justify-between">
+                                <p className="text-xs text-gray-500">Beekeepers</p>
+                                <Users className="w-4 h-4 text-gray-400" />
                             </div>
+                            <p className="text-3xl font-bold mt-1" style={{ color: '#0d1b2a' }}>{stats.total_beekeepers}</p>
+                            <p className="text-xs text-gray-400 mt-1">— no change</p>
+                        </div>
+                        <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm flex flex-col gap-1">
+                            <div className="flex items-center justify-between">
+                                <p className="text-xs text-gray-500">Active alerts</p>
+                                <AlertTriangle className="w-4 h-4 text-gray-400" />
+                            </div>
+                            <p className="text-3xl font-bold mt-1" style={{ color: stats.active_alerts > 0 ? '#ef4444' : '#0d1b2a' }}>
+                                {stats.active_alerts}
+                            </p>
+                            <p className={`text-xs font-medium mt-1 ${alertDiff > 0 ? 'text-red-500' : alertDiff < 0 ? 'text-emerald-500' : 'text-gray-400'}`}>
+                                {alertDiff === 0 ? '— no change' : alertDiff > 0 ? `↑ +${alertDiff} since yesterday` : `↓ ${alertDiff} since yesterday`}
+                            </p>
+                        </div>
+                        <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm flex flex-col gap-1">
+                            <div className="flex items-center justify-between">
+                                <p className="text-xs text-gray-500">Recordings today</p>
+                                <Mic className="w-4 h-4 text-gray-400" />
+                            </div>
+                            <p className="text-3xl font-bold mt-1" style={{ color: '#0d1b2a' }}>{stats.recordings_today}</p>
+                            <p className={`text-xs font-medium mt-1 ${recDiff > 0 ? 'text-emerald-500' : recDiff < 0 ? 'text-red-500' : 'text-gray-400'}`}>
+                                {recDiff === 0 ? '— no change' : recDiff > 0 ? `↑ +${recDiff} vs yesterday` : `↓ ${recDiff} vs yesterday`}
+                            </p>
+                        </div>
+                    </div>
+
+                    {/* ── Hive status + charts ── */}
+                    <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
+
+                        {/* Hive list */}
+                        <div className="lg:col-span-2 bg-white rounded-xl border border-gray-200 shadow-sm flex flex-col overflow-hidden">
+                            <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+                                <div className="flex items-center gap-2">
+                                    <Hexagon className="w-4 h-4 text-gray-400" />
+                                    <span className="font-semibold text-sm" style={{ color: '#0d1b2a' }}>Hive status</span>
+                                </div>
+                                <button onClick={() => router.visit('/beehives')}
+                                    className="flex items-center gap-1 text-xs font-medium text-gray-500 border border-gray-200 rounded-lg px-3 py-1.5 hover:bg-gray-50 transition-colors">
+                                    View all <ExternalLink className="w-3 h-3" />
+                                </button>
+                            </div>
+                            {hives_list.length === 0 ? (
+                                <div className="flex-1 flex items-center justify-center py-12 text-sm text-gray-400">No hives registered yet</div>
+                            ) : (
+                                <div className="divide-y divide-gray-100">
+                                    {hives_list.map((hive) => {
+                                        const meta = stateMeta(hive.hive_state);
+                                        return (
+                                            <div key={hive.id}
+                                                className="flex items-center gap-3 px-5 py-3 hover:bg-gray-50 cursor-pointer transition-colors"
+                                                onClick={() => router.visit(`/beehives/${hive.id}`)}>
+                                                <div className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0" style={{ backgroundColor: '#fff7ed' }}>
+                                                    <Hexagon className="w-5 h-5" style={{ color: '#c2410c' }} />
+                                                </div>
+                                                <div className="flex-1 min-w-0">
+                                                    <p className="text-xs font-semibold truncate leading-tight" style={{ color: '#0d1b2a' }}>
+                                                        {hive.name}{hive.type ? ` — ${hive.type}` : ''}
+                                                    </p>
+                                                    <p className="text-[11px] text-gray-400 truncate mt-0.5">{hive.location}</p>
+                                                </div>
+                                                <span className="shrink-0 text-[11px] font-semibold px-2 py-0.5 rounded-full"
+                                                    style={{ backgroundColor: meta.bg, color: meta.text }}>
+                                                    {meta.label}
+                                                </span>
+                                                {hive.confidence !== null && (
+                                                    <span className="shrink-0 text-xs font-medium text-gray-500 w-8 text-right">
+                                                        {hive.confidence}%
+                                                    </span>
+                                                )}
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            )}
                         </div>
 
-                        {/* Active Alerts */}
-                        <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm flex flex-col gap-1">
-                            <div className="flex items-start justify-between">
-                                <p className="text-[11px] font-semibold uppercase tracking-widest text-gray-400">
-                                    Active Alerts
-                                </p>
-                                <AlertTriangle className="w-5 h-5 shrink-0" style={{ color: '#f5a623' }} />
+                        {/* Donut + bar */}
+                        <div className="lg:col-span-3 flex flex-col gap-4">
+                            <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
+                                <div className="flex items-center gap-2 mb-4">
+                                    <Hexagon className="w-4 h-4 text-gray-400" />
+                                    <span className="font-semibold text-sm" style={{ color: '#0d1b2a' }}>Hive states</span>
+                                </div>
+                                <div className="flex items-center gap-6">
+                                    <div className="w-40 h-40 shrink-0"><DonutChart categories={hive_categories} /></div>
+                                    <div className="flex flex-col gap-3">
+                                        {([['normal','Normal'],['at_risk','At risk'],['critical','Critical']] as const).map(([key, label]) => (
+                                            <div key={key} className="flex items-center gap-2">
+                                                <span className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: DONUT_COLORS[key] }} />
+                                                <span className="text-sm text-gray-600">{label}</span>
+                                                <span className="text-sm font-semibold ml-auto pl-4" style={{ color: '#0d1b2a' }}>
+                                                    {hive_categories[key]}
+                                                </span>
+                                            </div>
+                                        ))}
+                                        {donutTotal === 0 && <p className="text-xs text-gray-400">No inference data yet</p>}
+                                    </div>
+                                </div>
                             </div>
-                            <p className="text-4xl font-bold mt-2" style={{ color: '#f5a623' }}>
-                                {String(stats?.inactive_beehives ?? 8).padStart(2, '0')}
-                            </p>
-                            <div className="mt-2 border-t border-orange-100 pt-2 flex items-center gap-1 text-xs font-medium" style={{ color: '#f5a623' }}>
-                                <span className="w-1 h-1 rounded-full inline-block" style={{ backgroundColor: '#f5a623' }} />
-                                Immediate attention required
-                            </div>
-                        </div>
 
-                        {/* System Health */}
-                        <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm flex flex-col gap-1">
-                            <div className="flex items-start justify-between">
-                                <p className="text-[11px] font-semibold uppercase tracking-widest text-gray-400 leading-tight">
-                                    System<br />Health
-                                </p>
-                                <CheckCircle2 className="w-5 h-5 text-gray-300 shrink-0" />
-                            </div>
-                            <p className="text-4xl font-bold mt-2" style={{ color: '#0d1b2a' }}>
-                                98<span className="text-2xl">%</span>
-                            </p>
-                            <div className="mt-2 flex items-center gap-1 text-gray-400 text-xs">
-                                <BarChart2 className="w-3 h-3" />
-                                All nodes communicating
-                            </div>
-                        </div>
-
-                        {/* Active Users */}
-                        <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm flex flex-col gap-1">
-                            <div className="flex items-start justify-between">
-                                <p className="text-[11px] font-semibold uppercase tracking-widest text-gray-400">
-                                    Active Users
-                                </p>
-                                <Users className="w-5 h-5 text-gray-300 shrink-0" />
-                            </div>
-                            <p className="text-4xl font-bold mt-2" style={{ color: '#0d1b2a' }}>
-                                {stats?.total_beekeepers ?? 24}
-                            </p>
-                            <div className="mt-2 flex items-center gap-1 text-gray-400 text-xs">
-                                <span className="w-2 h-2 rounded-full bg-emerald-400 inline-block" />
-                                14 currently online
+                            <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
+                                <div className="flex items-center gap-2 mb-4">
+                                    <Hexagon className="w-4 h-4 text-gray-400" />
+                                    <span className="font-semibold text-sm" style={{ color: '#0d1b2a' }}>Inference states</span>
+                                </div>
+                                {inference_distribution.length === 0 ? (
+                                    <p className="text-sm text-gray-400 py-4 text-center">No inference results yet</p>
+                                ) : (
+                                    <div className="flex flex-col gap-3">
+                                        {inference_distribution.map((row) => (
+                                            <div key={row.state} className="flex items-center gap-3">
+                                                <span className="text-sm text-gray-600 w-24 shrink-0">{stateMeta(row.state).label}</span>
+                                                <div className="flex-1 h-2.5 bg-gray-100 rounded-full overflow-hidden">
+                                                    <div className="h-full rounded-full" style={{ width: `${row.percentage}%`, backgroundColor: infColor(row.state) }} />
+                                                </div>
+                                                <span className="text-sm font-medium text-gray-500 w-9 text-right shrink-0">{row.percentage}%</span>
+                                            </div>
+                                        ))}
+                                    </div>
+                                )}
                             </div>
                         </div>
                     </div>
 
-                    {/* ── Bottom two-column section ── */}
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 flex-1">
+                    {/* ── Recent alerts + Advisory actions ── */}
+                    <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
 
-                        {/* Frequency chart panel */}
-                        <div className="lg:col-span-2 bg-white rounded-xl border border-gray-200 shadow-sm flex flex-col overflow-hidden">
-                            <div className="flex items-center gap-3 px-5 py-4 border-b border-gray-100">
-                                <span className="font-semibold text-sm" style={{ color: '#0d1b2a' }}>
-                                    Acoustic Swarm Frequency Analysis
-                                </span>
-                                <span className="text-[10px] font-semibold border border-gray-300 rounded px-2 py-0.5 text-gray-500 uppercase tracking-wide">
-                                    Live Data
-                                </span>
-                                <span className="text-[10px] font-semibold rounded px-2 py-0.5 text-white uppercase tracking-wide ml-auto" style={{ backgroundColor: '#0d1b2a' }}>
-                                    250Hz – 450Hz Range
-                                </span>
-                            </div>
-
-                            {/* SVG chart */}
-                            <div className="flex-1 relative p-4">
-                                <svg viewBox="0 0 600 320" className="w-full h-full" preserveAspectRatio="none">
-                                    {/* Y-axis labels */}
-                                    {['MAX', '800Hz', '600Hz', '400Hz', '200Hz'].map((label, i) => (
-                                        <text key={label} x="8" y={30 + i * 68} fontSize="9" fill="#94a3b8">{label}</text>
-                                    ))}
-                                    {/* Grid lines */}
-                                    {[30, 98, 166, 234, 302].map((y) => (
-                                        <line key={y} x1="50" y1={y} x2="590" y2={y} stroke="#f1f5f9" strokeWidth="1" />
-                                    ))}
-                                    {/* Dark wave (sine-like) */}
-                                    <path
-                                        d="M50,240 C120,240 150,80 220,100 C290,120 320,260 390,240 C460,220 500,120 590,80"
-                                        fill="none"
-                                        stroke="#0d1b2a"
-                                        strokeWidth="2.5"
-                                    />
-                                    {/* Orange dashed rising line */}
-                                    <path
-                                        d="M50,290 C100,280 150,260 200,230 C250,200 300,170 350,140 C400,110 450,80 500,55 C530,40 560,30 590,20"
-                                        fill="none"
-                                        stroke="#f5a623"
-                                        strokeWidth="2"
-                                        strokeDasharray="6 4"
-                                    />
-                                    {/* Alert tooltip */}
-                                    <rect x="330" y="110" width="90" height="36" rx="4" fill="#0d1b2a" />
-                                    <text x="375" y="126" fontSize="9" fill="white" textAnchor="middle" fontWeight="bold">ALERT: 432 Hz</text>
-                                    <text x="375" y="139" fontSize="8" fill="#f5a623" textAnchor="middle">▲ threshold</text>
-                                </svg>
-                            </div>
-                        </div>
-
-                        {/* Critical Alerts panel */}
+                        {/* Recent alerts */}
                         <div className="bg-white rounded-xl border border-gray-200 shadow-sm flex flex-col overflow-hidden">
                             <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
-                                <span className="font-semibold text-sm" style={{ color: '#0d1b2a' }}>Critical Alerts</span>
-                                <span className="text-[10px] font-bold px-2 py-0.5 rounded text-white" style={{ backgroundColor: '#f5a623' }}>
-                                    8 NEW
-                                </span>
+                                <div className="flex items-center gap-2">
+                                    <Bell className="w-4 h-4 text-gray-400" />
+                                    <span className="font-semibold text-sm" style={{ color: '#0d1b2a' }}>Recent alerts</span>
+                                </div>
+                                <button onClick={() => router.visit('/alerts')}
+                                    className="flex items-center gap-1 text-xs font-medium text-gray-500 border border-gray-200 rounded-lg px-3 py-1.5 hover:bg-gray-50 transition-colors">
+                                    View all <ExternalLink className="w-3 h-3" />
+                                </button>
                             </div>
-                            <div className="flex flex-col divide-y divide-gray-100 overflow-y-auto">
-                                {criticalAlerts.map((alert) => (
-                                    <div key={alert.id} className="p-4 flex flex-col gap-2">
-                                        <div className="flex items-start gap-3">
-                                            <div
-                                                className="w-8 h-8 rounded flex items-center justify-center shrink-0 mt-0.5"
-                                                style={{ backgroundColor: alert.color === '#f5a623' ? '#fff7ed' : '#f1f5f9' }}
-                                            >
-                                                <AlertTriangle className="w-4 h-4" style={{ color: alert.color }} />
-                                            </div>
-                                            <div className="flex-1 min-w-0">
-                                                <div className="flex items-start justify-between gap-1">
+                            {recent_alerts.length === 0 ? (
+                                <div className="flex-1 flex items-center justify-center py-10 text-sm text-gray-400">No alerts yet</div>
+                            ) : (
+                                <div className="divide-y divide-gray-100">
+                                    {recent_alerts.map((a) => {
+                                        const badge = severityBadge(a.severity_level);
+                                        const dot   = severityDot(a.severity_level);
+                                        const status = a.action_status?.replace(/_/g, ' ') ?? '';
+                                        return (
+                                            <div key={a.id} className="flex items-start gap-3 px-5 py-3">
+                                                <span className="w-2 h-2 rounded-full shrink-0 mt-1.5" style={{ backgroundColor: dot }} />
+                                                <div className="flex-1 min-w-0">
                                                     <p className="text-xs font-semibold leading-tight" style={{ color: '#0d1b2a' }}>
-                                                        {alert.title}
+                                                        {a.recommended_action} — {a.hive_name}, {a.hive_location}
                                                     </p>
-                                                    <span className="text-[10px] text-gray-400 shrink-0 whitespace-nowrap">{alert.time}</span>
+                                                    <p className="text-[11px] text-gray-400 mt-0.5">
+                                                        {timeAgo(a.alert_timestamp)} · {badge.label} · {status}
+                                                    </p>
                                                 </div>
-                                                <p className="text-[11px] text-gray-500 mt-1 leading-snug">{alert.desc}</p>
+                                                <span className="shrink-0 text-[11px] font-semibold px-2 py-0.5 rounded-full"
+                                                    style={{ backgroundColor: badge.bg, color: badge.text }}>
+                                                    {badge.label}
+                                                </span>
                                             </div>
+                                        );
+                                    })}
+                                </div>
+                            )}
+                        </div>
+
+                        {/* Advisory actions */}
+                        <div className="bg-white rounded-xl border border-gray-200 shadow-sm flex flex-col overflow-hidden">
+                            <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+                                <div className="flex items-center gap-2">
+                                    <CheckSquare className="w-4 h-4 text-gray-400" />
+                                    <span className="font-semibold text-sm" style={{ color: '#0d1b2a' }}>Advisory actions</span>
+                                </div>
+                                <button onClick={() => router.visit('/advisories')}
+                                    className="flex items-center gap-1 text-xs font-medium text-gray-500 border border-gray-200 rounded-lg px-3 py-1.5 hover:bg-gray-50 transition-colors">
+                                    View all <ExternalLink className="w-3 h-3" />
+                                </button>
+                            </div>
+                            <div className="px-5 py-4 flex flex-col gap-3 border-b border-gray-100">
+                                {[
+                                    { label: 'Pending',     count: pendingCount,    color: '#dc2626' },
+                                    { label: 'In progress', count: inProgressCount, color: '#b45309' },
+                                    { label: 'Resolved',    count: resolvedCount,   color: '#15803d' },
+                                ].map(({ label, count, color }) => (
+                                    <div key={label} className="flex items-center gap-3">
+                                        <span className="text-sm text-gray-600 w-24 shrink-0">{label}</span>
+                                        <div className="flex-1 h-2.5 bg-gray-100 rounded-full overflow-hidden">
+                                            <div className="h-full rounded-full" style={{
+                                                width: `${Math.round((count / actionTotal) * 100)}%`,
+                                                backgroundColor: color,
+                                            }} />
                                         </div>
-                                        {alert.actions.length > 0 && (
-                                            <div className="flex gap-2 pl-11">
-                                                {alert.actions.map((action) => (
-                                                    <button
-                                                        key={action}
-                                                        className="text-[10px] font-bold px-3 py-1.5 rounded"
-                                                        style={
-                                                            action === 'DISMISS'
-                                                                ? { backgroundColor: '#f1f5f9', color: '#64748b' }
-                                                                : { backgroundColor: '#0d1b2a', color: 'white' }
-                                                        }
-                                                    >
-                                                        {action}
-                                                    </button>
-                                                ))}
-                                            </div>
-                                        )}
+                                        <span className="text-sm font-semibold w-6 text-right shrink-0" style={{ color: '#0d1b2a' }}>{count}</span>
                                     </div>
                                 ))}
                             </div>
+                            {high_priority_actions.length > 0 && (
+                                <div className="px-5 py-4 flex flex-col gap-2">
+                                    <p className="text-[11px] font-semibold uppercase tracking-widest text-gray-400 mb-1">
+                                        High priority pending
+                                    </p>
+                                    {high_priority_actions.map((a, i) => (
+                                        <div key={i} className="flex items-center gap-2 border-b border-gray-100 pb-2 last:border-0 last:pb-0">
+                                            <p className="text-xs text-gray-700 flex-1">
+                                                {a.description}{a.hive_name ? ` — ${a.hive_name}` : ''}
+                                            </p>
+                                        </div>
+                                    ))}
+                                </div>
+                            )}
                         </div>
                     </div>
 
-                    {/* ── Bottom section: legend + actions row ── */}
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-
-                        {/* Chart legend + time controls */}
-                        <div className="lg:col-span-2 bg-white rounded-xl border border-gray-200 shadow-sm px-5 py-4 flex items-center gap-6 flex-wrap">
+                    {/* ── System logs ── */}
+                    <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+                        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
                             <div className="flex items-center gap-2">
-                                <span className="w-3 h-3 rounded-sm inline-block" style={{ backgroundColor: '#0d1b2a' }} />
-                                <span className="text-[11px] font-semibold uppercase tracking-widest text-gray-500">Baseline Activity</span>
+                                <Terminal className="w-4 h-4 text-gray-400" />
+                                <span className="font-semibold text-sm" style={{ color: '#0d1b2a' }}>System logs</span>
                             </div>
-                            <div className="flex items-center gap-2">
-                                <span className="w-3 h-3 rounded-sm border-2 border-dashed inline-block" style={{ borderColor: '#f5a623' }} />
-                                <span className="text-[11px] font-semibold uppercase tracking-widest text-gray-500">Swarm Intensity Score</span>
-                            </div>
-                            <div className="flex items-center gap-2 ml-auto">
-                                {['1H', '24H', '7D'].map((t) => (
-                                    <button
-                                        key={t}
-                                        className={`text-xs font-bold px-3 py-1.5 rounded border transition-colors ${t === '24H' ? 'border-gray-800 text-gray-800' : 'border-gray-300 text-gray-400 hover:border-gray-500'}`}
-                                    >
-                                        {t}
-                                    </button>
-                                ))}
-                            </div>
-                        </div>
-
-                        {/* View All Incidents + quick actions */}
-                        <div className="flex flex-col gap-3">
-                            <button
-                                className="w-full py-3 rounded-xl text-sm font-bold uppercase tracking-widest text-white transition-opacity hover:opacity-90"
-                                style={{ backgroundColor: '#0d1b2a' }}
-                            >
-                                View All Incidents
+                            <button className="flex items-center gap-1 text-xs font-medium text-gray-500 border border-gray-200 rounded-lg px-3 py-1.5 hover:bg-gray-50 transition-colors">
+                                View all <ExternalLink className="w-3 h-3" />
                             </button>
-                            <div className="grid grid-cols-2 gap-3">
-                                <div className="bg-white rounded-xl border border-gray-200 shadow-sm flex flex-col items-center justify-center py-4 gap-2 cursor-pointer hover:bg-gray-50 transition-colors">
-                                    <svg xmlns="http://www.w3.org/2000/svg" className="w-6 h-6 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
-                                    </svg>
-                                    <span className="text-[10px] font-semibold uppercase tracking-widest text-gray-400">Export Report</span>
-                                </div>
-                                <div className="bg-white rounded-xl border border-gray-200 shadow-sm flex flex-col items-center justify-center py-4 gap-2 cursor-pointer hover:bg-gray-50 transition-colors">
-                                    <svg xmlns="http://www.w3.org/2000/svg" className="w-6 h-6 text-gray-300" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 20l-5.447-2.724A1 1 0 013 16.382V5.618a1 1 0 011.447-.894L9 7m0 13l6-3m-6 3V7m6 10l4.553 2.276A1 1 0 0021 18.382V7.618a1 1 0 00-.553-.894L15 4m0 13V4m0 0L9 7" />
-                                    </svg>
-                                    <span className="text-[10px] font-semibold uppercase tracking-widest text-gray-400">Hive Locator</span>
-                                </div>
-                            </div>
                         </div>
-                    </div>
-
-                    {/* ── Swarm Risk + Seasonal Forecast row ── */}
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-
-                        {/* Swarm Risk Factor */}
-                        <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5 flex items-start gap-4">
-                            {/* Circular progress */}
-                            <div className="relative w-16 h-16 shrink-0">
-                                <svg viewBox="0 0 36 36" className="w-16 h-16 -rotate-90">
-                                    <circle cx="18" cy="18" r="15.9" fill="none" stroke="#f1f5f9" strokeWidth="3" />
-                                    <circle
-                                        cx="18" cy="18" r="15.9" fill="none"
-                                        stroke="#f5a623" strokeWidth="3"
-                                        strokeDasharray="75 25"
-                                        strokeLinecap="round"
-                                    />
-                                </svg>
-                                <span className="absolute inset-0 flex items-center justify-center text-sm font-bold" style={{ color: '#0d1b2a' }}>
-                                    75%
-                                </span>
+                        {system_logs.length === 0 ? (
+                            <div className="flex items-center justify-center py-10 text-sm text-gray-400">No system logs yet</div>
+                        ) : (
+                            <div className="divide-y divide-gray-100">
+                                {system_logs.map((log, i) => {
+                                    const style = logStyle(log.level);
+                                    return (
+                                        <div key={i} className="flex items-center gap-4 px-5 py-3 hover:bg-gray-50 transition-colors">
+                                            <span className="shrink-0 text-[10px] font-bold px-2 py-0.5 rounded w-14 text-center"
+                                                style={{ backgroundColor: style.bg, color: style.text }}>
+                                                {log.level}
+                                            </span>
+                                            <p className="flex-1 text-xs text-gray-700 truncate">{log.message}</p>
+                                            <span className="shrink-0 text-[11px] text-gray-400 tabular-nums">{log.created_at ?? ''}</span>
+                                        </div>
+                                    );
+                                })}
                             </div>
-                            <div>
-                                <p className="text-sm font-bold" style={{ color: '#0d1b2a' }}>Swarm Risk Factor</p>
-                                <p className="text-xs text-gray-400 mt-1 leading-snug">
-                                    Regional aggregate based on current environmental pressure.
-                                </p>
-                            </div>
-                        </div>
-
-                        {/* Seasonal Forecast banner */}
-                        <div className="lg:col-span-2 rounded-xl p-6 flex flex-col justify-between gap-4 relative overflow-hidden" style={{ backgroundColor: '#0d1b2a' }}>
-                            {/* Decorative checkmark watermark */}
-                            <div className="absolute right-6 top-1/2 -translate-y-1/2 opacity-10">
-                                <svg xmlns="http://www.w3.org/2000/svg" className="w-32 h-32 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1}>
-                                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                </svg>
-                            </div>
-                            <div>
-                                <p className="text-base font-bold" style={{ color: '#f5a623' }}>Seasonal Forecast Active</p>
-                                <p className="text-sm text-slate-300 mt-2 leading-relaxed max-w-lg">
-                                    Our AI models predict a 20% increase in swarming events over the next 48 hours due to the upcoming high-pressure system.
-                                </p>
-                            </div>
-                            <div className="flex items-center gap-3">
-                                <button
-                                    className="px-5 py-2 rounded-lg text-xs font-bold uppercase tracking-widest hover:opacity-90 transition-opacity"
-                                    style={{ backgroundColor: '#f5a623', color: '#0d1b2a' }}
-                                >
-                                    View Full Forecast
-                                </button>
-                                <button
-                                    className="px-5 py-2 rounded-lg text-xs font-bold uppercase tracking-widest border border-slate-500 text-slate-300 hover:border-slate-300 transition-colors"
-                                >
-                                    Prepare Assets
-                                </button>
-                            </div>
-                        </div>
+                        )}
                     </div>
 
                 </div>

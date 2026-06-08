@@ -8,20 +8,22 @@ return new class extends Migration
 {
     public function up(): void
     {
-        Schema::create('inferences', function (Blueprint $table) {
-            $table->id();
-            $table->string('hive_id');
-            $table->foreign('hive_id')->references('id')->on('beehives')->onDelete('cascade');
-            $table->enum('prediction', ['Normal', 'Pre-swarm', 'Swarm', 'Abscondment', 'Uncertain']);
-            $table->decimal('confidence_score', 5, 2);
-            $table->decimal('inference_latency', 8, 2);
-            $table->timestamp('analyzed_at');
-            $table->timestamps();
+        Schema::create('inference_results', function (Blueprint $table) {
+            $table->uuid('inference_id')->primary();
+            $table->uuid('hive_id');
+            $table->uuid('audio_id')->nullable(); // FK → audio_sources (table created separately)
+            $table->string('hive_state', 50);
+            $table->decimal('confidence_score', 5, 4);
+            $table->decimal('inference_latency_ms', 10, 2)->nullable();
+            $table->timestamp('analyzed_at')->nullable();
+            $table->timestamp('created_at')->nullable();
+
+            $table->foreign('hive_id')->references('hive_id')->on('hives')->onDelete('cascade');
         });
     }
 
     public function down(): void
     {
-        Schema::dropIfExists('inferences');
+        Schema::dropIfExists('inference_results');
     }
 };

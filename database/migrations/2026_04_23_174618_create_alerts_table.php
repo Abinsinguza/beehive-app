@@ -9,14 +9,19 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('alerts', function (Blueprint $table) {
-            $table->id();
-            $table->string('alert_id')->unique();
-            $table->foreignId('inference_id')->constrained('inferences')->onDelete('cascade');
-            $table->foreignId('advisory_id')->constrained('advisories')->onDelete('cascade');
-            $table->enum('alert_type', ['Info', 'Warning', 'Critical', 'Threat']);
-            $table->timestamp('alert_timestamp');
-            $table->enum('status', ['pending', 'sent'])->default('pending');
+            $table->uuid('alert_id')->primary();
+            $table->uuid('hive_id');
+            $table->uuid('inference_id');
+            $table->uuid('advisory_id')->nullable();
+            $table->string('severity_level', 20);
+            $table->text('recommended_action')->nullable();
+            $table->string('action_status', 20);
+            $table->timestamp('alert_timestamp')->nullable();
             $table->timestamps();
+
+            $table->foreign('hive_id')->references('hive_id')->on('hives')->cascadeOnDelete();
+            $table->foreign('inference_id')->references('inference_id')->on('inference_results')->cascadeOnDelete();
+            // advisory_id FK added after advisories table is created (see 2026_06_04_000007)
         });
     }
 

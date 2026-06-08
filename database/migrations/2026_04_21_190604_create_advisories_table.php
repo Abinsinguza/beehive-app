@@ -6,26 +6,22 @@ use Illuminate\Support\Facades\Schema;
 
 return new class extends Migration
 {
-    /**
-     * Run the migrations.
-     */
     public function up(): void
     {
-        Schema::create('advisories', function (Blueprint $table) {
-            $table->id();
-            $table->integer('prediction_code');
-            $table->string('condition_label');
+        Schema::create('advisory_templates', function (Blueprint $table) {
+            $table->bigIncrements('template_id');
+            $table->decimal('prediction_code', 10, 4)->unique();
+            $table->string('hive_state', 50)->unique();
+            $table->string('condition_label', 100);
             $table->text('advisory_text');
-            $table->string('severity');
+            $table->string('advisory_type', 30);
+            $table->string('severity', 20);
             $table->timestamps();
         });
     }
 
-    /**
-     * Reverse the migrations.
-     */
     public function down(): void
     {
-        Schema::dropIfExists('advisories');
+        Schema::dropIfExists('advisory_templates');
     }
 };

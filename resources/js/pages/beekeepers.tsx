@@ -1,5 +1,5 @@
 ﻿import { Head, router, useForm } from '@inertiajs/react';
-import { ChevronDown, Download, Edit2, Eye, UserPlus, X, Zap } from 'lucide-react';
+import { ChevronDown, Download, Edit2, Eye, UserPlus, X } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 
 type Beekeeper = {
@@ -25,11 +25,6 @@ const statusConfig: Record<string, { dot: string; label: string; labelColor: str
     suspended: { dot: '#94a3b8', label: 'Suspended', labelColor: '#94a3b8' },
 };
 
-const auditLog = [
-    { color: '#f5a623', text: "Arthur Denton modified hive permissions for User 'Elena Markov'", meta: 'October 24, 2023 at 14:22 PM â€¢ IP: 192.168.1.1' },
-    { color: '#3b82f6', text: 'New system audit: Access tokens refreshed for all Beekeeper roles', meta: 'October 24, 2023 at 09:15 AM â€¢ Automatic System Task' },
-    { color: '#ef4444', text: 'Security Alert: Failed login attempt from unrecognized device (User: LHuang)', meta: 'October 23, 2023 at 23:59 PM â€¢ Device: Android 12' },
-];
 
 function getInitials(name: string) {
     return name.split(' ').map((n) => n[0]).slice(0, 2).join('').toUpperCase();
@@ -49,7 +44,7 @@ function getStatus(bk: Beekeeper): string {
 // â”€â”€ Add Beekeeper form â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function AddBeekeeperModal({ onClose }: { onClose: () => void }) {
     const { data, setData, post, processing, reset, errors } = useForm({
-        name: '', phone: '', email: '', address: '',
+        name: '', email: '', phone: '', password: '', address: '',
     });
 
     const submit = (e: React.FormEvent) => {
@@ -57,30 +52,61 @@ function AddBeekeeperModal({ onClose }: { onClose: () => void }) {
         post('/beekeepers', { onSuccess: () => { reset(); onClose(); } });
     };
 
+    const fields: { label: string; key: keyof typeof data; type: string; placeholder: string; required: boolean; hint?: string }[] = [
+        { label: 'Full Name',     key: 'name',     type: 'text',     placeholder: 'e.g. Jane Namutebi',   required: true  },
+        { label: 'Email Address', key: 'email',    type: 'email',    placeholder: 'jane@example.com',      required: true  },
+        { label: 'Phone Number',  key: 'phone',    type: 'text',     placeholder: '+256 700 000 000',      required: true  },
+        { label: 'Password',      key: 'password', type: 'password', placeholder: 'Min. 4 characters',    required: true  },
+        { label: 'Address',       key: 'address',  type: 'text',     placeholder: 'e.g. Kampala, Uganda', required: false, hint: 'Optional' },
+    ];
+
     return (
         <ModalShell title="Add New Beekeeper" onClose={onClose}>
-            <form onSubmit={submit} className="p-6 flex flex-col gap-4">
-                {[
-                    { label: 'Full Name', key: 'name',    type: 'text',  placeholder: 'e.g. John Doe',    required: true  },
-                    { label: 'Phone',     key: 'phone',   type: 'text',  placeholder: '+1 555 000 0000',  required: true  },
-                    { label: 'Email',     key: 'email',   type: 'email', placeholder: 'john@example.com', required: false },
-                    { label: 'Address',   key: 'address', type: 'text',  placeholder: '123 Honey Lane',   required: false },
-                ].map((f) => (
-                    <div key={f.key}>
-                        <label className="text-xs font-semibold uppercase tracking-widest text-gray-400 block mb-1.5">{f.label}</label>
+            <form onSubmit={submit} className="px-6 pb-6 pt-2 flex flex-col gap-5">
+
+                {/* Header note */}
+                <p className="text-sm text-gray-500 border-l-4 pl-3" style={{ borderColor: '#f5a623' }}>
+                    Fields marked <span className="text-red-500 font-bold">*</span> are required.
+                </p>
+
+                {fields.map((f) => (
+                    <div key={f.key} className="flex flex-col gap-1.5">
+                        {/* Label */}
+                        <label className="text-sm font-semibold text-gray-700 flex items-center gap-1.5">
+                            {f.label}
+                            {f.required
+                                ? <span className="text-red-500 font-bold">*</span>
+                                : f.hint
+                                    ? <span className="text-xs font-normal text-gray-400">({f.hint})</span>
+                                    : <span className="text-xs font-normal text-gray-400">(optional)</span>
+                            }
+                        </label>
+
+                        {/* Input */}
                         <input
                             type={f.type}
-                            value={data[f.key as keyof typeof data]}
-                            onChange={(e) => setData(f.key as keyof typeof data, e.target.value)}
+                            value={data[f.key]}
+                            onChange={(e) => setData(f.key, e.target.value)}
                             placeholder={f.placeholder}
                             required={f.required}
-                            className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm outline-none text-gray-700 placeholder-gray-300"
+                            className={[
+                                'w-full rounded-lg px-3.5 py-2.5 text-sm text-gray-800 placeholder-gray-400',
+                                'border outline-none transition-colors',
+                                errors[f.key]
+                                    ? 'border-red-400 bg-red-50 focus:border-red-500'
+                                    : 'border-gray-300 bg-white focus:border-amber-400 focus:ring-2 focus:ring-amber-100',
+                            ].join(' ')}
                         />
-                        {errors[f.key as keyof typeof errors] && (
-                            <p className="text-xs text-red-500 mt-1">{errors[f.key as keyof typeof errors]}</p>
+
+                        {/* Error */}
+                        {errors[f.key] && (
+                            <p className="text-xs text-red-500 flex items-center gap-1">
+                                <span>⚠</span> {errors[f.key]}
+                            </p>
                         )}
                     </div>
                 ))}
+
                 <ModalActions onCancel={onClose} processing={processing} label="Add Beekeeper" />
             </form>
         </ModalShell>
@@ -630,41 +656,6 @@ export default function Beekeepers({
                     </div>
                 </div>
 
-                {/* Bottom section */}
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                    {/* Audit log */}
-                    <div className="md:col-span-2 bg-white rounded-xl border border-gray-200 shadow-sm p-5">
-                        <div className="flex items-center justify-between mb-4">
-                            <h2 className="font-semibold text-sm" style={{ color: '#0d1b2a' }}>Recent Administrative Actions</h2>
-                            <Zap className="w-4 h-4 text-gray-300" />
-                        </div>
-                        <div className="flex flex-col gap-4">
-                            {auditLog.map((log, i) => (
-                                <div key={i} className="flex items-start gap-3">
-                                    <span className="w-2 h-2 rounded-full mt-1.5 shrink-0" style={{ backgroundColor: log.color }} />
-                                    <div>
-                                        <p className="text-sm text-gray-700">{log.text}</p>
-                                        <p className="text-xs text-gray-400 mt-0.5">{log.meta}</p>
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    </div>
-
-                    {/* Access Guidelines */}
-                    <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5 flex flex-col gap-3">
-                        <div className="w-9 h-9 rounded-full flex items-center justify-center" style={{ backgroundColor: '#eff6ff' }}>
-                            <span className="text-blue-500 font-bold text-sm">i</span>
-                        </div>
-                        <h2 className="font-semibold text-sm" style={{ color: '#0d1b2a' }}>Access Guidelines</h2>
-                        <p className="text-xs text-gray-500 leading-relaxed">
-                            Administrators have full read/write access to hive data and swarm records. Beekeepers are limited to their assigned apiaries.
-                        </p>
-                        <button className="flex items-center gap-1 text-xs font-semibold mt-auto" style={{ color: '#0d1b2a' }}>
-                            View Security Protocols â†’
-                        </button>
-                    </div>
-                </div>
             </div>
 
             {/* Modals */}
