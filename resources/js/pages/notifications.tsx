@@ -12,7 +12,7 @@ import {
     X,
     Zap,
 } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 
 // ── Types ────────────────────────────────────────────────────────────────────
 type NotifCategory = 'alert' | 'prediction' | 'system' | 'battery';
@@ -23,9 +23,9 @@ type NotifType =
     | 'Connectivity Alert'
     | 'System Update'
     | 'AI Prediction';
-type Severity = 'critical' | 'high' | 'medium' | 'low';
+type Severity = 'critical' | 'elevated' | 'normal';
 type Status = 'new' | 'acknowledged' | 'resolved';
-type BadgeKind = 'CRITICAL' | 'WARNING' | 'INFO' | 'SUCCESS';
+type BadgeKind = 'CRITICAL' | 'WARNING' | 'NORMAL' | 'SUCCESS';
 type DateGroup = 'today' | 'last7' | 'last30';
 
 type Notification = {
@@ -41,6 +41,7 @@ type Notification = {
     time: string;
     date: DateGroup;
     borderColor: string;
+    acknowledgedAt?: string;
 };
 
 // ── Mock Data ────────────────────────────────────────────────────────────────
@@ -80,7 +81,7 @@ const mockNotifications: Notification[] = [
         hiveId: 'BH0002',
         title: 'Pre-Swarm Prediction: BH0002',
         body: 'ML model confidence 87%. Acoustic signature approaching 420Hz threshold. Recommend proactive inspection within 6 hours.',
-        severity: 'high',
+        severity: 'elevated',
         status: 'new',
         badge: 'WARNING',
         time: '1 hour ago',
@@ -94,7 +95,7 @@ const mockNotifications: Notification[] = [
         hiveId: 'BH0005',
         title: 'Battery Alert: BH0005',
         body: 'Microphone battery at 15%. Audio recording at risk. Replace battery soon to maintain hive monitoring.',
-        severity: 'high',
+        severity: 'elevated',
         status: 'new',
         badge: 'WARNING',
         time: '3 hours ago',
@@ -107,8 +108,8 @@ const mockNotifications: Notification[] = [
         type: 'Connectivity Alert',
         hiveId: 'BH0011',
         title: 'Connectivity Lost: BH0011',
-        body: 'Node BH0011 has been offline for 47 minutes. Last known status: Normal. Check power supply and network connection.',
-        severity: 'medium',
+        body: 'BH0011 has been offline for 47 minutes. Last known status: Normal. Check microphone power supply and WiFi connection.',
+        severity: 'normal',
         status: 'acknowledged',
         badge: 'WARNING',
         time: '47 mins ago',
@@ -121,7 +122,7 @@ const mockNotifications: Notification[] = [
         type: 'System Update',
         title: 'System Update: v4.2',
         body: 'BSADS system successfully updated to v4.2.0. ML classification model performance improved by 12%.',
-        severity: 'low',
+        severity: 'normal',
         status: 'resolved',
         badge: 'SUCCESS',
         time: '22 hours ago',
@@ -149,9 +150,9 @@ const mockNotifications: Notification[] = [
         hiveId: 'BH0008',
         title: 'Humidity Risk Prediction: BH0008',
         body: 'Relative humidity reached 89%. ML model flags moisture accumulation risk in brood chamber. Confidence: 79%.',
-        severity: 'medium',
+        severity: 'normal',
         status: 'new',
-        badge: 'INFO',
+        badge: 'NORMAL',
         time: 'Yesterday at 2:15 PM',
         date: 'last7',
         borderColor: '#3b82f6',
@@ -162,7 +163,7 @@ const mockNotifications: Notification[] = [
         type: 'Battery Alert',
         hiveId: 'BH0012',
         title: 'Battery Critical: BH0012',
-        body: 'Battery at 8%. Sensor shutdown imminent. All acoustic monitoring for BH0012 will cease within 2 hours.',
+        body: 'Battery at 8%. Microphone shutdown imminent. Audio recording for BH0012 will cease within 2 hours.',
         severity: 'critical',
         status: 'new',
         badge: 'CRITICAL',
@@ -175,9 +176,9 @@ const mockNotifications: Notification[] = [
         category: 'system',
         type: 'Connectivity Alert',
         hiveId: 'BH0006',
-        title: 'Node Reconnected: BH0006',
-        body: 'BH0006 successfully reconnected after 2-hour outage. All sensors recalibrated and audio classification resumed.',
-        severity: 'low',
+        title: 'Connection Restored: BH0006',
+        body: 'BH0006 successfully reconnected after 2-hour outage. Audio classification resumed successfully.',
+        severity: 'normal',
         status: 'resolved',
         badge: 'SUCCESS',
         time: '2 days ago',
@@ -205,9 +206,9 @@ const mockNotifications: Notification[] = [
         hiveId: 'BH0001',
         title: 'Seasonal Swarm Risk: BH0001',
         body: 'Environmental conditions indicate elevated swarm probability this week. Temperature rising, humidity optimal for swarming.',
-        severity: 'medium',
+        severity: 'normal',
         status: 'acknowledged',
-        badge: 'INFO',
+        badge: 'NORMAL',
         time: '4 days ago',
         date: 'last7',
         borderColor: '#3b82f6',
@@ -218,7 +219,7 @@ const mockNotifications: Notification[] = [
         type: 'System Update',
         title: 'ML Model Retrained',
         body: 'Classification accuracy improved to 91.3% after retraining with 2,400 new acoustic samples from verified swarm events.',
-        severity: 'low',
+        severity: 'normal',
         status: 'resolved',
         badge: 'SUCCESS',
         time: '5 days ago',
@@ -232,7 +233,7 @@ const mockNotifications: Notification[] = [
         hiveId: 'BH0010',
         title: 'Pre-Swarm Confirmed: BH0010',
         body: 'Sustained piping above 420Hz for 22 minutes. Classification confidence 94%. Physical inspection confirmed queen cells present.',
-        severity: 'high',
+        severity: 'elevated',
         status: 'resolved',
         badge: 'WARNING',
         time: '1 week ago',
@@ -246,7 +247,7 @@ const mockNotifications: Notification[] = [
         hiveId: 'BH0014',
         title: 'Battery Replaced: BH0014',
         body: 'Battery replacement confirmed for BH0014. Microphone operational. Audio classification resumed successfully.',
-        severity: 'low',
+        severity: 'normal',
         status: 'resolved',
         badge: 'SUCCESS',
         time: '2 weeks ago',
@@ -260,9 +261,9 @@ const mockNotifications: Notification[] = [
         hiveId: 'BH0013',
         title: 'Acoustic Drift Detected: BH0013',
         body: 'Gradual frequency shift from 280Hz to 380Hz over 72 hours. Model predicts 68% chance of pre-swarm within 5 days.',
-        severity: 'medium',
+        severity: 'normal',
         status: 'acknowledged',
-        badge: 'INFO',
+        badge: 'NORMAL',
         time: '3 weeks ago',
         date: 'last30',
         borderColor: '#3b82f6',
@@ -286,7 +287,7 @@ const defaultFilters: FilterSettings = {
         'System Update',
         'AI Prediction',
     ],
-    severities: ['critical', 'high', 'medium', 'low'],
+    severities: ['critical', 'elevated', 'normal'],
     statuses: ['new', 'acknowledged', 'resolved'],
     dateRange: 'all',
 };
@@ -296,7 +297,7 @@ function SeverityBadge({ badge }: { badge: BadgeKind }) {
     const styles: Record<BadgeKind, { bg: string; color: string }> = {
         CRITICAL: { bg: '#ef4444', color: '#fff' },
         WARNING: { bg: '#f5a623', color: '#0d1b2a' },
-        INFO: { bg: '#3b82f6', color: '#fff' },
+        NORMAL: { bg: '#3b82f6', color: '#fff' },
         SUCCESS: { bg: '#22c55e', color: '#fff' },
     };
     const s = styles[badge];
@@ -460,6 +461,11 @@ function NotifCard({
                 {/* Body */}
                 <p className="text-xs text-gray-500 mt-1.5 leading-relaxed">{n.body}</p>
 
+                {/* Acknowledged timestamp */}
+                {n.acknowledgedAt && (
+                    <p className="text-[10px] text-gray-400 mt-1.5 italic">{n.acknowledgedAt}</p>
+                )}
+
                 {/* Action buttons */}
                 <div className="flex items-center gap-3 mt-3 flex-wrap">
                     <button
@@ -541,7 +547,7 @@ function FilterModal({
         'System Update',
         'AI Prediction',
     ];
-    const allSeverities: Severity[] = ['critical', 'high', 'medium', 'low'];
+    const allSeverities: Severity[] = ['critical', 'elevated', 'normal'];
     const allStatuses: Status[] = ['new', 'acknowledged', 'resolved'];
     const dateOptions: { label: string; value: FilterSettings['dateRange'] }[] = [
         { label: 'All Time', value: 'all' },
@@ -686,9 +692,19 @@ export default function Notifications() {
         setTimeout(() => setToast(null), 3500);
     };
 
+    // ── Lock body scroll when any modal is open ──────────────────────────────
+    useEffect(() => {
+        const anyOpen = showFilterModal || showDispatch || showSchedule || !!viewTarget;
+        document.body.style.overflow = anyOpen ? 'hidden' : '';
+        return () => { document.body.style.overflow = ''; };
+    }, [showFilterModal, showDispatch, showSchedule, viewTarget]);
+
     const handleAcknowledge = (id: number) => {
+        const now = new Date();
+        const timeStr = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        const stamp = `Acknowledged at ${timeStr} — June 6, 2026`;
         setNotifications((prev) =>
-            prev.map((n) => (n.id === id ? { ...n, status: 'acknowledged' as Status } : n)),
+            prev.map((n) => (n.id === id ? { ...n, status: 'acknowledged' as Status, acknowledgedAt: stamp } : n)),
         );
         fireToast('Notification acknowledged');
     };
@@ -734,7 +750,7 @@ export default function Notifications() {
     const urgentCounts = useMemo(
         () => ({
             critical: notifications.filter((n) => n.severity === 'critical' && n.status !== 'resolved').length,
-            high: notifications.filter((n) => n.severity === 'high' && n.status !== 'resolved').length,
+            high: notifications.filter((n) => n.severity === 'elevated' && n.status !== 'resolved').length,
             unresolved: notifications.filter((n) => n.status !== 'resolved').length,
         }),
         [notifications],
