@@ -1,43 +1,43 @@
 import { Head, useForm, usePage } from '@inertiajs/react';
-import { AlertOctagon, CheckCircle, Eye, EyeOff, Key, MessageSquare, Server, Smartphone, X } from 'lucide-react';
+import { AlertOctagon, CheckCircle, CheckCircle2, Eye, EyeOff, Key, MessageSquare, Server, Smartphone, X } from 'lucide-react';
 import { useRef, useState } from 'react';
 
 type Settings = {
     sms_server_url: string;
-    sms_username:   string;
-    sms_api_key:    string;
-    sms_sender_id:  string;
-    sms_template:   string;
+    sms_username: string;
+    sms_api_key: string;
+    sms_sender_id: string;
+    sms_template: string;
 };
 
 const WILDCARDS = [
-    { tag: '#beeHive',      desc: 'Hive ID'           },
-    { tag: '#beekeeper',    desc: 'Beekeeper name'     },
-    { tag: '#alertMessage', desc: 'Advisory message'   },
-    { tag: '#hiveLocation', desc: 'Hive location'      },
-    { tag: '#alertType',    desc: 'Alert severity'     },
-    { tag: '#prediction',   desc: 'ML prediction'      },
-    { tag: '#timestamp',    desc: 'Date & time'        },
-    { tag: '#confidence',   desc: 'Confidence score'   },
+    { tag: '#beeHive', desc: 'Hive ID' },
+    { tag: '#beekeeper', desc: 'Beekeeper name' },
+    { tag: '#alertMessage', desc: 'Advisory message' },
+    { tag: '#hiveLocation', desc: 'Hive location' },
+    { tag: '#alertType', desc: 'Alert severity' },
+    { tag: '#prediction', desc: 'ML prediction' },
+    { tag: '#timestamp', desc: 'Date & time' },
+    { tag: '#confidence', desc: 'Confidence score' },
 ];
 
 const PREVIEW_MAP: Record<string, string> = {
-    '#beeHive':      'BH0042',
-    '#beekeeper':    'John Ssekandi',
+    '#beeHive': 'BH0042',
+    '#beekeeper': 'John Ssekandi',
     '#alertMessage': 'Inspect hive immediately — colony collapse risk detected.',
     '#hiveLocation': 'North Field, Sector B',
-    '#alertType':    'Critical',
-    '#prediction':   'Swarm',
-    '#timestamp':    '2026-04-23 14:32',
-    '#confidence':   '96.2%',
+    '#alertType': 'Critical',
+    '#prediction': 'Swarm',
+    '#timestamp': '2026-04-23 14:32',
+    '#confidence': '96.2%',
 };
 
 const alertRoutes = [
-    { label: 'Critical Swarm Events',  enabled: true,  muted: false },
-    { label: 'Temperature Anomalies',  enabled: true,  muted: false },
-    { label: 'Low Battery Warning',    enabled: false, muted: true  },
-    { label: 'Maintenance Reminders',  enabled: false, muted: false },
-    { label: 'Daily Digest Reports',   enabled: true,  muted: false },
+    { label: 'Critical Swarm Events', enabled: true, muted: false },
+    { label: 'Temperature Anomalies', enabled: true, muted: false },
+    { label: 'Low Battery Warning', enabled: false, muted: true },
+    { label: 'Maintenance Reminders', enabled: false, muted: false },
+    { label: 'Daily Digest Reports', enabled: true, muted: false },
 ];
 
 function Toggle({ on, onChange }: { on: boolean; onChange: () => void }) {
@@ -64,10 +64,10 @@ export default function SystemConfig({ settings }: { settings: Settings }) {
     const textareaRef = useRef<HTMLTextAreaElement>(null);
     const { data, setData, post, processing, errors } = useForm({
         sms_server_url: settings?.sms_server_url ?? '',
-        sms_username:   settings?.sms_username   ?? '',
-        sms_api_key:    settings?.sms_api_key    ?? '',
-        sms_sender_id:  settings?.sms_sender_id  ?? '',
-        sms_template:   settings?.sms_template   ?? '',
+        sms_username: settings?.sms_username ?? '',
+        sms_api_key: settings?.sms_api_key ?? '',
+        sms_sender_id: settings?.sms_sender_id ?? '',
+        sms_template: settings?.sms_template ?? '',
     });
 
     const [showApiKey, setShowApiKey] = useState(false);
@@ -77,8 +77,8 @@ export default function SystemConfig({ settings }: { settings: Settings }) {
         const el = textareaRef.current;
         if (!el) return;
         const start = el.selectionStart ?? data.sms_template.length;
-        const end   = el.selectionEnd   ?? data.sms_template.length;
-        const next  = data.sms_template.slice(0, start) + tag + data.sms_template.slice(end);
+        const end = el.selectionEnd ?? data.sms_template.length;
+        const next = data.sms_template.slice(0, start) + tag + data.sms_template.slice(end);
         setData('sms_template', next);
         requestAnimationFrame(() => {
             el.focus();
@@ -94,20 +94,89 @@ export default function SystemConfig({ settings }: { settings: Settings }) {
     const submit = (e: React.FormEvent) => {
         e.preventDefault();
         setFlashDismissed(false);
-        post('/system-config');
+        post('/system-config', {
+            onSuccess: () => {
+                fireToast('Settings saved successfully');
+            }
+        });
     };
 
     // ── Local-only UI state ──────────────────────────────────────────────────
     const [routes, setRoutes] = useState(alertRoutes.map((r) => ({ ...r })));
+    const [toast, setToast] = useState<string | null>(null);
+    const [showResetModal, setShowResetModal] = useState(false);
 
     const toggleRoute = (i: number) =>
         setRoutes((prev) => prev.map((r, idx) => idx === i ? { ...r, enabled: !r.enabled } : r));
+
+    const fireToast = (msg: string) => {
+        setToast(msg);
+        setTimeout(() => setToast(null), 3500);
+    };
+
+    const handleExportConfig = () => {
+        const config = {
+            "System version": "2.4.0-Stable",
+            "Alert routing settings": routes.map((r) => ({ route: r.label, enabled: r.enabled })),
+            "Database latency": "12ms",
+            "Buffer capacity": "84%"
+        };
+        const blob = new Blob([JSON.stringify(config, null, 2)], { type: 'application/json;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'BSADS_Config.json';
+        a.click();
+        URL.revokeObjectURL(url);
+        fireToast('Configuration exported successfully');
+    };
+
+    const handleConfirmReset = () => {
+        setShowResetModal(false);
+        setRoutes(alertRoutes.map((r) => ({ ...r })));
+        fireToast('System configuration reset successfully');
+    };
 
     const showFlash = !flashDismissed && (flash?.success || flash?.error);
 
     return (
         <>
             <Head title="System Settings" />
+
+            {/* ── Toast ── */}
+            {toast && (
+                <div className="fixed bottom-6 right-6 z-50 flex items-center gap-3 px-4 py-3 rounded-xl shadow-xl text-white text-xs font-semibold" style={{ backgroundColor: '#0d1b2a' }}>
+                    <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                    {toast}
+                </div>
+            )}
+
+            {/* ── Reset Confirmation Modal ── */}
+            {showResetModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+                    <div className="w-full max-w-sm rounded-2xl bg-white shadow-2xl">
+                        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+                            <h2 className="text-base font-bold" style={{ color: '#0d1b2a' }}>Reset System Configuration?</h2>
+                            <button type="button" onClick={() => setShowResetModal(false)} className="text-gray-400 hover:text-gray-600">
+                                <X className="w-5 h-5" />
+                            </button>
+                        </div>
+                        <div className="p-6 flex flex-col gap-4">
+                            <p className="text-sm text-gray-600">This will revert all settings to default values. This cannot be undone.</p>
+                            <div className="flex gap-3 pt-1">
+                                <button type="button" onClick={handleConfirmReset}
+                                    className="flex-1 py-2.5 rounded-lg text-sm font-semibold border-2 border-red-500 text-red-500 hover:bg-red-50 transition-colors">
+                                    Confirm Reset
+                                </button>
+                                <button type="button" onClick={() => setShowResetModal(false)}
+                                    className="flex-1 py-2.5 rounded-lg text-sm font-semibold border border-gray-200 text-gray-500 hover:bg-gray-50 transition-colors">
+                                    Cancel
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            )}
 
             <form onSubmit={submit} className="min-h-screen p-6 flex flex-col gap-5" style={{ backgroundColor: '#f8f9fa' }}>
 
@@ -117,8 +186,8 @@ export default function SystemConfig({ settings }: { settings: Settings }) {
                         className="flex items-center justify-between gap-3 px-4 py-3 rounded-xl text-sm font-medium"
                         style={{
                             backgroundColor: flash?.success ? '#ecfdf5' : '#fef2f2',
-                            color:           flash?.success ? '#065f46'  : '#991b1b',
-                            border:          flash?.success ? '1px solid #a7f3d0' : '1px solid #fecaca',
+                            color: flash?.success ? '#065f46' : '#991b1b',
+                            border: flash?.success ? '1px solid #a7f3d0' : '1px solid #fecaca',
                         }}
                     >
                         <div className="flex items-center gap-2">
@@ -134,122 +203,13 @@ export default function SystemConfig({ settings }: { settings: Settings }) {
                 {/* Page heading */}
                 <div>
                     <h1 className="text-2xl font-bold" style={{ color: '#0d1b2a' }}>System Settings</h1>
-                    <p className="text-sm text-gray-500 mt-1">Configure swarm detection algorithms and global integration keys.</p>
+                    <p className="text-sm text-gray-500 mt-1">Configure alert routing and system preferences.</p>
                 </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
 
                     {/* ── Left column ─────────────────────────────────────────────────── */}
                     <div className="lg:col-span-2 flex flex-col gap-5">
-
-                        {/* SMS / Notifications — wired to DB ──────────────────────────── */}
-                        <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
-                            <div className="flex items-center gap-2 mb-1">
-                                <Smartphone className="w-5 h-5 text-gray-500" />
-                                <h2 className="font-semibold text-base" style={{ color: '#0d1b2a' }}>SMS Notifications</h2>
-                            </div>
-                            <div className="h-px mb-5" style={{ backgroundColor: '#f5a623' }} />
-
-                            {/* Server URL */}
-                            <div className="mb-4">
-                                <label className="text-[11px] font-semibold uppercase tracking-widest text-gray-400 block mb-1.5">
-                                    <Server className="inline w-3 h-3 mr-1" />SMS Server URL
-                                </label>
-                                <input
-                                    type="url"
-                                    value={data.sms_server_url}
-                                    onChange={(e) => setData('sms_server_url', e.target.value)}
-                                    placeholder="https://comms-test.pahappa.net/api/v1/json/"
-                                    className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-700 outline-none placeholder-gray-300"
-                                />
-                                {errors.sms_server_url && <p className="text-xs text-red-500 mt-1">{errors.sms_server_url}</p>}
-                            </div>
-
-                            {/* Username + Sender ID */}
-                            <div className="grid grid-cols-2 gap-4 mb-4">
-                                <div>
-                                    <label className="text-[11px] font-semibold uppercase tracking-widest text-gray-400 block mb-1.5">Username</label>
-                                    <input
-                                        type="text"
-                                        value={data.sms_username}
-                                        onChange={(e) => setData('sms_username', e.target.value)}
-                                        placeholder="your-sms-username"
-                                        className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-700 outline-none placeholder-gray-300"
-                                    />
-                                    {errors.sms_username && <p className="text-xs text-red-500 mt-1">{errors.sms_username}</p>}
-                                </div>
-                                <div>
-                                    <label className="text-[11px] font-semibold uppercase tracking-widest text-gray-400 block mb-1.5">Sender ID</label>
-                                    <input
-                                        type="text"
-                                        value={data.sms_sender_id}
-                                        onChange={(e) => setData('sms_sender_id', e.target.value)}
-                                        placeholder="BeeHive"
-                                        className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-700 outline-none placeholder-gray-300"
-                                    />
-                                    {errors.sms_sender_id && <p className="text-xs text-red-500 mt-1">{errors.sms_sender_id}</p>}
-                                </div>
-                            </div>
-
-                            {/* API Key */}
-                            <div className="mb-5">
-                                <label className="text-[11px] font-semibold uppercase tracking-widest text-gray-400 block mb-1.5">
-                                    <Key className="inline w-3 h-3 mr-1" />API Key
-                                </label>
-                                <div className="flex items-center gap-2">
-                                    <input
-                                        type={showApiKey ? 'text' : 'password'}
-                                        value={data.sms_api_key}
-                                        onChange={(e) => setData('sms_api_key', e.target.value)}
-                                        placeholder="••••••••••••••••"
-                                        className="flex-1 border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-700 outline-none placeholder-gray-300"
-                                    />
-                                    <button type="button" onClick={() => setShowApiKey((v) => !v)}
-                                        className="p-2.5 rounded-lg border border-gray-200 text-gray-400 hover:text-gray-600 hover:bg-gray-50 transition-colors">
-                                        {showApiKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                                    </button>
-                                </div>
-                                {errors.sms_api_key && <p className="text-xs text-red-500 mt-1">{errors.sms_api_key}</p>}
-                            </div>
-
-                            {/* SMS Template */}
-                            <div>
-                                <label className="text-[11px] font-semibold uppercase tracking-widest text-gray-400 block mb-1.5">
-                                    <MessageSquare className="inline w-3 h-3 mr-1" />SMS Template
-                                </label>
-                                <textarea
-                                    ref={textareaRef}
-                                    value={data.sms_template}
-                                    onChange={(e) => setData('sms_template', e.target.value)}
-                                    rows={5}
-                                    className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-700 outline-none resize-none font-mono"
-                                />
-                                {errors.sms_template && <p className="text-xs text-red-500 mt-1">{errors.sms_template}</p>}
-
-                                {/* Wildcard chips */}
-                                <div className="mt-2 flex flex-wrap gap-1.5">
-                                    {WILDCARDS.map(({ tag, desc }) => (
-                                        <button
-                                            key={tag}
-                                            type="button"
-                                            title={desc}
-                                            onClick={() => insertWildcard(tag)}
-                                            className="text-[10px] font-mono px-2 py-1 rounded border border-gray-200 text-gray-500 hover:border-orange-300 hover:text-orange-600 hover:bg-orange-50 transition-colors"
-                                        >
-                                            {tag}
-                                        </button>
-                                    ))}
-                                </div>
-
-                                {/* Preview */}
-                                {data.sms_template && (
-                                    <div className="mt-3 rounded-lg p-3 border border-dashed border-gray-200" style={{ backgroundColor: '#f8f9fa' }}>
-                                        <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1">Preview</p>
-                                        <p className="text-xs text-gray-600 whitespace-pre-line">{previewText}</p>
-                                    </div>
-                                )}
-                            </div>
-                        </div>
 
                         {/* Danger Zone */}
                         <div>
@@ -259,11 +219,11 @@ export default function SystemConfig({ settings }: { settings: Settings }) {
                             </div>
                             <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5 flex items-center justify-between gap-4">
                                 <div>
-                                    <p className="text-sm font-semibold" style={{ color: '#0d1b2a' }}>Reset Cluster Configuration</p>
-                                    <p className="text-xs text-gray-400 mt-0.5">This will revert all monitoring configurations to factory defaults.</p>
+                                    <p className="text-sm font-semibold" style={{ color: '#0d1b2a' }}>Reset System Configuration</p>
+                                    <p className="text-xs text-gray-400 mt-0.5">This will revert all system settings to default values. This action cannot be undone.</p>
                                 </div>
-                                <button type="button" className="shrink-0 px-5 py-2.5 rounded-lg text-sm font-bold border-2 border-red-500 text-red-500 hover:bg-red-50 transition-colors">
-                                    Reset All
+                                <button type="button" onClick={() => setShowResetModal(true)} className="shrink-0 px-5 py-2.5 rounded-lg text-sm font-bold border-2 border-red-500 text-red-500 hover:bg-red-50 transition-colors">
+                                    Reset System Configuration
                                 </button>
                             </div>
                         </div>
@@ -327,7 +287,11 @@ export default function SystemConfig({ settings }: { settings: Settings }) {
                             {processing ? 'Saving…' : 'Save Changes'}
                         </button>
 
-                        <button type="button" className="w-full py-3 rounded-xl text-sm font-bold border border-gray-300 text-gray-700 hover:bg-gray-50 transition-colors">
+                        <button
+                            type="button"
+                            onClick={handleExportConfig}
+                            className="w-full py-3 rounded-xl text-sm font-bold border border-gray-300 text-gray-700 hover:bg-gray-50 transition-colors"
+                        >
                             Export Configuration
                         </button>
 
