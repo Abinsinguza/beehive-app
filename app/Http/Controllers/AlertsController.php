@@ -18,7 +18,9 @@ class AlertsController extends Controller
                                 ->latest()
                                 ->get(),
             'inferences' => Inference::with('beehive')->get(['inference_id', 'hive_id', 'hive_state']),
-            'advisories' => AdvisoryTemplate::orderBy('prediction_code')->get(['template_id', 'condition_label', 'advisory_text', 'advisory_type', 'severity']),
+            'advisories' => AdvisoryTemplate::orderBy('prediction_code')
+                                ->selectRaw("template_id AS id, hive_state AS condition_label, COALESCE(description, '') AS advisory_text, advisory_type, severity")
+                                ->get(),
         ]);
     }
 
