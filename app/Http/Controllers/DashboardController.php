@@ -111,8 +111,7 @@ class DashboardController extends Controller
             ->mapWithKeys(fn($r) => [$r->status => (int) $r->cnt]);
 
         $highPriorityActions = DB::table('advisory_actions as aa')
-            ->leftJoin('advisories as adv', 'aa.advisory_id', '=', 'adv.advisory_id')
-            ->leftJoin('hives as b', 'adv.hive_id', '=', 'b.hive_id')
+            ->leftJoin('hives as b', 'aa.hive_id', '=', 'b.hive_id')
             ->where('aa.priority_level', 'high')
             ->where('aa.status', 'pending')
             ->orderByDesc('aa.created_at')
