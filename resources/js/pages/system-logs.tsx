@@ -124,19 +124,28 @@ export default function SystemLogs({ logs, stats, eventTypes, filters }: Props) 
             <Head title="System Logs" />
             <div className="min-h-screen flex flex-col" style={{ backgroundColor: '#f8f9fa' }}>
 
-                {/* Breadcrumb sub-header */}
-                <div className="px-6 py-3 bg-white border-b border-gray-200">
-                    <div className="flex items-center gap-2 text-sm">
-                        <Link
-                            href="/dashboard"
-                            className="font-semibold hover:underline"
-                            style={{ color: '#0d1b2a' }}
-                        >
-                            Admin Dashboard
-                        </Link>
-                        <span className="text-gray-300 font-light">/</span>
-                        <span className="font-semibold" style={{ color: '#f5a623' }}>System Logs</span>
+                {/* Breadcrumb + subtitle sub-header */}
+                <div className="px-6 py-3 bg-white border-b border-gray-200 flex items-center justify-between">
+                    <div className="flex flex-col gap-0.5">
+                        <div className="flex items-center gap-2 text-sm">
+                            <Link
+                                href="/dashboard"
+                                className="font-semibold hover:underline"
+                                style={{ color: '#0d1b2a' }}
+                            >
+                                Admin Dashboard
+                            </Link>
+                            <span className="text-gray-300 font-light">/</span>
+                            <span className="font-semibold" style={{ color: '#f5a623' }}>System Logs</span>
+                        </div>
+                        <p className="text-xs text-gray-400">
+                            Real-time application event history and diagnostics. Monitoring the hive ecosystem's digital pulse.
+                        </p>
                     </div>
+                    <span className="inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full bg-green-50 text-green-700 border border-green-200">
+                        <span className="w-1.5 h-1.5 rounded-full bg-green-500 inline-block" />
+                        Live
+                    </span>
                 </div>
 
                 <div className="p-6 flex flex-col gap-5 flex-1">
