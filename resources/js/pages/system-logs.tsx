@@ -1,4 +1,4 @@
-import { Head, router } from '@inertiajs/react';
+import { Head, Link, router } from '@inertiajs/react';
 import { AlertCircle, AlertTriangle, Download, Info, Search, SlidersHorizontal } from 'lucide-react';
 import React, { useState } from 'react';
 
@@ -124,16 +124,18 @@ export default function SystemLogs({ logs, stats, eventTypes, filters }: Props) 
             <Head title="System Logs" />
             <div className="min-h-screen flex flex-col" style={{ backgroundColor: '#f8f9fa' }}>
 
-                {/* Sub-header */}
-                <div className="flex items-center gap-3 px-6 py-3 bg-white border-b border-gray-200">
-                    <span className="font-semibold text-sm" style={{ color: '#0d1b2a' }}>System Logs</span>
-                    <span className="text-sm text-gray-400">●</span>
-                    <span className="text-sm text-gray-500">Real-time application event history and diagnostics. Monitoring the hive ecosystem's digital pulse.</span>
-                    <div className="ml-auto flex items-center gap-2">
-                        <span className="inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full bg-green-50 text-green-700 border border-green-200">
-                            <span className="w-1.5 h-1.5 rounded-full bg-green-500 inline-block" />
-                            Live
-                        </span>
+                {/* Breadcrumb sub-header */}
+                <div className="px-6 py-3 bg-white border-b border-gray-200">
+                    <div className="flex items-center gap-2 text-sm">
+                        <Link
+                            href="/dashboard"
+                            className="font-semibold hover:underline"
+                            style={{ color: '#0d1b2a' }}
+                        >
+                            Admin Dashboard
+                        </Link>
+                        <span className="text-gray-300 font-light">/</span>
+                        <span className="font-semibold" style={{ color: '#f5a623' }}>System Logs</span>
                     </div>
                 </div>
 
