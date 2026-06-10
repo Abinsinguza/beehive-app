@@ -11,8 +11,44 @@ const trendData = [
     { day: 'Sun', normal: 87, preSwarm: 30, swarm: 7,  abscondence: 3, pest: 10, uncertain: 5 },
 ];
 
+interface ChartPoint {
+    time: string;
+    x: number;
+    hz: number;
+    rms: number;
+    state: 'Normal' | 'Pre-swarm' | 'Swarm/Absconding' | 'Uncertain';
+    confidence: string;
+}
+
+const chartPoints: ChartPoint[] = [
+    { time: '00:00', x: 50,  hz: 220, rms: 0.15, state: 'Normal',           confidence: '95%' },
+    { time: '04:00', x: 148, hz: 240, rms: 0.18, state: 'Normal',           confidence: '92%' },
+    { time: '08:00', x: 247, hz: 310, rms: 0.25, state: 'Normal',           confidence: '89%' },
+    { time: '12:00', x: 345, hz: 410, rms: 0.58, state: 'Pre-swarm',        confidence: '83%' },
+    { time: '16:00', x: 443, hz: 285, rms: 0.32, state: 'Normal',           confidence: '91%' },
+    { time: '20:00', x: 542, hz: 360, rms: 0.45, state: 'Uncertain',        confidence: '68%' },
+    { time: '24:00', x: 640, hz: 485, rms: 0.88, state: 'Swarm/Absconding', confidence: '96%' },
+];
+
+const stateColors = {
+    'Normal': '#22c55e',
+    'Pre-swarm': '#f5a623',
+    'Swarm/Absconding': '#ef4444',
+    'Uncertain': '#9ca3af',
+};
+
 export default function Inferences() {
     const [toast, setToast] = useState(false);
+    const [viewMode, setViewMode] = useState<'frequency' | 'intensity'>('frequency');
+    const [hoveredPoint, setHoveredPoint] = useState<ChartPoint | null>(null);
+
+    const getPointY = (p: ChartPoint) => {
+        if (viewMode === 'frequency') {
+            return 230 - ((p.hz - 200) / 300) * 215;
+        } else {
+            return 230 - p.rms * 215;
+        }
+    };
 
     const showToast = () => {
         setToast(true);
@@ -189,49 +225,159 @@ export default function Inferences() {
 
                     {/* Frequency chart */}
                     <div className="lg:col-span-2 bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-                        <div className="flex items-center gap-3 px-5 py-4 border-b border-gray-100">
-                            <span className="font-semibold text-sm" style={{ color: '#0d1b2a' }}>Acoustic Frequency Trends (24h)</span>
-                            <span className="text-[10px] font-bold border border-gray-300 rounded px-2 py-0.5 text-gray-500 uppercase tracking-wide">Live</span>
-                            <span className="text-[10px] font-bold border border-gray-300 rounded px-2 py-0.5 text-gray-500 uppercase tracking-wide">Periodic</span>
+                        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 flex-wrap gap-2">
+                            <div className="flex items-center gap-3">
+                                <span className="font-semibold text-sm" style={{ color: '#0d1b2a' }}>Acoustic Frequency Trends (24h)</span>
+                                <span
+                                    className="text-[10px] font-bold rounded px-2.5 py-0.5 border uppercase tracking-wide animate-pulse"
+                                    style={{
+                                        backgroundColor: '#fef2f2',
+                                        color: '#b91c1c',
+                                        borderColor: '#fecaca',
+                                    }}
+                                >
+                                    Current State: Swarm / Absconding
+                                </span>
+                            </div>
+                            <div className="flex items-center gap-2">
+                                <button
+                                    type="button"
+                                    onClick={() => setViewMode('frequency')}
+                                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                                        viewMode === 'frequency'
+                                            ? 'bg-[#0d1b2a] text-white'
+                                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                    }`}
+                                >
+                                    Frequency (Hz)
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setViewMode('intensity')}
+                                    className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                                        viewMode === 'intensity'
+                                            ? 'bg-[#0d1b2a] text-white'
+                                            : 'bg-gray-100 text-gray-600 hover:bg-gray-200'
+                                    }`}
+                                >
+                                    Intensity (RMS)
+                                </button>
+                            </div>
                         </div>
                         <div className="relative" style={{ backgroundColor: '#0d1b2a' }}>
+                            {/* Tooltip */}
+                            {hoveredPoint && (
+                                <div
+                                    className="absolute z-10 p-3 rounded-lg text-white shadow-xl pointer-events-none flex flex-col gap-1 text-[11px]"
+                                    style={{
+                                        left: `${(hoveredPoint.x / 660) * 100}%`,
+                                        top: `${(getPointY(hoveredPoint) / 310) * 100}%`,
+                                        transform: 'translate(-50%, -110%)',
+                                        backgroundColor: 'rgba(13, 27, 42, 0.95)',
+                                        border: `1px solid ${stateColors[hoveredPoint.state]}`,
+                                        minWidth: '140px',
+                                    }}
+                                >
+                                    <p className="font-bold text-slate-300">{hoveredPoint.time}</p>
+                                    <p className="font-semibold text-white">
+                                        {viewMode === 'frequency' ? `Frequency: ${hoveredPoint.hz} Hz` : `Intensity: ${hoveredPoint.rms} RMS`}
+                                    </p>
+                                    <p style={{ color: stateColors[hoveredPoint.state] }} className="font-bold">
+                                        State: {hoveredPoint.state}
+                                    </p>
+                                    <p className="text-slate-400">Confidence: {hoveredPoint.confidence}</p>
+                                </div>
+                            )}
+
                             <svg viewBox="0 0 660 310" className="w-full" preserveAspectRatio="xMidYMid meet">
 
                                 {/* ── Y-axis label (rotated) ── */}
                                 <text x="-122" y="12" fontSize="8" fill="#94a3b8" fontWeight="600"
-                                    transform="rotate(-90)" textAnchor="middle">Frequency (Hz)</text>
+                                    transform="rotate(-90)" textAnchor="middle">
+                                    {viewMode === 'frequency' ? 'Frequency (Hz)' : 'Intensity (RMS)'}
+                                </text>
+
+                                {/* ── Color-coded Background Zones (Frequency view only) ── */}
+                                {viewMode === 'frequency' && (
+                                    <g>
+                                        {/* Red Zone: 450+ Hz */}
+                                        <rect x="50" y="15" width="590" height="35.83" fill="#ef4444" opacity="0.08" />
+                                        <text x="635" y="32" fontSize="6.5" fill="#ef4444" opacity="0.6" textAnchor="end" fontWeight="bold">Swarm / Absconding (&gt;450 Hz)</text>
+
+                                        {/* Amber Zone: 350-450 Hz */}
+                                        <rect x="50" y="50.83" width="590" height="71.67" fill="#f5a623" opacity="0.08" />
+                                        <text x="635" y="80" fontSize="6.5" fill="#f5a623" opacity="0.6" textAnchor="end" fontWeight="bold">Pre-swarm (350-450 Hz)</text>
+
+                                        {/* Green Zone: 200-350 Hz */}
+                                        <rect x="50" y="122.5" width="590" height="107.5" fill="#22c55e" opacity="0.08" />
+                                        <text x="635" y="150" fontSize="6.5" fill="#22c55e" opacity="0.6" textAnchor="end" fontWeight="bold">Normal (200-350 Hz)</text>
+                                    </g>
+                                )}
 
                                 {/* ── Y-axis ticks + grid lines ── */}
-                                {/* y = 230 - ((hz-200)/300)*215 */}
-                                {[
-                                    { hz: 500, y: 15  },
-                                    { hz: 420, y: 72  },
-                                    { hz: 400, y: 86  },
-                                    { hz: 300, y: 158 },
-                                    { hz: 200, y: 230 },
-                                ].map(({ hz, y }) => (
-                                    <g key={hz}>
+                                {(viewMode === 'frequency'
+                                    ? [
+                                        { label: '500', y: 15 },
+                                        { label: '420', y: 72 },
+                                        { label: '400', y: 86 },
+                                        { label: '300', y: 158 },
+                                        { label: '200', y: 230 },
+                                      ]
+                                    : [
+                                        { label: '1.0', y: 15 },
+                                        { label: '0.8', y: 58 },
+                                        { label: '0.6', y: 101 },
+                                        { label: '0.4', y: 144 },
+                                        { label: '0.2', y: 187 },
+                                        { label: '0.0', y: 230 },
+                                      ]
+                                ).map(({ label, y }) => (
+                                    <g key={label}>
                                         <line x1="50" y1={y} x2="640" y2={y} stroke="#1e3a5f" strokeWidth="0.8" />
-                                        <text x="46" y={y + 3} fontSize="7.5" fill="#64748b" textAnchor="end">{hz}</text>
+                                        <text x="46" y={y + 3} fontSize="7.5" fill="#64748b" textAnchor="end">{label}</text>
                                     </g>
                                 ))}
 
-                                {/* ── 420Hz swarm threshold dashed red line ── */}
-                                <line x1="50" y1={72} x2="640" y2={72} stroke="#ef4444" strokeWidth="1.2" strokeDasharray="5 3" opacity="0.9" />
-                                <text x="642" y={75} fontSize="7.5" fill="#ef4444" fontWeight="600">⚠ Swarm Threshold</text>
-
-                                {/* ── Orange wave (remapped to new plot area) ── */}
+                                {/* ── Connected line path ── */}
                                 <path
-                                    d="M50,220 C110,214 155,198 205,177 C255,156 275,128 318,108 C360,88 383,93 426,119 C469,145 491,170 534,160 C577,150 614,122 635,102"
+                                    d={chartPoints.reduce((acc, p, idx) => {
+                                        const x = p.x;
+                                        const y = getPointY(p);
+                                        return idx === 0 ? `M ${x} ${y}` : `${acc} L ${x} ${y}`;
+                                    }, '')}
                                     fill="none" stroke="#f5a623" strokeWidth="2.5"
                                 />
 
-                                {/* ── Peak tooltip (green, Normal Range) ── */}
-                                <rect x="370" y="55" width="148" height="38" rx="4" fill="#16a34a" />
-                                <text x="444" y="71" fontSize="10" fill="white" textAnchor="middle" fontWeight="bold">Peak: 285Hz</text>
-                                <text x="444" y="85" fontSize="10" fill="white" textAnchor="middle" fontWeight="bold">(Normal Range)</text>
-                                {/* Dot on curve */}
-                                <circle cx="426" cy="119" r="5" fill="#f5a623" />
+                                {/* ── Dynamic Colored Data Points ── */}
+                                {chartPoints.map((p) => {
+                                    const cy = getPointY(p);
+                                    const color = stateColors[p.state];
+                                    const isHovered = hoveredPoint?.time === p.time;
+                                    return (
+                                        <g key={p.time}>
+                                            {/* Large hit target circle */}
+                                            <circle
+                                                cx={p.x}
+                                                cy={cy}
+                                                r="14"
+                                                fill="transparent"
+                                                className="cursor-pointer"
+                                                onMouseEnter={() => setHoveredPoint(p)}
+                                                onMouseLeave={() => setHoveredPoint(null)}
+                                            />
+                                            {/* Visual circle dot */}
+                                            <circle
+                                                cx={p.x}
+                                                cy={cy}
+                                                r={isHovered ? 6.5 : 4.5}
+                                                fill={color}
+                                                stroke="#0d1b2a"
+                                                strokeWidth={isHovered ? 2 : 1.5}
+                                                className="pointer-events-none transition-all duration-150"
+                                            />
+                                        </g>
+                                    );
+                                })}
 
                                 {/* ── X-axis baseline ── */}
                                 <line x1="50" y1="230" x2="640" y2="230" stroke="#334155" strokeWidth="0.8" />
@@ -252,6 +398,30 @@ export default function Inferences() {
                                 {/* ── X-axis label ── */}
                                 <text x="345" y="260" fontSize="8" fill="#94a3b8" fontWeight="600" textAnchor="middle">Time</text>
                             </svg>
+                        </div>
+
+                        {/* Metric summary cards directly below the chart */}
+                        <div className="grid grid-cols-2 lg:grid-cols-4 border-t border-gray-100 bg-gray-50">
+                            <div className="p-4 border-r border-gray-100 flex flex-col gap-1">
+                                <p className="text-[9px] font-bold uppercase tracking-widest text-gray-400">Current State</p>
+                                <p className="text-sm font-bold text-red-600">Swarm / Absconding</p>
+                                <p className="text-[10px] text-gray-500">Critical state detected</p>
+                            </div>
+                            <div className="p-4 border-r border-gray-100 flex flex-col gap-1">
+                                <p className="text-[9px] font-bold uppercase tracking-widest text-gray-400">Peak Frequency</p>
+                                <p className="text-sm font-bold text-gray-800">485 Hz</p>
+                                <p className="text-[10px] text-gray-500">At 24:00 (Today)</p>
+                            </div>
+                            <div className="p-4 border-r border-gray-100 flex flex-col gap-1">
+                                <p className="text-[9px] font-bold uppercase tracking-widest text-gray-400">Alerts Today</p>
+                                <p className="text-sm font-bold text-amber-600">3 Alerts</p>
+                                <p className="text-[10px] text-gray-500">2 Pre-swarm, 1 Swarm</p>
+                            </div>
+                            <div className="p-4 flex flex-col gap-1">
+                                <p className="text-[9px] font-bold uppercase tracking-widest text-gray-400">Last Sync Time</p>
+                                <p className="text-sm font-bold text-gray-800">07:45 AM</p>
+                                <p className="text-[10px] text-gray-500">Acoustic feed active</p>
+                            </div>
                         </div>
                     </div>
 
