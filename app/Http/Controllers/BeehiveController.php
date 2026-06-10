@@ -76,10 +76,16 @@ class BeehiveController extends Controller
 
         $latestInference = $recentInferences->first();
 
-        $recentAdvisories = \App\Models\Advisory::where('hive_id', $beehive->hive_id)
+        $recentAdvisories = \App\Models\AdvisoryAction::where('hive_id', $beehive->hive_id)
             ->latest()
             ->take(3)
-            ->get();
+            ->get()
+            ->map(fn($a) => [
+                'condition_label' => $a->action_title,
+                'advisory_text'   => $a->action_description,
+                'severity'        => $a->priority_level,
+                'created_at'      => $a->created_at,
+            ]);
 
         $audioSources = $beehive->audioSources()
             ->latest('captured_at')
