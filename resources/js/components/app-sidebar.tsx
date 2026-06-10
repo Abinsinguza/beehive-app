@@ -1,5 +1,5 @@
 import { Link } from '@inertiajs/react';
-import { BarChart2, Bell, Database, HelpCircle, Hexagon, LayoutGrid, MessageSquareWarning, Mic, Radio, Settings, Users } from 'lucide-react';
+import { BarChart2, Bell, Database, HelpCircle, Hexagon, LayoutGrid, MessageSquareWarning, Mic, Radio, ScrollText, Settings, Users } from 'lucide-react';
 import { NavUser } from '@/components/nav-user';
 import {
     Sidebar,
@@ -22,6 +22,7 @@ const mainNavItems: NavItem[] = [
     { title: 'Alerts & Logs', href: '/alerts', icon: Bell },
     { title: 'Advisories',   href: '/advisories', icon: MessageSquareWarning },
     { title: 'Analytics & Reports', href: '/analytics', icon: BarChart2 },
+    { title: 'System Logs',         href: '/system-logs', icon: ScrollText },
 ];
 
 const bottomNavItems: NavItem[] = [

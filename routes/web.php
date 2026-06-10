@@ -9,12 +9,14 @@ use App\Http\Controllers\InferenceController;
 use App\Http\Controllers\AudioSourceController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\SystemConfigController;
+use App\Http\Controllers\SystemLogsController;
 
 Route::redirect('/', '/login')->name('home');
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('dashboard', [DashboardController::class, 'index'])->name('dashboard');
     Route::inertia('analytics', 'inferences')->name('analytics');
+    Route::get('system-logs', [SystemLogsController::class, 'index'])->name('system-logs');
     Route::inertia('monitoring', 'monitoring')->name('monitoring');
     Route::get('alerts', [AlertsController::class, 'index'])->name('alerts.index');
     Route::post('alerts', [AlertsController::class, 'store'])->name('alerts.store');
