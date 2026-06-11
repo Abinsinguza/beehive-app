@@ -251,22 +251,6 @@ export default function SystemConfig({ settings }: { settings: Settings }) {
                             </div>
                         </div>
 
-                        {/* Danger Zone */}
-                        <div>
-                            <div className="flex items-center gap-2 mb-3">
-                                <AlertOctagon className="w-5 h-5 text-red-500" />
-                                <h2 className="font-semibold text-base text-red-500">Danger Zone</h2>
-                            </div>
-                            <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5 flex items-center justify-between gap-4">
-                                <div>
-                                    <p className="text-sm font-semibold" style={{ color: '#0d1b2a' }}>Reset Cluster Configuration</p>
-                                    <p className="text-xs text-gray-400 mt-0.5">This will revert all monitoring configurations to factory defaults.</p>
-                                </div>
-                                <button type="button" className="shrink-0 px-5 py-2.5 rounded-lg text-sm font-bold border-2 border-red-500 text-red-500 hover:bg-red-50 transition-colors">
-                                    Reset All
-                                </button>
-                            </div>
-                        </div>
                     </div>
 
                     {/* ── Right column ────────────────────────────────────────────────── */}
