@@ -1,199 +1,428 @@
-import { Head } from '@inertiajs/react';
+import { Head, router, useForm } from '@inertiajs/react';
+import { useState } from 'react';
+import { X } from 'lucide-react';
 
-const eventLog = [
-    { time: 'Oct 24, 09:12:04', hive: 'HV-4922-A', type: 'Acoustic Shift', measurement: '294 Hz',   status: 'SWARM PROB.', statusColor: '#f5a623', statusBg: '#fff7ed', action: 'View Spectra' },
-    { time: 'Oct 24, 08:45:12', hive: 'HV-1288-C', type: 'Temp Spike',     measurement: '38.4 °C',  status: 'CRITICAL',    statusColor: '#ffffff', statusBg: '#0d1b2a', action: 'View Spectra' },
-    { time: 'Oct 24, 07:22:58', hive: 'HV-3310-B', type: 'Weight Loss',    measurement: '-1.2 kg',  status: 'NORMAL',      statusColor: '#374151', statusBg: '#f3f4f6', action: 'View Spectra' },
-];
+type Beehive = {
+    hive_id: string;
+    hive_name: string;
+    hive_location: string;
+};
 
-export default function Inferences() {
+type Inference = {
+    inference_id: string;
+    hive_id: string;
+    audio_id: string | null;
+    hive_state: string;
+    confidence_score: number;
+    inference_latency_ms: number | null;
+    analyzed_at: string | null;
+    created_at: string | null;
+    beehive: Beehive | null;
+};
+
+type Props = {
+    inferences: Inference[];
+    beehives: Beehive[];
+};
+
+const STATE_COLORS: Record<string, { bg: string; text: string }> = {
+    Normal:             { bg: '#dcfce7', text: '#16a34a' },
+    'Pre-Swarm':        { bg: '#fef3c7', text: '#d97706' },
+    Swarm:              { bg: '#fee2e2', text: '#dc2626' },
+    Abscondence:        { bg: '#fce7f3', text: '#9d174d' },
+    'Pest/Disturbance': { bg: '#ffedd5', text: '#ea580c' },
+    Uncertain:          { bg: '#f1f5f9', text: '#64748b' },
+};
+
+function stateStyle(state: string) {
+    return STATE_COLORS[state] ?? { bg: '#f1f5f9', text: '#64748b' };
+}
+
+function fmtDate(val: string | null) {
+    if (!val) return '—';
+    return new Date(val).toLocaleString('en-GB', {
+        day: '2-digit', month: 'short', year: 'numeric',
+        hour: '2-digit', minute: '2-digit',
+    });
+}
+
+function fmtScore(val: number) {
+    return `${(val * 100).toFixed(1)}%`;
+}
+
+function scoreColor(val: number) {
+    if (val >= 0.8) return '#16a34a';
+    if (val >= 0.6) return '#d97706';
+    return '#dc2626';
+}
+
+function shortId(id: string | null) {
+    if (!id) return '—';
+    return id.slice(0, 8) + '…';
+}
+
+export default function Inferences({ inferences = [], beehives = [] }: Props) {
+    const [search, setSearch] = useState('');
+    const [stateFilter, setStateFilter] = useState('');
+    const [showModal, setShowModal] = useState(false);
+
+    const { data, setData, post, processing, errors, reset } = useForm({
+        hive_id: '',
+        audio_id: '',
+        hive_state: 'Normal',
+        confidence_score: '',
+        inference_latency_ms: '',
+        analyzed_at: '',
+    });
+
+    const filtered = inferences.filter((r) => {
+        const hiveName = r.beehive?.hive_name ?? '';
+        const matchSearch =
+            hiveName.toLowerCase().includes(search.toLowerCase()) ||
+            r.hive_state.toLowerCase().includes(search.toLowerCase()) ||
+            r.inference_id.toLowerCase().includes(search.toLowerCase());
+        const matchState = stateFilter ? r.hive_state === stateFilter : true;
+        return matchSearch && matchState;
+    });
+
+    const handleExportCSV = () => {
+        const header = [
+            'Inference ID', 'Hive', 'Audio ID', 'Hive State',
+            'Confidence Score', 'Latency (ms)', 'Analyzed At', 'Created At',
+        ].join(',');
+        const rows = filtered.map((r) =>
+            [
+                r.inference_id,
+                r.beehive?.hive_name ?? r.hive_id,
+                r.audio_id ?? '',
+                r.hive_state,
+                fmtScore(r.confidence_score),
+                r.inference_latency_ms ?? '',
+                fmtDate(r.analyzed_at),
+                fmtDate(r.created_at),
+            ].join(',')
+        );
+        const blob = new Blob([[header, ...rows].join('\n')], { type: 'text/csv' });
+        const a = document.createElement('a');
+        a.href = URL.createObjectURL(blob);
+        a.download = 'inference_results.csv';
+        a.click();
+        URL.revokeObjectURL(a.href);
+    };
+
+    const handleSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        post('/inferences', {
+            onSuccess: () => { reset(); setShowModal(false); },
+        });
+    };
+
+    const uniqueStates = [...new Set(inferences.map((r) => r.hive_state))].sort();
+
     return (
         <>
-            <Head title="Analytics & Reports" />
+            <Head title="ML Inferences" />
+
+            {/* ── Log Inference Modal ── */}
+            {showModal && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+                    <div className="w-full max-w-lg rounded-2xl bg-white shadow-2xl">
+                        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+                            <h2 className="text-base font-bold" style={{ color: '#0d1b2a' }}>Log New Inference</h2>
+                            <button onClick={() => setShowModal(false)} className="text-gray-400 hover:text-gray-600 transition-colors">
+                                <X className="w-5 h-5" />
+                            </button>
+                        </div>
+                        <form onSubmit={handleSubmit} className="p-6 flex flex-col gap-4">
+                            {/* Hive */}
+                            <div>
+                                <label className="text-xs font-semibold uppercase tracking-widest text-gray-400 block mb-1.5">Hive *</label>
+                                <select
+                                    value={data.hive_id}
+                                    onChange={(e) => setData('hive_id', e.target.value)}
+                                    className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm bg-white outline-none focus:border-amber-400"
+                                    style={{ color: '#0d1b2a' }}
+                                    required
+                                >
+                                    <option value="">Select hive…</option>
+                                    {beehives.map((b) => (
+                                        <option key={b.hive_id} value={b.hive_id}>
+                                            {b.hive_name} — {b.hive_location}
+                                        </option>
+                                    ))}
+                                </select>
+                                {errors.hive_id && <p className="text-xs text-red-500 mt-1">{errors.hive_id}</p>}
+                            </div>
+
+                            {/* Audio ID */}
+                            <div>
+                                <label className="text-xs font-semibold uppercase tracking-widest text-gray-400 block mb-1.5">Audio ID (optional)</label>
+                                <input
+                                    type="text"
+                                    value={data.audio_id}
+                                    onChange={(e) => setData('audio_id', e.target.value)}
+                                    placeholder="UUID of audio source…"
+                                    className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-amber-400"
+                                    style={{ color: '#0d1b2a' }}
+                                />
+                            </div>
+
+                            {/* Hive State */}
+                            <div>
+                                <label className="text-xs font-semibold uppercase tracking-widest text-gray-400 block mb-1.5">Hive State *</label>
+                                <select
+                                    value={data.hive_state}
+                                    onChange={(e) => setData('hive_state', e.target.value)}
+                                    className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm bg-white outline-none focus:border-amber-400"
+                                    style={{ color: '#0d1b2a' }}
+                                    required
+                                >
+                                    {['Normal', 'Pre-Swarm', 'Swarm', 'Abscondence', 'Pest/Disturbance', 'Uncertain'].map((s) => (
+                                        <option key={s} value={s}>{s}</option>
+                                    ))}
+                                </select>
+                                {errors.hive_state && <p className="text-xs text-red-500 mt-1">{errors.hive_state}</p>}
+                            </div>
+
+                            {/* Confidence Score */}
+                            <div>
+                                <label className="text-xs font-semibold uppercase tracking-widest text-gray-400 block mb-1.5">Confidence Score (0–1) *</label>
+                                <input
+                                    type="number"
+                                    min="0" max="1" step="0.0001"
+                                    value={data.confidence_score}
+                                    onChange={(e) => setData('confidence_score', e.target.value)}
+                                    placeholder="e.g. 0.8750"
+                                    className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-amber-400"
+                                    style={{ color: '#0d1b2a' }}
+                                    required
+                                />
+                                {errors.confidence_score && <p className="text-xs text-red-500 mt-1">{errors.confidence_score}</p>}
+                            </div>
+
+                            {/* Latency */}
+                            <div>
+                                <label className="text-xs font-semibold uppercase tracking-widest text-gray-400 block mb-1.5">Inference Latency (ms)</label>
+                                <input
+                                    type="number"
+                                    min="0" step="0.01"
+                                    value={data.inference_latency_ms}
+                                    onChange={(e) => setData('inference_latency_ms', e.target.value)}
+                                    placeholder="e.g. 142.50"
+                                    className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-amber-400"
+                                    style={{ color: '#0d1b2a' }}
+                                />
+                            </div>
+
+                            {/* Analyzed At */}
+                            <div>
+                                <label className="text-xs font-semibold uppercase tracking-widest text-gray-400 block mb-1.5">Analyzed At *</label>
+                                <input
+                                    type="datetime-local"
+                                    value={data.analyzed_at}
+                                    onChange={(e) => setData('analyzed_at', e.target.value)}
+                                    className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-amber-400"
+                                    style={{ color: '#0d1b2a' }}
+                                    required
+                                />
+                                {errors.analyzed_at && <p className="text-xs text-red-500 mt-1">{errors.analyzed_at}</p>}
+                            </div>
+
+                            <div className="flex gap-3 pt-2">
+                                <button
+                                    type="submit"
+                                    disabled={processing}
+                                    className="flex-1 py-2.5 rounded-lg text-sm font-semibold hover:opacity-90 transition-opacity disabled:opacity-60"
+                                    style={{ backgroundColor: '#f5a623', color: '#0d1b2a' }}
+                                >
+                                    {processing ? 'Saving…' : 'Log Inference'}
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setShowModal(false)}
+                                    className="flex-1 py-2.5 rounded-lg text-sm font-semibold border border-gray-200 text-gray-500 hover:bg-gray-50 transition-colors"
+                                >
+                                    Cancel
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            )}
+
             <div className="min-h-screen p-6 flex flex-col gap-6" style={{ backgroundColor: '#f8f9fa' }}>
 
-                {/* Page heading */}
+                {/* ── Page heading ── */}
                 <div className="flex items-start justify-between gap-4 flex-wrap">
                     <div>
-                        <h1 className="text-2xl font-bold" style={{ color: '#0d1b2a' }}>
-                            Acoustic &amp; Environmental Analytics
-                        </h1>
+                        <h1 className="text-2xl font-bold" style={{ color: '#0d1b2a' }}>ML Inference Results</h1>
                         <p className="text-sm text-gray-500 mt-1">
-                            Comprehensive historical data for swarm prediction models.
+                            Audio classification results from the hive monitoring ML engine.
                         </p>
                     </div>
-                    <div className="flex items-center gap-3">
-                        <button className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold hover:opacity-90 transition-opacity" style={{ backgroundColor: '#f5a623', color: '#0d1b2a' }}>
-                            <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M9 17v-2m3 2v-4m3 4v-6m2 10H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" /></svg>
-                            Export PDF
+                    <div className="flex items-center gap-3 flex-wrap">
+                        <button
+                            onClick={() => setShowModal(true)}
+                            className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold hover:opacity-90 transition-opacity"
+                            style={{ backgroundColor: '#0d1b2a', color: 'white' }}
+                        >
+                            + Log Inference
                         </button>
-                        <button className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold hover:opacity-90 transition-opacity" style={{ backgroundColor: '#f5a623', color: '#0d1b2a' }}>
-                            <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}><path strokeLinecap="round" strokeLinejoin="round" d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" /></svg>
+                        <button
+                            onClick={handleExportCSV}
+                            className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold hover:opacity-90 transition-opacity"
+                            style={{ backgroundColor: '#f5a623', color: '#0d1b2a' }}
+                        >
+                            <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                <path strokeLinecap="round" strokeLinejoin="round" d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                            </svg>
                             Export CSV
                         </button>
                     </div>
                 </div>
 
-                {/* Stat cards */}
+                {/* ── Summary cards ── */}
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                    <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
-                        <p className="text-[11px] font-semibold uppercase tracking-widest text-gray-400 leading-tight">Total Colony<br />Activity</p>
-                        <p className="text-4xl font-bold mt-3" style={{ color: '#0d1b2a' }}>84.2%</p>
-                        <p className="mt-2 text-xs font-medium text-emerald-500">↗ +12% vs last month</p>
-                    </div>
-                    <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
-                        <p className="text-[11px] font-semibold uppercase tracking-widest text-gray-400 leading-tight">Acoustic Peak<br />(Hz)</p>
-                        <p className="text-4xl font-bold mt-3" style={{ color: '#f5a623' }}>248</p>
-                        <p className="mt-2 text-xs font-medium" style={{ color: '#f5a623' }}>▲ Elevated – Swarm risk</p>
-                    </div>
-                    <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
-                        <p className="text-[11px] font-semibold uppercase tracking-widest text-gray-400">Mean Hive Temp</p>
-                        <p className="text-4xl font-bold mt-3" style={{ color: '#0d1b2a' }}>35.2°C</p>
-                        <p className="mt-2 text-xs text-gray-400 flex items-center gap-1">
-                            <span className="w-3 h-3 rounded-full border-2 border-gray-300 inline-block" />
-                            Stable within range
-                        </p>
-                    </div>
-                    <div className="bg-white rounded-xl border border-gray-200 p-5 shadow-sm">
-                        <p className="text-[11px] font-semibold uppercase tracking-widest text-gray-400">Monitoring Hives</p>
-                        <p className="text-4xl font-bold mt-3" style={{ color: '#0d1b2a' }}>142</p>
-                        <p className="mt-2 text-xs text-gray-400">↔ 98% Data Integrity</p>
-                    </div>
+                    {[
+                        { label: 'Total Inferences',  value: inferences.length.toLocaleString(),  color: '#0d1b2a' },
+                        { label: 'Avg Confidence',    value: inferences.length ? fmtScore(inferences.reduce((s, r) => s + r.confidence_score, 0) / inferences.length) : '—', color: '#16a34a' },
+                        { label: 'Avg Latency',       value: (() => { const vals = inferences.filter(r => r.inference_latency_ms != null); return vals.length ? `${(vals.reduce((s, r) => s + r.inference_latency_ms!, 0) / vals.length).toFixed(1)} ms` : '—'; })(), color: '#d97706' },
+                        { label: 'Flagged (Swarm / Pre-Swarm)', value: inferences.filter(r => r.hive_state === 'Swarm' || r.hive_state === 'Pre-Swarm').length.toLocaleString(), color: '#dc2626' },
+                    ].map((c) => (
+                        <div key={c.label} className="bg-white rounded-xl border border-gray-200 shadow-sm p-5 flex flex-col gap-1">
+                            <p className="text-[11px] font-semibold uppercase tracking-widest text-gray-400">{c.label}</p>
+                            <p className="text-3xl font-bold mt-1" style={{ color: c.color }}>{c.value}</p>
+                        </div>
+                    ))}
                 </div>
 
-                {/* Chart + Health Profile */}
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-
-                    {/* Frequency chart */}
-                    <div className="lg:col-span-2 bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-                        <div className="flex items-center gap-3 px-5 py-4 border-b border-gray-100">
-                            <span className="font-semibold text-sm" style={{ color: '#0d1b2a' }}>Acoustic Frequency Trends (24h)</span>
-                            <span className="text-[10px] font-bold border border-gray-300 rounded px-2 py-0.5 text-gray-500 uppercase tracking-wide">Live</span>
-                            <span className="text-[10px] font-bold border border-gray-300 rounded px-2 py-0.5 text-gray-500 uppercase tracking-wide">Periodic</span>
-                        </div>
-                        <div className="relative" style={{ backgroundColor: '#0d1b2a' }}>
-                            <svg viewBox="0 0 660 280" className="w-full" preserveAspectRatio="none">
-                                {/* Grid lines */}
-                                {[40, 100, 160, 220].map((y) => (
-                                    <line key={y} x1="0" y1={y} x2="660" y2={y} stroke="#1e3a5f" strokeWidth="1" />
-                                ))}
-                                {/* Orange wave */}
-                                <path
-                                    d="M0,220 C60,215 100,200 150,180 C200,160 220,130 260,110 C300,90 320,95 360,120 C400,145 420,170 460,160 C500,150 540,120 600,100 C630,90 650,85 660,80"
-                                    fill="none" stroke="#f5a623" strokeWidth="2.5"
-                                />
-                                {/* Peak tooltip */}
-                                <rect x="370" y="60" width="130" height="38" rx="4" fill="#f5a623" />
-                                <text x="435" y="76" fontSize="10" fill="#0d1b2a" textAnchor="middle" fontWeight="bold">Peak: 285Hz (Pre-</text>
-                                <text x="435" y="90" fontSize="10" fill="#0d1b2a" textAnchor="middle" fontWeight="bold">Swarm)</text>
-                                {/* Dot on curve */}
-                                <circle cx="360" cy="120" r="5" fill="#f5a623" />
-                            </svg>
-                            {/* X-axis labels */}
-                            <div className="flex justify-between px-4 pb-3 text-[10px] text-slate-500">
-                                {['06:00','10:00','14:00','18:00','22:00','02:00'].map((t) => <span key={t}>{t}</span>)}
-                            </div>
-                        </div>
-                    </div>
-
-                    {/* Health Profile + Live Environment */}
-                    <div className="flex flex-col gap-4">
-                        <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5 flex flex-col gap-4">
-                            <div>
-                                <p className="font-semibold text-sm" style={{ color: '#0d1b2a' }}>Health Profile</p>
-                                <div className="h-0.5 w-8 mt-1 rounded-full" style={{ backgroundColor: '#f5a623' }} />
-                            </div>
-                            {[
-                                { label: 'Normal State',      count: '82 Hives', pct: 58, color: '#0d1b2a' },
-                                { label: 'Elevated State',    count: '48 Hives', pct: 34, color: '#f5a623' },
-                                { label: 'Critical / Swarming', count: '12 Hives', pct: 8,  color: '#ef4444' },
-                            ].map((row) => (
-                                <div key={row.label} className="flex flex-col gap-1">
-                                    <div className="flex items-center justify-between text-xs">
-                                        <span className="text-gray-600">{row.label}</span>
-                                        <span className="font-semibold" style={{ color: row.color }}>{row.count}</span>
-                                    </div>
-                                    <div className="w-full h-1.5 rounded-full bg-gray-100">
-                                        <div className="h-1.5 rounded-full" style={{ width: `${row.pct}%`, backgroundColor: row.color }} />
-                                    </div>
-                                </div>
-                            ))}
-                            <button className="w-full py-2.5 rounded-lg border border-gray-300 text-sm font-semibold text-gray-700 hover:bg-gray-50 transition-colors mt-1">
-                                Detailed Hive Audit
-                            </button>
-                        </div>
-
-                        {/* Live Environment */}
-                        <div className="rounded-xl p-5 flex flex-col gap-4" style={{ backgroundColor: '#0d1b2a' }}>
-                            <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: '#f5a623' }}>Live Environment</p>
-                            <div className="flex items-center gap-3">
-                                <svg xmlns="http://www.w3.org/2000/svg" className="w-6 h-6 text-slate-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                                    <path strokeLinecap="round" strokeLinejoin="round" d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
-                                </svg>
-                                <div>
-                                    <p className="text-[10px] text-slate-400">Avg. Internal Temperature</p>
-                                    <p className="text-2xl font-bold text-white">34.8°C</p>
-                                </div>
-                            </div>
-                            <div className="flex items-center gap-3">
-                                <svg xmlns="http://www.w3.org/2000/svg" className="w-6 h-6 text-slate-400 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={1.5}>
-                                    <path strokeLinecap="round" strokeLinejoin="round" d="M3 15a4 4 0 004 4h9a5 5 0 10-.1-9.999 5.002 5.002 0 10-9.78 2.096A4.001 4.001 0 003 15z" />
-                                </svg>
-                                <div>
-                                    <p className="text-[10px] text-slate-400">Relative Humidity</p>
-                                    <p className="text-2xl font-bold text-white">58.2%</p>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
+                {/* ── Filters ── */}
+                <div className="flex items-center gap-3 flex-wrap">
+                    <input
+                        type="text"
+                        value={search}
+                        onChange={(e) => setSearch(e.target.value)}
+                        placeholder="Search by hive, state, or ID…"
+                        className="border border-gray-200 rounded-lg px-4 py-2.5 text-sm outline-none focus:border-amber-400 w-72"
+                        style={{ color: '#0d1b2a' }}
+                    />
+                    <select
+                        value={stateFilter}
+                        onChange={(e) => setStateFilter(e.target.value)}
+                        className="border border-gray-200 rounded-lg px-4 py-2.5 text-sm bg-white outline-none focus:border-amber-400"
+                        style={{ color: '#0d1b2a' }}
+                    >
+                        <option value="">All States</option>
+                        {uniqueStates.map((s) => <option key={s} value={s}>{s}</option>)}
+                    </select>
+                    {(search || stateFilter) && (
+                        <button
+                            onClick={() => { setSearch(''); setStateFilter(''); }}
+                            className="text-xs text-gray-400 hover:text-gray-600 underline"
+                        >
+                            Clear filters
+                        </button>
+                    )}
+                    <span className="text-xs text-gray-400 ml-auto">{filtered.length} record{filtered.length !== 1 ? 's' : ''}</span>
                 </div>
 
-                {/* Significant Event Log */}
-                <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-                    <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 flex-wrap gap-3">
-                        <h2 className="font-semibold text-sm" style={{ color: '#0d1b2a' }}>Significant Event Log</h2>
-                        <div className="flex items-center gap-3">
-                            <select className="text-xs border border-gray-200 rounded-lg px-3 py-2 text-gray-600 outline-none bg-white">
-                                <option>All Types</option>
-                                <option>Acoustic Shift</option>
-                                <option>Temp Spike</option>
-                                <option>Weight Loss</option>
-                            </select>
-                            <select className="text-xs border border-gray-200 rounded-lg px-3 py-2 text-gray-600 outline-none bg-white">
-                                <option>Last 30 Days</option>
-                                <option>Last 7 Days</option>
-                                <option>Last 24 Hours</option>
-                            </select>
-                        </div>
-                    </div>
-                    <table className="w-full text-sm">
+                {/* ── Table ── */}
+                <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-x-auto">
+                    <table className="w-full text-xs min-w-225">
                         <thead>
-                            <tr className="border-b border-gray-100">
-                                {['Timestamp','Hive ID','Event Type','Measurement','Status','Action'].map((h) => (
-                                    <th key={h} className="text-left px-6 py-3 text-xs font-semibold text-gray-400 uppercase tracking-widest">{h}</th>
+                            <tr className="border-b border-gray-100 bg-gray-50">
+                                {[
+                                    '#',
+                                    'Inference ID',
+                                    'Hive',
+                                    'Audio ID',
+                                    'Hive State',
+                                    'Confidence Score',
+                                    'Latency (ms)',
+                                    'Analyzed At',
+                                    'Created At',
+                                ].map((h) => (
+                                    <th key={h} className="text-left px-4 py-3 text-[10px] font-bold uppercase tracking-widest text-gray-400 whitespace-nowrap">
+                                        {h}
+                                    </th>
                                 ))}
                             </tr>
                         </thead>
                         <tbody>
-                            {eventLog.map((row, i) => (
-                                <tr key={i} className="border-b border-gray-50 hover:bg-gray-50 transition-colors">
-                                    <td className="px-6 py-4 text-xs text-gray-500 whitespace-nowrap">{row.time}</td>
-                                    <td className="px-6 py-4 text-xs font-medium" style={{ color: '#0d1b2a' }}>{row.hive}</td>
-                                    <td className="px-6 py-4 text-xs text-gray-600">{row.type}</td>
-                                    <td className="px-6 py-4 text-xs text-gray-600">{row.measurement}</td>
-                                    <td className="px-6 py-4">
-                                        <span className="text-[10px] font-bold px-2 py-1 rounded uppercase tracking-wide"
-                                            style={{ backgroundColor: row.statusBg, color: row.statusColor }}>
-                                            {row.status}
-                                        </span>
-                                    </td>
-                                    <td className="px-6 py-4">
-                                        <button className="text-xs font-semibold hover:underline" style={{ color: '#f5a623' }}>
-                                            {row.action}
-                                        </button>
+                            {filtered.length === 0 ? (
+                                <tr>
+                                    <td colSpan={9} className="px-4 py-12 text-center text-sm text-gray-400">
+                                        No inference records found.
                                     </td>
                                 </tr>
-                            ))}
+                            ) : (
+                                filtered.map((r, idx) => {
+                                    const style = stateStyle(r.hive_state);
+                                    return (
+                                        <tr
+                                            key={r.inference_id}
+                                            className="border-b border-gray-50 hover:bg-gray-50 transition-colors"
+                                        >
+                                            {/* # */}
+                                            <td className="px-4 py-3 text-gray-400 tabular-nums">{idx + 1}</td>
+
+                                            {/* Inference ID */}
+                                            <td className="px-4 py-3 font-mono text-gray-500" title={r.inference_id}>
+                                                {shortId(r.inference_id)}
+                                            </td>
+
+                                            {/* Hive */}
+                                            <td className="px-4 py-3 font-semibold whitespace-nowrap" style={{ color: '#0d1b2a' }}>
+                                                {r.beehive ? (
+                                                    <div>
+                                                        <p>{r.beehive.hive_name}</p>
+                                                        <p className="text-[10px] text-gray-400 font-normal">{r.beehive.hive_location}</p>
+                                                    </div>
+                                                ) : (
+                                                    <span className="font-mono text-gray-400" title={r.hive_id}>{shortId(r.hive_id)}</span>
+                                                )}
+                                            </td>
+
+                                            {/* Audio ID */}
+                                            <td className="px-4 py-3 font-mono text-gray-400" title={r.audio_id ?? ''}>
+                                                {r.audio_id ? shortId(r.audio_id) : '—'}
+                                            </td>
+
+                                            {/* Hive State */}
+                                            <td className="px-4 py-3">
+                                                <span
+                                                    className="text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-widest whitespace-nowrap"
+                                                    style={{ backgroundColor: style.bg, color: style.text }}
+                                                >
+                                                    {r.hive_state}
+                                                </span>
+                                            </td>
+
+                                            {/* Confidence Score */}
+                                            <td className="px-4 py-3">
+                                                <span className="font-bold tabular-nums" style={{ color: scoreColor(r.confidence_score) }}>
+                                                    {fmtScore(r.confidence_score)}
+                                                </span>
+                                            </td>
+
+                                            {/* Latency */}
+                                            <td className="px-4 py-3 tabular-nums text-gray-600">
+                                                {r.inference_latency_ms != null ? `${r.inference_latency_ms.toFixed(2)}` : '—'}
+                                            </td>
+
+                                            {/* Analyzed At */}
+                                            <td className="px-4 py-3 text-gray-500 whitespace-nowrap">
+                                                {fmtDate(r.analyzed_at)}
+                                            </td>
+
+                                            {/* Created At */}
+                                            <td className="px-4 py-3 text-gray-500 whitespace-nowrap">
+                                                {fmtDate(r.created_at)}
+                                            </td>
+                                        </tr>
+                                    );
+                                })
+                            )}
                         </tbody>
                     </table>
                 </div>
@@ -206,6 +435,6 @@ export default function Inferences() {
 Inferences.layout = {
     breadcrumbs: [
         { title: 'Admin Dashboard', href: '/dashboard' },
-        { title: 'Analytics & Historical Reports', href: '/analytics' },
+        { title: 'ML Inference Results', href: '/analytics' },
     ],
 };
