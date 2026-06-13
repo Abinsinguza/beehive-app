@@ -29,7 +29,7 @@ const bottomNavItems: NavItem[] = [
     { title: 'Database Schema', href: '/database-schema', icon: Database },
     { title: 'Settings',        href: '/system-config',   icon: Settings },
     { title: 'Notifications',   href: '/notifications',   icon: Bell },
-    { title: 'Help',            href: '/help',            icon: HelpCircle },
+    // { title: 'Help',            href: '/help',            icon: HelpCircle },
 ];
 
 function SidebarNavItem({ item }: { item: NavItem }) {
