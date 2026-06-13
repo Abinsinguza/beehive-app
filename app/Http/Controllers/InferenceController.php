@@ -9,11 +9,34 @@ use Inertia\Inertia;
 
 class InferenceController extends Controller
 {
-    public function index()
+    public function index(Request $request)
     {
+        $state  = $request->input('state', '');
+        $search = $request->input('search', '');
+
+        $inferences = Inference::with('beehive:hive_id,hive_name,hive_location')
+            ->when($state,  fn($q) => $q->where('hive_state', $state))
+            ->when($search, fn($q) => $q->where(function ($q) use ($search) {
+                $q->whereHas('beehive', fn($q) => $q->where('hive_name', 'ilike', "%{$search}%"))
+                  ->orWhere('hive_state', 'ilike', "%{$search}%")
+                  ->orWhere('inference_id', 'ilike', "%{$search}%");
+            }))
+            ->latest('analyzed_at')
+            ->paginate(10)
+            ->withQueryString();
+
+        $stats = [
+            'total'   => Inference::count(),
+            'avg_confidence' => Inference::avg('confidence_score'),
+            'avg_latency'    => Inference::whereNotNull('inference_latency_ms')->avg('inference_latency_ms'),
+            'swarm_count'    => Inference::whereIn('hive_state', ['swarm', 'pre_swarm'])->count(),
+        ];
+
         return Inertia::render('inferences', [
-            'inferences' => Inference::with('beehive')->latest('analyzed_at')->get(),
+            'inferences' => $inferences,
             'beehives'   => Beehive::select('hive_id', 'hive_name', 'hive_location')->get(),
+            'stats'      => $stats,
+            'filters'    => compact('state', 'search'),
         ]);
     }
 

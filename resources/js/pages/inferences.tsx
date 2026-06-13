@@ -21,9 +21,28 @@ type Inference = {
     beehive: Beehive | null;
 };
 
+type Paginator = {
+    data: Inference[];
+    current_page: number;
+    last_page: number;
+    per_page: number;
+    total: number;
+    next_page_url: string | null;
+    prev_page_url: string | null;
+};
+
+type Stats = {
+    total: number;
+    avg_confidence: number | null;
+    avg_latency: number | null;
+    swarm_count: number;
+};
+
 type Props = {
-    inferences: Inference[];
+    inferences: Paginator;
     beehives: Beehive[];
+    stats: Stats;
+    filters: { state: string; search: string };
 };
 
 const STATE_COLORS: Record<string, { bg: string; text: string }> = {
@@ -64,36 +83,54 @@ function shortId(id: string | null) {
     return id.slice(0, 8) + '…';
 }
 
-export default function Inferences({ inferences = [], beehives = [] }: Props) {
-    const [search, setSearch] = useState('');
-    const [stateFilter, setStateFilter] = useState('');
+function getPageNumbers(current: number, last: number): (number | '…')[] {
+    if (last <= 7) return Array.from({ length: last }, (_, i) => i + 1);
+    if (current <= 4) return [1, 2, 3, 4, 5, '…', last];
+    if (current >= last - 3) return [1, '…', last - 4, last - 3, last - 2, last - 1, last];
+    return [1, '…', current - 1, current, current + 1, '…', last];
+}
+
+export default function Inferences({ inferences, beehives = [], stats, filters }: Props) {
+    const [search, setSearch]       = useState(filters?.search ?? '');
+    const [stateFilter, setStateFilter] = useState(filters?.state ?? '');
     const [showModal, setShowModal] = useState(false);
 
     const { data, setData, post, processing, errors, reset } = useForm({
         hive_id: '',
         audio_id: '',
-        hive_state: 'Normal',
+        hive_state: 'swarm',
         confidence_score: '',
         inference_latency_ms: '',
         analyzed_at: '',
     });
 
-    const filtered = inferences.filter((r) => {
-        const hiveName = r.beehive?.hive_name ?? '';
-        const matchSearch =
-            hiveName.toLowerCase().includes(search.toLowerCase()) ||
-            r.hive_state.toLowerCase().includes(search.toLowerCase()) ||
-            r.inference_id.toLowerCase().includes(search.toLowerCase());
-        const matchState = stateFilter ? r.hive_state === stateFilter : true;
-        return matchSearch && matchState;
-    });
+    function applyFilters(overrides: { search?: string; state?: string } = {}) {
+        router.get('/analytics', {
+            search: overrides.search ?? search,
+            state:  overrides.state  ?? stateFilter,
+        }, { preserveScroll: true, preserveState: true });
+    }
+
+    function goToPage(url: string | null) {
+        if (url) router.visit(url, { preserveScroll: true });
+    }
+
+    function goToPageNum(page: number) {
+        router.get('/analytics', { search, state: stateFilter, page }, { preserveScroll: true });
+    }
+
+    const rows    = inferences?.data ?? [];
+    const from    = ((inferences?.current_page ?? 1) - 1) * (inferences?.per_page ?? 10) + 1;
+    const to      = Math.min((inferences?.current_page ?? 1) * (inferences?.per_page ?? 10), inferences?.total ?? 0);
+    const pages   = getPageNumbers(inferences?.current_page ?? 1, inferences?.last_page ?? 1);
+    const uniqueStates = [...new Set(rows.map((r) => r.hive_state))].sort();
 
     const handleExportCSV = () => {
         const header = [
             'Inference ID', 'Hive', 'Audio ID', 'Hive State',
             'Confidence Score', 'Latency (ms)', 'Analyzed At', 'Created At',
         ].join(',');
-        const rows = filtered.map((r) =>
+        const csvRows = rows.map((r) =>
             [
                 r.inference_id,
                 r.beehive?.hive_name ?? r.hive_id,
@@ -105,7 +142,7 @@ export default function Inferences({ inferences = [], beehives = [] }: Props) {
                 fmtDate(r.created_at),
             ].join(',')
         );
-        const blob = new Blob([[header, ...rows].join('\n')], { type: 'text/csv' });
+        const blob = new Blob([[header, ...csvRows].join('\n')], { type: 'text/csv' });
         const a = document.createElement('a');
         a.href = URL.createObjectURL(blob);
         a.download = 'inference_results.csv';
@@ -119,8 +156,6 @@ export default function Inferences({ inferences = [], beehives = [] }: Props) {
             onSuccess: () => { reset(); setShowModal(false); },
         });
     };
-
-    const uniqueStates = [...new Set(inferences.map((r) => r.hive_state))].sort();
 
     return (
         <>
@@ -295,10 +330,10 @@ export default function Inferences({ inferences = [], beehives = [] }: Props) {
                 {/* ── Summary cards ── */}
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                     {[
-                        { label: 'Total Inferences',  value: inferences.length.toLocaleString(),  color: '#0d1b2a' },
-                        { label: 'Avg Confidence',    value: inferences.length ? fmtScore(inferences.reduce((s, r) => s + r.confidence_score, 0) / inferences.length) : '—', color: '#16a34a' },
-                        { label: 'Avg Latency',       value: (() => { const vals = inferences.filter(r => r.inference_latency_ms != null); return vals.length ? `${(vals.reduce((s, r) => s + r.inference_latency_ms!, 0) / vals.length).toFixed(1)} ms` : '—'; })(), color: '#d97706' },
-                        { label: 'Flagged (Swarm)', value: inferences.filter(r => r.hive_state === 'swarm' || r.hive_state === 'pre_swarm').length.toLocaleString(), color: '#dc2626' },
+                        { label: 'Total Inferences', value: (stats?.total ?? 0).toLocaleString(),                                                      color: '#0d1b2a' },
+                        { label: 'Avg Confidence',   value: stats?.avg_confidence != null ? fmtScore(stats.avg_confidence) : '—',                      color: '#16a34a' },
+                        { label: 'Avg Latency',      value: stats?.avg_latency    != null ? `${Number(stats.avg_latency).toFixed(1)} ms` : '—',        color: '#d97706' },
+                        { label: 'Flagged (Swarm)',  value: (stats?.swarm_count ?? 0).toLocaleString(),                                                color: '#dc2626' },
                     ].map((c) => (
                         <div key={c.label} className="bg-white rounded-xl border border-gray-200 shadow-sm p-5 flex flex-col gap-1">
                             <p className="text-[11px] font-semibold uppercase tracking-widest text-gray-400">{c.label}</p>
@@ -313,28 +348,33 @@ export default function Inferences({ inferences = [], beehives = [] }: Props) {
                         type="text"
                         value={search}
                         onChange={(e) => setSearch(e.target.value)}
+                        onKeyDown={(e) => e.key === 'Enter' && applyFilters()}
                         placeholder="Search by hive, state, or ID…"
                         className="border border-gray-200 rounded-lg px-4 py-2.5 text-sm outline-none focus:border-amber-400 w-72"
                         style={{ color: '#0d1b2a' }}
                     />
                     <select
                         value={stateFilter}
-                        onChange={(e) => setStateFilter(e.target.value)}
+                        onChange={(e) => { setStateFilter(e.target.value); applyFilters({ state: e.target.value }); }}
                         className="border border-gray-200 rounded-lg px-4 py-2.5 text-sm bg-white outline-none focus:border-amber-400"
                         style={{ color: '#0d1b2a' }}
                     >
                         <option value="">All States</option>
-                        {uniqueStates.map((s) => <option key={s} value={s}>{s}</option>)}
+                        {['swarm','pre_swarm','external_noise','normal','abscondence','pest_disturbance','uncertain'].map((s) => (
+                            <option key={s} value={s}>{s.replace(/_/g, ' ')}</option>
+                        ))}
                     </select>
                     {(search || stateFilter) && (
                         <button
-                            onClick={() => { setSearch(''); setStateFilter(''); }}
+                            onClick={() => { setSearch(''); setStateFilter(''); applyFilters({ search: '', state: '' }); }}
                             className="text-xs text-gray-400 hover:text-gray-600 underline"
                         >
                             Clear filters
                         </button>
                     )}
-                    <span className="text-xs text-gray-400 ml-auto">{filtered.length} record{filtered.length !== 1 ? 's' : ''}</span>
+                    <span className="text-xs text-gray-400 ml-auto">
+                        {inferences?.total ?? 0} record{(inferences?.total ?? 0) !== 1 ? 's' : ''}
+                    </span>
                 </div>
 
                 {/* ── Table ── */}
@@ -360,14 +400,15 @@ export default function Inferences({ inferences = [], beehives = [] }: Props) {
                             </tr>
                         </thead>
                         <tbody>
-                            {filtered.length === 0 ? (
+                            {rows.length === 0 ? (
                                 <tr>
                                     <td colSpan={9} className="px-4 py-12 text-center text-sm text-gray-400">
                                         No inference records found.
                                     </td>
                                 </tr>
                             ) : (
-                                filtered.map((r, idx) => {
+                                rows.map((r, idx) => {
+                                    const idx2 = from - 1 + idx;
                                     const style = stateStyle(r.hive_state);
                                     return (
                                         <tr
@@ -375,7 +416,7 @@ export default function Inferences({ inferences = [], beehives = [] }: Props) {
                                             className="border-b border-gray-50 hover:bg-gray-50 transition-colors"
                                         >
                                             {/* # */}
-                                            <td className="px-4 py-3 text-gray-400 tabular-nums">{idx + 1}</td>
+                                            <td className="px-4 py-3 text-gray-400 tabular-nums">{idx2 + 1}</td>
 
                                             {/* Inference ID */}
                                             <td className="px-4 py-3 font-mono text-gray-500" title={r.inference_id}>
@@ -436,6 +477,50 @@ export default function Inferences({ inferences = [], beehives = [] }: Props) {
                             )}
                         </tbody>
                     </table>
+                    {/* ── Pagination ── */}
+                    {(inferences?.last_page ?? 1) > 1 && (
+                        <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100">
+                            <p className="text-xs text-gray-500">
+                                Showing <span className="font-semibold text-gray-700">{from}</span> to{' '}
+                                <span className="font-semibold text-gray-700">{to}</span> of{' '}
+                                <span className="font-semibold text-gray-700">{inferences?.total?.toLocaleString()}</span> results
+                            </p>
+                            <div className="flex items-center gap-1">
+                                <button
+                                    onClick={() => goToPage(inferences?.prev_page_url ?? null)}
+                                    disabled={!inferences?.prev_page_url}
+                                    className="px-3 py-1.5 text-xs rounded-lg border border-gray-200 text-gray-600 disabled:opacity-40 hover:bg-gray-50 transition-colors"
+                                >
+                                    Previous
+                                </button>
+                                {pages.map((p, i) =>
+                                    p === '…' ? (
+                                        <span key={`e-${i}`} className="px-2 py-1.5 text-xs text-gray-400">…</span>
+                                    ) : (
+                                        <button
+                                            key={p}
+                                            onClick={() => goToPageNum(p as number)}
+                                            className="w-8 h-8 text-xs rounded-lg border transition-colors font-medium"
+                                            style={
+                                                p === inferences?.current_page
+                                                    ? { backgroundColor: '#0d1b2a', color: '#fff', borderColor: '#0d1b2a' }
+                                                    : { backgroundColor: '#fff', color: '#374151', borderColor: '#e5e7eb' }
+                                            }
+                                        >
+                                            {p}
+                                        </button>
+                                    )
+                                )}
+                                <button
+                                    onClick={() => goToPage(inferences?.next_page_url ?? null)}
+                                    disabled={!inferences?.next_page_url}
+                                    className="px-3 py-1.5 text-xs rounded-lg border border-gray-200 text-gray-600 disabled:opacity-40 hover:bg-gray-50 transition-colors"
+                                >
+                                    Next
+                                </button>
+                            </div>
+                        </div>
+                    )}
                 </div>
 
             </div>
