@@ -1,5 +1,6 @@
 import { Head, router, useForm } from '@inertiajs/react';
-import { useState } from 'react';
+import AppLayout from '@/layouts/app-layout';
+import React, { useState } from 'react';
 import { X } from 'lucide-react';
 
 type Beehive = {
@@ -26,12 +27,14 @@ type Props = {
 };
 
 const STATE_COLORS: Record<string, { bg: string; text: string }> = {
-    Normal:             { bg: '#dcfce7', text: '#16a34a' },
-    'Pre-Swarm':        { bg: '#fef3c7', text: '#d97706' },
-    Swarm:              { bg: '#fee2e2', text: '#dc2626' },
-    Abscondence:        { bg: '#fce7f3', text: '#9d174d' },
-    'Pest/Disturbance': { bg: '#ffedd5', text: '#ea580c' },
-    Uncertain:          { bg: '#f1f5f9', text: '#64748b' },
+    // DB values (lowercase / snake_case)
+    normal:             { bg: '#dcfce7', text: '#16a34a' },
+    pre_swarm:          { bg: '#fef3c7', text: '#d97706' },
+    swarm:              { bg: '#fee2e2', text: '#dc2626' },
+    abscondence:        { bg: '#fce7f3', text: '#9d174d' },
+    external_noise:     { bg: '#ffedd5', text: '#ea580c' },
+    pest_disturbance:   { bg: '#ffedd5', text: '#ea580c' },
+    uncertain:          { bg: '#f1f5f9', text: '#64748b' },
 };
 
 function stateStyle(state: string) {
@@ -177,8 +180,16 @@ export default function Inferences({ inferences = [], beehives = [] }: Props) {
                                     style={{ color: '#0d1b2a' }}
                                     required
                                 >
-                                    {['Normal', 'Pre-Swarm', 'Swarm', 'Abscondence', 'Pest/Disturbance', 'Uncertain'].map((s) => (
-                                        <option key={s} value={s}>{s}</option>
+                                    {[
+                                        { value: 'normal',           label: 'Normal' },
+                                        { value: 'pre_swarm',        label: 'Pre-Swarm' },
+                                        { value: 'swarm',            label: 'Swarm' },
+                                        { value: 'abscondence',      label: 'Abscondence' },
+                                        { value: 'external_noise',   label: 'External Noise' },
+                                        { value: 'pest_disturbance', label: 'Pest / Disturbance' },
+                                        { value: 'uncertain',        label: 'Uncertain' },
+                                    ].map((s) => (
+                                        <option key={s.value} value={s.value}>{s.label}</option>
                                     ))}
                                 </select>
                                 {errors.hive_state && <p className="text-xs text-red-500 mt-1">{errors.hive_state}</p>}
@@ -287,7 +298,7 @@ export default function Inferences({ inferences = [], beehives = [] }: Props) {
                         { label: 'Total Inferences',  value: inferences.length.toLocaleString(),  color: '#0d1b2a' },
                         { label: 'Avg Confidence',    value: inferences.length ? fmtScore(inferences.reduce((s, r) => s + r.confidence_score, 0) / inferences.length) : '—', color: '#16a34a' },
                         { label: 'Avg Latency',       value: (() => { const vals = inferences.filter(r => r.inference_latency_ms != null); return vals.length ? `${(vals.reduce((s, r) => s + r.inference_latency_ms!, 0) / vals.length).toFixed(1)} ms` : '—'; })(), color: '#d97706' },
-                        { label: 'Flagged (Swarm / Pre-Swarm)', value: inferences.filter(r => r.hive_state === 'Swarm' || r.hive_state === 'Pre-Swarm').length.toLocaleString(), color: '#dc2626' },
+                        { label: 'Flagged (Swarm)', value: inferences.filter(r => r.hive_state === 'swarm' || r.hive_state === 'pre_swarm').length.toLocaleString(), color: '#dc2626' },
                     ].map((c) => (
                         <div key={c.label} className="bg-white rounded-xl border border-gray-200 shadow-sm p-5 flex flex-col gap-1">
                             <p className="text-[11px] font-semibold uppercase tracking-widest text-gray-400">{c.label}</p>
@@ -432,9 +443,11 @@ export default function Inferences({ inferences = [], beehives = [] }: Props) {
     );
 }
 
-Inferences.layout = {
-    breadcrumbs: [
-        { title: 'Admin Dashboard', href: '/dashboard' },
+Inferences.layout = (page: React.ReactElement) => (
+    <AppLayout breadcrumbs={[
+        { title: 'Admin Dashboard',    href: '/dashboard' },
         { title: 'ML Inference Results', href: '/analytics' },
-    ],
-};
+    ]}>
+        {page}
+    </AppLayout>
+);
