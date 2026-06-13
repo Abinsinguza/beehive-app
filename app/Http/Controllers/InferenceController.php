@@ -30,6 +30,6 @@ class InferenceController extends Controller
 
         Inference::create($validated);
 
-        return redirect()->route('inferences.index');
+        return redirect()->route('analytics');
     }
 }

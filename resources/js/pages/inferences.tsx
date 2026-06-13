@@ -115,7 +115,7 @@ export default function Inferences({ inferences = [], beehives = [] }: Props) {
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
-        post('/inferences', {
+        post('/analytics', {
             onSuccess: () => { reset(); setShowModal(false); },
         });
     };

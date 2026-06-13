@@ -15,7 +15,8 @@ Route::redirect('/', '/login')->name('home');
 
 Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('dashboard', [DashboardController::class, 'index'])->name('dashboard');
-    Route::inertia('analytics', 'inferences')->name('analytics');
+    Route::get('analytics', [InferenceController::class, 'index'])->name('analytics');
+    Route::post('analytics', [InferenceController::class, 'store'])->name('analytics.store');
     Route::get('system-logs', [SystemLogsController::class, 'index'])->name('system-logs');
     Route::inertia('monitoring', 'monitoring')->name('monitoring');
     Route::get('alerts', [AlertsController::class, 'index'])->name('alerts.index');
