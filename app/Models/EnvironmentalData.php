@@ -19,17 +19,13 @@ class EnvironmentalData extends Model
         'hive_id',
         'temperature',
         'humidity',
-        'population_k_bees',
-        'nectar_flow_kg_per_day',
         'recorded_at',
     ];
 
     protected $casts = [
-        'recorded_at'            => 'datetime',
-        'temperature'            => 'float',
-        'humidity'               => 'float',
-        'population_k_bees'      => 'float',
-        'nectar_flow_kg_per_day' => 'float',
+        'recorded_at' => 'datetime',
+        'temperature' => 'float',
+        'humidity'    => 'float',
     ];
 
     public function uniqueIds(): array

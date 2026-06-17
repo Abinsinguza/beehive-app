@@ -7,14 +7,20 @@ use App\Models\Alerts;
 use App\Models\Inference;
 use App\Services\SmsService;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Schema;
 use Inertia\Inertia;
 
 class AlertsController extends Controller
 {
     public function index()
     {
+        // viewed_at only exists on some database environments (e.g. bee_db) — guard before writing to it
+        if (Schema::hasColumn('alerts', 'viewed_at')) {
+            Alerts::whereNull('viewed_at')->update(['viewed_at' => now()]);
+        }
+
         return Inertia::render('alerts', [
-            'alerts'     => Alerts::with(['inference.beehive.owner', 'advisory'])
+            'alerts'     => Alerts::with(['inference.beehive.owner'])
                                 ->latest()
                                 ->get(),
             'inferences' => Inference::with('beehive')->get(['inference_id', 'hive_id', 'hive_state']),
@@ -29,7 +35,6 @@ class AlertsController extends Controller
         $validated = $request->validate([
             'hive_id'            => ['required', 'string', 'exists:hives,hive_id'],
             'inference_id'       => ['required', 'string', 'exists:inference_results,inference_id'],
-            'advisory_id'        => ['nullable', 'string', 'exists:advisories,advisory_id'],
             'severity_level'     => ['required', 'string', 'max:20'],
             'recommended_action' => ['nullable', 'string'],
             'action_status'      => ['required', 'string', 'max:20'],
@@ -43,10 +48,9 @@ class AlertsController extends Controller
 
     public function notify(Alerts $alert, SmsService $sms)
     {
-        $alert->load(['inference.beehive.owner', 'advisory']);
+        $alert->load(['inference.beehive.owner']);
 
         $beekeeper = $alert->inference?->beehive?->owner;
-        $advisory  = $alert->advisory;
 
         if (! $beekeeper) {
             return redirect()->route('alerts.index')
@@ -70,7 +74,7 @@ class AlertsController extends Controller
             '#beekeeper'    => $beekeeper->name,
             '#prediction'   => $alert->inference?->hive_state ?? '—',
             '#confidence'   => '—',
-            '#alertMessage' => $advisory?->advisory_text ?? $alert->recommended_action ?? '—',
+            '#alertMessage' => $alert->recommended_action ?? '—',
             '#timestamp'    => now()->format('Y-m-d H:i'),
         ]);
 

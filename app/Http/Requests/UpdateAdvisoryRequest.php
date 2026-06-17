@@ -17,12 +17,12 @@ class UpdateAdvisoryRequest extends FormRequest
         $id = $this->route('advisory')?->getKey();
 
         return [
-            'prediction_code' => ['sometimes', 'integer', Rule::unique('advisory_templates', 'prediction_code')->ignore($id, 'template_id')],
-            'hive_state'      => ['sometimes', 'string', 'max:50', Rule::unique('advisory_templates', 'hive_state')->ignore($id, 'template_id')],
-            'condition_label' => ['sometimes', 'string', 'max:100'],
-            'advisory_text'   => ['sometimes', 'string'],
-            'advisory_type'   => ['sometimes', 'string', 'max:30'],
-            'severity'        => ['sometimes', 'string', 'max:20'],
+            'prediction_code'          => ['sometimes', 'numeric', Rule::unique('advisory_templates', 'prediction_code')->ignore($id, 'template_id')],
+            'hive_state'               => ['sometimes', 'string', 'max:50', Rule::unique('advisory_templates', 'hive_state')->ignore($id, 'template_id')],
+            'advisory_type'            => ['sometimes', 'string', 'max:30'],
+            'severity'                 => ['sometimes', 'string', 'max:20'],
+            'min_confidence_threshold' => ['nullable', 'numeric', 'min:0', 'max:1'],
+            'description'              => ['nullable', 'string'],
         ];
     }
 }

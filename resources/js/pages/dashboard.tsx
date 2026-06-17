@@ -32,7 +32,7 @@ type HiveItem = {
     confidence: number | null;
 };
 
-type HiveCategories = { normal: number; at_risk: number; critical: number };
+type HiveCategories = Record<string, number>;
 type InferenceRow   = { state: string; percentage: number };
 
 type AlertItem = {
@@ -69,15 +69,16 @@ function getDayLabel() {
 }
 
 const STATE_META: Record<string, { label: string; bg: string; text: string }> = {
-    normal:     { label: 'Normal',     bg: '#dcfce7', text: '#15803d' },
-    healthy:    { label: 'Normal',     bg: '#dcfce7', text: '#15803d' },
-    swarming:   { label: 'Swarming',   bg: '#ffedd5', text: '#c2410c' },
-    critical:   { label: 'Critical',   bg: '#fee2e2', text: '#b91c1c' },
-    queen_risk: { label: 'Queen risk', bg: '#fef3c7', text: '#b45309' },
-    queenless:  { label: 'Queenless',  bg: '#fef3c7', text: '#b45309' },
-    high_temp:  { label: 'High temp',  bg: '#fef3c7', text: '#b45309' },
-    at_risk:    { label: 'At risk',    bg: '#fef3c7', text: '#b45309' },
-    unknown:    { label: 'Unknown',    bg: '#f1f5f9', text: '#64748b' },
+    normal:           { label: 'Normal',           bg: '#dcfce7', text: '#15803d' },
+    pre_swarm:        { label: 'Pre-Swarm',         bg: '#fef3c7', text: '#b45309' },
+    swarm:            { label: 'Swarm',             bg: '#fee2e2', text: '#b91c1c' },
+    abscondment:      { label: 'Abscondment',       bg: '#ede9fe', text: '#6d28d9' },
+    missing_queen:    { label: 'Missing Queen',     bg: '#ffedd5', text: '#c2410c' },
+    queenbee_present: { label: 'Queenbee Present',  bg: '#dcfce7', text: '#15803d' },
+    pest_infested:    { label: 'Pest Infested',     bg: '#ffedd5', text: '#c2410c' },
+    external_noise:   { label: 'External Noise',    bg: '#eff6ff', text: '#1d4ed8' },
+    uncertain:        { label: 'Uncertain',         bg: '#f1f5f9', text: '#64748b' },
+    unknown:          { label: 'Unknown',           bg: '#f1f5f9', text: '#64748b' },
 };
 
 function stateMeta(state: string) {
@@ -139,39 +140,42 @@ function donutArc(cx: number, cy: number, outerR: number, innerR: number, startD
         `A ${innerR} ${innerR} 0 ${large} 0 ${i2.x.toFixed(2)} ${i2.y.toFixed(2)}`, 'Z',
     ].join(' ');
 }
-const DONUT_COLORS = { normal: '#3d7a3d', at_risk: '#b45309', critical: '#dc2626' };
+const DONUT_COLORS: Record<string, string> = {
+    normal:           '#3d7a3d',
+    pre_swarm:        '#d97706',
+    swarm:            '#dc2626',
+    abscondment:      '#7c3aed',
+    missing_queen:    '#ea580c',
+    queenbee_present: '#16a34a',
+    pest_infested:    '#ea580c',
+    external_noise:   '#2563eb',
+    uncertain:        '#64748b',
+    unknown:          '#94a3b8',
+};
+function donutColor(state: string) { return DONUT_COLORS[state] ?? '#94a3b8'; }
 
 function DonutChart({ categories }: { categories: HiveCategories }) {
-    const total = categories.normal + categories.at_risk + categories.critical;
+    const entries = Object.entries(categories);
+    const total   = entries.reduce((sum, [, count]) => sum + count, 0);
     const cx = 80, cy = 80, outerR = 68, innerR = 42;
-    const segments = [
-        { key: 'normal'   as const, count: categories.normal   },
-        { key: 'at_risk'  as const, count: categories.at_risk  },
-        { key: 'critical' as const, count: categories.critical },
-    ];
     let cursor = 0;
-    const arcs = segments.map((seg) => {
-        const sweep = total > 0 ? (seg.count / total) * 360 : 0;
+    const arcs = entries.map(([key, count]) => {
+        const sweep = total > 0 ? (count / total) * 360 : 0;
         const path  = donutArc(cx, cy, outerR, innerR, cursor, cursor + sweep);
         cursor += sweep;
-        return { ...seg, path };
+        return { key, path };
     });
     return (
         <svg viewBox="0 0 160 160" className="w-full h-full">
             {total === 0
                 ? <circle cx={cx} cy={cy} r={outerR} fill="none" stroke="#e5e7eb" strokeWidth={outerR - innerR} />
-                : arcs.map((arc) => arc.path ? <path key={arc.key} d={arc.path} fill={DONUT_COLORS[arc.key]} /> : null)
+                : arcs.map((arc) => arc.path ? <path key={arc.key} d={arc.path} fill={donutColor(arc.key)} /> : null)
             }
         </svg>
     );
 }
 
-const INF_COLORS: Record<string, string> = {
-    normal: '#3d7a3d', healthy: '#3d7a3d', swarming: '#dc2626',
-    critical: '#dc2626', queenless: '#b45309', queen_risk: '#b45309',
-    high_temp: '#f59e0b', at_risk: '#b45309',
-};
-function infColor(s: string) { return INF_COLORS[s] ?? '#94a3b8'; }
+function infColor(s: string) { return donutColor(s); }
 
 // ── Main component ───────────────────────────────────────────────
 export default function Dashboard({
@@ -181,7 +185,7 @@ export default function Dashboard({
 }: DashboardProps) {
     const alertDiff  = stats.active_alerts - stats.alerts_yesterday;
     const recDiff    = stats.recordings_today - stats.recordings_yesterday;
-    const donutTotal = hive_categories.normal + hive_categories.at_risk + hive_categories.critical;
+    const donutTotal = Object.values(hive_categories).reduce((sum, n) => sum + n, 0);
 
     const pendingCount    = action_counts['pending']     ?? 0;
     const inProgressCount = action_counts['in_progress'] ?? 0;
@@ -313,15 +317,17 @@ export default function Dashboard({
                                 <div className="flex items-center gap-6">
                                     <div className="w-40 h-40 shrink-0"><DonutChart categories={hive_categories} /></div>
                                     <div className="flex flex-col gap-3">
-                                        {([['normal','Normal'],['at_risk','At risk'],['critical','Critical']] as const).map(([key, label]) => (
-                                            <div key={key} className="flex items-center gap-2">
-                                                <span className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: DONUT_COLORS[key] }} />
-                                                <span className="text-sm text-gray-600">{label}</span>
-                                                <span className="text-sm font-semibold ml-auto pl-4" style={{ color: '#0d1b2a' }}>
-                                                    {hive_categories[key]}
-                                                </span>
-                                            </div>
-                                        ))}
+                                        {Object.entries(hive_categories)
+                                            .sort(([, a], [, b]) => b - a)
+                                            .map(([key, count]) => (
+                                                <div key={key} className="flex items-center gap-2">
+                                                    <span className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: donutColor(key) }} />
+                                                    <span className="text-sm text-gray-600">{stateMeta(key).label}</span>
+                                                    <span className="text-sm font-semibold ml-auto pl-4" style={{ color: '#0d1b2a' }}>
+                                                        {count}
+                                                    </span>
+                                                </div>
+                                            ))}
                                         {donutTotal === 0 && <p className="text-xs text-gray-400">No inference data yet</p>}
                                     </div>
                                 </div>

@@ -14,7 +14,7 @@ export default function Register() {
                 {/* Top nav bar */}
                 <div className="w-full px-6 py-4" style={{ backgroundColor: '#0d1b2a' }}>
                     <span className="text-sm font-bold tracking-widest uppercase" style={{ color: '#f5a623' }}>
-                        SwarmIntel
+                        BSADS
                     </span>
                 </div>
 

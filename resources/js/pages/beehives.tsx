@@ -18,7 +18,10 @@ const statusConfig: Record<string, { label: string; bg: string; color: string }>
     inactive:    { label: 'MAINTENANCE',  bg: '#0d1b2a', color: '#ffffff' },
     migrated:    { label: 'TEMP WARNING', bg: '#fff7ed', color: '#f5a623' },
     lost:        { label: 'SWARM LIKELY', bg: '#fff7ed', color: '#f5a623' },
+    unknown:     { label: 'UNKNOWN',      bg: '#f1f5f9', color: '#64748b' },
 };
+
+const defaultStatusStyle = { label: 'UNKNOWN', bg: '#f1f5f9', color: '#64748b' };
 
 
 
@@ -42,6 +45,13 @@ export default function Beehives({ beehives = [], owners = [], search: initialSe
     };
 
     const filteredHives = beehives;
+
+    const statusCounts = [...new Set(beehives.map((h) => h.current_state))]
+        .sort()
+        .map((state) => ({
+            state,
+            count: beehives.filter((h) => h.current_state === state).length,
+        }));
 
     // Export CSV
     const exportCSV = () => {
@@ -87,40 +97,23 @@ export default function Beehives({ beehives = [], owners = [], search: initialSe
                     </button>
                 </div>
 
-                {/* Stat cards */}
-                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                    <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
-                        <p className="text-[11px] font-semibold uppercase tracking-widest text-gray-400">Total Hives</p>
-                        <div className="flex items-end gap-2 mt-2">
-                            <p className="text-4xl font-bold" style={{ color: '#0d1b2a' }}>{beehives.length}</p>
-                            <span className="text-xs font-semibold text-emerald-500 mb-1">↑ 4%</span>
-                        </div>
-                        <div className="mt-3 h-1 w-12 rounded-full" style={{ backgroundColor: '#f5a623' }} />
+                {/* Stat cards — total + breakdown by current_state */}
+                <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+                    <div className="bg-white rounded-lg border border-gray-200 shadow-sm px-4 py-3">
+                        <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-400">Total Hives</p>
+                        <p className="text-2xl font-bold mt-1" style={{ color: '#0d1b2a' }}>{beehives.length}</p>
                     </div>
-                    <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
-                        <p className="text-[11px] font-semibold uppercase tracking-widest text-gray-400">Elevated Risk</p>
-                        <div className="flex items-end gap-2 mt-2">
-                            <p className="text-4xl font-bold" style={{ color: '#f5a623' }}>08</p>
-                            <span className="text-xs text-gray-400 mb-1">Active Alerts</span>
-                        </div>
-                        <div className="mt-3 h-1 w-12 rounded-full" style={{ backgroundColor: '#f5a623' }} />
-                    </div>
-                    <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
-                        <p className="text-[11px] font-semibold uppercase tracking-widest text-gray-400">Mean Temperature</p>
-                        <div className="flex items-end gap-1 mt-2">
-                            <p className="text-4xl font-bold" style={{ color: '#0d1b2a' }}>34.2°</p>
-                            <span className="text-sm text-gray-400 mb-1">Celsius</span>
-                        </div>
-                        <div className="mt-3 h-1 w-12 rounded-full bg-gray-200" />
-                    </div>
-                    <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
-                        <p className="text-[11px] font-semibold uppercase tracking-widest text-gray-400">Honey Production</p>
-                        <div className="flex items-end gap-1 mt-2">
-                            <p className="text-4xl font-bold" style={{ color: '#0d1b2a' }}>1.2t</p>
-                            <span className="text-xs text-gray-400 mb-1">Est. Weight</span>
-                        </div>
-                        <div className="mt-3 h-1 w-12 rounded-full bg-gray-200" />
-                    </div>
+                    {statusCounts.map(({ state, count }) => {
+                        const sc = statusConfig[state] ?? defaultStatusStyle;
+                        return (
+                            <div key={state} className="bg-white rounded-lg border border-gray-200 shadow-sm px-4 py-3">
+                                <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-400">{state}</p>
+                                <p className="text-2xl font-bold mt-1" style={{ color: sc.bg === '#0d1b2a' ? '#0d1b2a' : sc.color }}>
+                                    {count}
+                                </p>
+                            </div>
+                        );
+                    })}
                 </div>
 
                 {/* Active Monitoring Registry table */}

@@ -75,8 +75,8 @@ export function AppSidebar() {
                                 </svg>
                             </div>
                             <div className="flex flex-col leading-tight group-data-[collapsible=icon]:hidden">
-                                <span className="text-base font-bold" style={{ color: '#f5a623' }}>SwarmIntel</span>
-                                <span className="text-[10px] uppercase tracking-widest" style={{ color: '#64748b' }}>Bee Monitoring Pro</span>
+                                <span className="text-base font-bold" style={{ color: '#f5a623' }}>BSADS</span>
+                                <span className="text-[10px] uppercase tracking-widest" style={{ color: '#64748b' }}>Bee Swarming &amp; Abscondence Detection System</span>
                             </div>
                         </Link>
                     </SidebarMenuItem>

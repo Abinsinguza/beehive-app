@@ -50,6 +50,7 @@ class BeehiveController extends Controller
         Beehive::create([
             ...$validated,
             'current_state' => 'unknown',
+            'is_deleted'    => false,
         ]);
 
         return redirect()->back()->with('success', 'Hive added successfully');
@@ -92,6 +93,18 @@ class BeehiveController extends Controller
             ->take(3)
             ->get();
 
+        $dataSource = $beehive->dataSource;
+        if ($dataSource) {
+            $config = $dataSource->connection_config ?? [];
+            if (isset($config['api_key'])) {
+                $key = $config['api_key'];
+                $config['api_key'] = strlen($key) > 8
+                    ? substr($key, 0, 4) . '••••••••' . substr($key, -4)
+                    : '••••••••';
+            }
+            $dataSource->connection_config = $config;
+        }
+
         return inertia('beehive-show', [
             'beehive'               => $beehive,
             'latestEnv'             => $latestEnv,
@@ -99,6 +112,7 @@ class BeehiveController extends Controller
             'latestInference'       => $latestInference,
             'recentAdvisories'      => $recentAdvisories,
             'audioSources'          => $audioSources,
+            'dataSource'            => $dataSource,
         ]);
     }
 

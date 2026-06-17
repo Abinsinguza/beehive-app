@@ -1,5 +1,7 @@
 import { Head, router } from '@inertiajs/react';
-import { Activity, AlertTriangle, Calendar, ChevronLeft, ClipboardList, Droplets, Leaf, MapPin, Mic, Play, Thermometer, Users } from 'lucide-react';
+import { Activity, AlertTriangle, Calendar, ChevronLeft, ClipboardList, Droplets, Leaf, LayoutGrid, Link2, MapPin, Mic, Play, Plug, Thermometer } from 'lucide-react';
+import React, { useState } from 'react';
+import AppLayout from '@/layouts/app-layout';
 
 type Beehive = {
     id: string;
@@ -17,8 +19,6 @@ type Beehive = {
 type EnvData = {
     temperature: number | null;
     humidity: number | null;
-    population_k_bees: number | null;
-    nectar_flow_kg_per_day: number | null;
     recorded_at: string | null;
 } | null;
 
@@ -46,6 +46,15 @@ type LatestInference = {
     confidence_score: number;
     inference_latency_ms: number | null;
     analyzed_at: string;
+} | null;
+
+type DataSource = {
+    source_id: string;
+    source_type: string;
+    source_path: string | null;
+    connection_config: { api_key?: string; api_base_url?: string } | null;
+    last_scanned_at: string | null;
+    is_active: boolean;
 } | null;
 
 const stateColors: Record<string, string> = {
@@ -94,6 +103,7 @@ export default function BeehiveShow({
     latestInference,
     recentAdvisories,
     audioSources,
+    dataSource,
 }: {
     beehive: Beehive;
     latestEnv: EnvData;
@@ -101,9 +111,16 @@ export default function BeehiveShow({
     latestInference: LatestInference;
     recentAdvisories: Advisory[];
     audioSources: AudioSource[];
+    dataSource: DataSource;
 }) {
     const stateBadgeColor = stateColors[beehive.current_state] ?? '#94a3b8';
     const isRisk = ['Swarming', 'Swarm', 'Pre-swarm', 'Abscondment'].includes(beehive.current_state);
+    const [tab, setTab] = useState<'overview' | 'data-source'>('overview');
+
+    function fmtTimeFull(dateStr: string | null | undefined): string {
+        if (!dateStr) return 'Never synced';
+        return `Last synced ${fmtTime(dateStr)}`;
+    }
 
     return (
         <>
@@ -156,6 +173,37 @@ export default function BeehiveShow({
                     </button>
                 </div>
 
+                {/* ── Tabs ─────────────────────────────────────────── */}
+                <div className="flex items-center gap-1 bg-white rounded-xl border border-gray-200 shadow-sm p-1 w-fit">
+                    <button
+                        onClick={() => setTab('overview')}
+                        className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-colors"
+                        style={tab === 'overview' ? { backgroundColor: '#0d1b2a', color: '#ffffff' } : { color: '#64748b' }}
+                    >
+                        <LayoutGrid className="w-4 h-4" />
+                        Overview
+                    </button>
+                    <button
+                        onClick={() => setTab('data-source')}
+                        className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-colors"
+                        style={tab === 'data-source' ? { backgroundColor: '#0d1b2a', color: '#ffffff' } : { color: '#64748b' }}
+                    >
+                        <Plug className="w-4 h-4" />
+                        Data Source
+                        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full"
+                            style={
+                                dataSource?.is_active
+                                    ? { backgroundColor: '#f0fdf4', color: '#16a34a' }
+                                    : { backgroundColor: '#f1f5f9', color: '#94a3b8' }
+                            }>
+                            {dataSource ? (dataSource.is_active ? 'Active' : 'Inactive') : 'None'}
+                        </span>
+                    </button>
+                </div>
+
+                {tab === 'overview' && (
+                <>
+
                 {/* ── Stat cards ──────────────────────────────────── */}
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                     {[
@@ -172,16 +220,16 @@ export default function BeehiveShow({
                             sub: latestEnv?.recorded_at ? `Recorded ${fmtTime(latestEnv.recorded_at)}` : 'No sensor data yet',
                         },
                         {
-                            icon: <Users className="w-4 h-4 text-amber-500" />,
-                            label: 'Population',
-                            value: latestEnv?.population_k_bees != null ? `${latestEnv.population_k_bees}k bees` : '—',
-                            sub: 'Estimated colony size',
+                            icon: <Activity className="w-4 h-4 text-amber-500" />,
+                            label: 'Confidence',
+                            value: latestInference?.confidence_score != null ? `${(latestInference.confidence_score * 100).toFixed(1)}%` : '—',
+                            sub: latestInference?.analyzed_at ? `Analysed ${fmtTime(latestInference.analyzed_at)}` : 'No inference data yet',
                         },
                         {
                             icon: <Leaf className="w-4 h-4 text-green-500" />,
-                            label: 'Nectar Flow',
-                            value: latestEnv?.nectar_flow_kg_per_day != null ? `${latestEnv.nectar_flow_kg_per_day} kg/day` : '—',
-                            sub: '~ stable',
+                            label: 'Inference Latency',
+                            value: latestInference?.inference_latency_ms != null ? `${latestInference.inference_latency_ms} ms` : '—',
+                            sub: latestInference?.hive_state ?? 'No prediction yet',
                         },
                     ].map((s) => (
                         <div key={s.label} className="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
@@ -351,15 +399,81 @@ export default function BeehiveShow({
                     </div>
                 </div>
 
+                </>
+                )}
+
+                {tab === 'data-source' && (
+                <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5 flex flex-col gap-4">
+                    <div className="flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                            <Plug className="w-4 h-4 text-gray-500" />
+                            <h2 className="font-semibold text-sm" style={{ color: '#0d1b2a' }}>Sensor Data Source</h2>
+                        </div>
+                        {dataSource && (
+                            <span className="text-[10px] font-bold px-2.5 py-1 rounded uppercase tracking-widest"
+                                style={
+                                    dataSource.is_active
+                                        ? { backgroundColor: '#f0fdf4', color: '#16a34a' }
+                                        : { backgroundColor: '#f1f5f9', color: '#94a3b8' }
+                                }>
+                                {dataSource.is_active ? 'Active' : 'Inactive'}
+                            </span>
+                        )}
+                    </div>
+
+                    {!dataSource ? (
+                        <p className="text-xs text-gray-400 italic">No data source configured for this hive.</p>
+                    ) : (
+                        <div className="divide-y divide-gray-50">
+                            <div className="flex items-start py-3 gap-4">
+                                <span className="text-xs text-gray-400 w-40 shrink-0 pt-0.5 flex items-center gap-1.5">
+                                    <Link2 className="w-3.5 h-3.5" /> Source Path
+                                </span>
+                                <span className="text-sm font-mono text-gray-700 break-all">{dataSource.source_path ?? '—'}</span>
+                            </div>
+                            <div className="flex items-start py-3 gap-4">
+                                <span className="text-xs text-gray-400 w-40 shrink-0 pt-0.5">Source Type</span>
+                                <span className="text-sm text-gray-700 uppercase">{dataSource.source_type}</span>
+                            </div>
+                            <div className="flex items-start py-3 gap-4">
+                                <span className="text-xs text-gray-400 w-40 shrink-0 pt-0.5">API Base URL</span>
+                                <span className="text-sm font-mono text-gray-700 break-all">{dataSource.connection_config?.api_base_url ?? '—'}</span>
+                            </div>
+                            <div className="flex items-start py-3 gap-4">
+                                <span className="text-xs text-gray-400 w-40 shrink-0 pt-0.5">API Key</span>
+                                <span className="text-sm font-mono text-gray-500">{dataSource.connection_config?.api_key ?? '—'}</span>
+                            </div>
+                            <div className="flex items-start py-3 gap-4">
+                                <span className="text-xs text-gray-400 w-40 shrink-0 pt-0.5">Last Sync</span>
+                                <span className="text-sm text-gray-700">{fmtTimeFull(dataSource.last_scanned_at)}</span>
+                            </div>
+                            <div className="flex items-start py-3 gap-4">
+                                <span className="text-xs text-gray-400 w-40 shrink-0 pt-0.5">Status</span>
+                                <span className="text-xs font-bold px-2.5 py-1 rounded"
+                                    style={
+                                        dataSource.is_active
+                                            ? { backgroundColor: '#f0fdf4', color: '#166534' }
+                                            : { backgroundColor: '#f1f5f9', color: '#64748b' }
+                                    }>
+                                    {dataSource.is_active ? 'Active' : 'Inactive'}
+                                </span>
+                            </div>
+                        </div>
+                    )}
+                </div>
+                )}
+
             </div>
         </>
     );
 }
 
-BeehiveShow.layout = {
-    breadcrumbs: [
+BeehiveShow.layout = (page: React.ReactElement) => (
+    <AppLayout breadcrumbs={[
         { title: 'Admin Dashboard', href: '/dashboard' },
         { title: 'Hive Inventory',  href: '/beehives' },
         { title: 'Hive Profile',    href: '#' },
-    ],
-};
+    ]}>
+        {page}
+    </AppLayout>
+);

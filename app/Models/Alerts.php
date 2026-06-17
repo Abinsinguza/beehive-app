@@ -16,7 +16,6 @@ class Alerts extends Model
     protected $fillable = [
         'hive_id',
         'inference_id',
-        'advisory_id',
         'severity_level',
         'recommended_action',
         'action_status',
@@ -25,6 +24,7 @@ class Alerts extends Model
 
     protected $casts = [
         'alert_timestamp' => 'datetime',
+        'viewed_at'       => 'datetime',
     ];
 
     public function uniqueIds(): array
@@ -40,10 +40,5 @@ class Alerts extends Model
     public function inference()
     {
         return $this->belongsTo(Inference::class, 'inference_id', 'inference_id');
-    }
-
-    public function advisory()
-    {
-        return $this->belongsTo(Advisory::class, 'advisory_id', 'advisory_id');
     }
 }

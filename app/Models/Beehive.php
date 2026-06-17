@@ -79,4 +79,9 @@ class Beehive extends Model
     {
         return $this->hasMany(EnvironmentalData::class, 'hive_id', 'hive_id');
     }
+
+    public function dataSource()
+    {
+        return $this->hasOne(FarmerDataSource::class, 'hive_id', 'hive_id');
+    }
 }

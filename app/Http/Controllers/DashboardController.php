@@ -60,14 +60,10 @@ class DashboardController extends Controller
                                 ? round((float) $h->confidence_score * 100) : null,
         ])->values();
 
-        // ── Hive state categories for donut ────────────────────────
+        // ── Hive state breakdown for donut — one bucket per real hive_state ──
         $catRaw = DB::select("
             SELECT
-                CASE
-                    WHEN COALESCE(ir.hive_state,'unknown') IN ('normal','healthy') THEN 'normal'
-                    WHEN COALESCE(ir.hive_state,'unknown') IN ('swarming','critical') THEN 'critical'
-                    ELSE 'at_risk'
-                END AS category,
+                COALESCE(ir.hive_state, 'unknown') AS category,
                 COUNT(*) AS count
             FROM hives b
             LEFT JOIN LATERAL (
@@ -76,7 +72,7 @@ class DashboardController extends Controller
             ) ir ON true
             GROUP BY category
         ");
-        $hiveCategories = ['normal' => 0, 'at_risk' => 0, 'critical' => 0];
+        $hiveCategories = [];
         foreach ($catRaw as $row) {
             $hiveCategories[$row->category] = (int) $row->count;
         }

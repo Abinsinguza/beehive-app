@@ -14,12 +14,12 @@ class StoreAdvisoryRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'prediction_code' => ['required', 'integer', 'unique:advisory_templates,prediction_code'],
-            'hive_state'      => ['required', 'string', 'max:50', 'unique:advisory_templates,hive_state'],
-            'condition_label' => ['required', 'string', 'max:100'],
-            'advisory_text'   => ['required', 'string'],
-            'advisory_type'   => ['required', 'string', 'max:30'],
-            'severity'        => ['required', 'string', 'max:20'],
+            'prediction_code'          => ['required', 'numeric', 'unique:advisory_templates,prediction_code'],
+            'hive_state'               => ['required', 'string', 'max:50', 'unique:advisory_templates,hive_state'],
+            'advisory_type'            => ['required', 'string', 'max:30'],
+            'severity'                 => ['required', 'string', 'max:20'],
+            'min_confidence_threshold' => ['nullable', 'numeric', 'min:0', 'max:1'],
+            'description'              => ['nullable', 'string'],
         ];
     }
 }

@@ -421,7 +421,7 @@ export default function SystemLogs({ logs, stats, eventTypes, filters }: Props) 
                             12.4 GB Storage Used
                         </span>
                     </div>
-                    <span>© {new Date().getFullYear()} SwarmIntel — Bee Monitoring Pro</span>
+                    <span>© {new Date().getFullYear()} BSADS — Bee Swarming &amp; Abscondence Detection System</span>
                 </div>
 
             </div>

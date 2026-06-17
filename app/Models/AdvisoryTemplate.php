@@ -12,9 +12,19 @@ class AdvisoryTemplate extends Model
     protected $fillable = [
         'prediction_code',
         'hive_state',
-        'condition_label',
-        'advisory_text',
         'advisory_type',
         'severity',
+        'min_confidence_threshold',
+        'description',
     ];
+
+    protected $casts = [
+        'prediction_code'          => 'float',
+        'min_confidence_threshold' => 'float',
+    ];
+
+    public function advisories()
+    {
+        return $this->hasMany(Advisory::class, 'template_id', 'template_id');
+    }
 }

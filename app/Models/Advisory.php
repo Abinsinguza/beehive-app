@@ -14,32 +14,27 @@ class Advisory extends Model
     protected $keyType = 'string';
 
     protected $fillable = [
-        'inference_id',
-        'hive_id',
         'template_id',
-        'advisory_type',
-        'condition_label',
-        'advisory_text',
-        'severity',
+        'action_title',
+        'action_description',
+        'priority_level',
+        'confidence_threshold_min',
+        'confidence_threshold_max',
+        'action_order',
+        'is_active',
     ];
 
     protected $casts = [
-        'template_id' => 'integer',
+        'template_id'              => 'integer',
+        'confidence_threshold_min' => 'float',
+        'confidence_threshold_max' => 'float',
+        'action_order'             => 'integer',
+        'is_active'                => 'boolean',
     ];
 
     public function uniqueIds(): array
     {
         return ['advisory_id'];
-    }
-
-    public function inferenceResult()
-    {
-        return $this->belongsTo(Inference::class, 'inference_id', 'inference_id');
-    }
-
-    public function hive()
-    {
-        return $this->belongsTo(Beehive::class, 'hive_id', 'hive_id');
     }
 
     public function template()

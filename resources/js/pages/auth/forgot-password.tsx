@@ -28,8 +28,8 @@ export default function ForgotPassword({ status }: { status?: string }) {
                             <line x1="26" y1="48" x2="38" y2="48" stroke="#0d1b2a" strokeWidth="2" />
                         </svg>
                     </div>
-                    <h1 className="text-3xl font-bold tracking-tight" style={{ color: '#0d1b2a' }}>SwarmIntel</h1>
-                    <p className="text-sm" style={{ color: '#6b7280' }}>Professional Bee Monitoring Administration</p>
+                    <h1 className="text-3xl font-bold tracking-tight" style={{ color: '#0d1b2a' }}>BSADS</h1>
+                    <p className="text-sm" style={{ color: '#6b7280' }}>Bee Swarming &amp; Abscondence Detection System</p>
                 </div>
 
                 {/* Card */}
