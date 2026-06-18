@@ -1,5 +1,5 @@
 import { Head, useForm } from '@inertiajs/react';
-import { ClipboardList, MessageSquareWarning, Plus, X } from 'lucide-react';
+import { CheckSquare, ClipboardList, MessageSquareWarning, Plus, X } from 'lucide-react';
 import React, { useState } from 'react';
 import AppLayout from '@/layouts/app-layout';
 
@@ -29,6 +29,27 @@ type Advisory = {
     template?: { template_id: number; hive_state: string } | null;
 };
 
+type ActionItem = {
+    action_id: string;
+    hive_id: string;
+    action_title: string;
+    action_description: string;
+    priority_level: string;
+    confidence_score: number | null;
+    status: string;
+    completed_at: string | null;
+    notes: string | null;
+    created_at: string | null;
+    hive?: { hive_id: string; hive_name: string | null; hive_location: string } | null;
+};
+
+const statusConfig: Record<string, { label: string; bg: string; color: string }> = {
+    pending:     { label: 'Pending',     bg: '#fff7ed', color: '#c2410c' },
+    in_progress: { label: 'In Progress', bg: '#eff6ff', color: '#1d4ed8' },
+    completed:   { label: 'Completed',   bg: '#f0fdf4', color: '#16a34a' },
+    resolved:    { label: 'Resolved',    bg: '#f0fdf4', color: '#16a34a' },
+};
+
 const severityConfig: Record<string, { label: string; bg: string; color: string }> = {
     info:     { label: 'Info',     bg: '#f1f5f9', color: '#64748b' },
     low:      { label: 'Low',      bg: '#f0fdf4', color: '#16a34a' },
@@ -55,11 +76,13 @@ function fmtDate(v: string | null) {
 export default function Advisories({
     templates = [],
     advisories = [],
+    actions = [],
 }: {
     templates?: Template[];
     advisories?: Advisory[];
+    actions?: ActionItem[];
 }) {
-    const [tab, setTab] = useState<'templates' | 'advisories'>('templates');
+    const [tab, setTab] = useState<'templates' | 'advisories' | 'actions'>('templates');
     const [showModal, setShowModal] = useState(false);
 
     const { data, setData, post, reset, processing, errors } = useForm({
@@ -86,7 +109,7 @@ export default function Advisories({
                     <div>
                         <h1 className="text-2xl font-bold" style={{ color: '#0d1b2a' }}>Advisories</h1>
                         <p className="text-sm text-gray-500 mt-1">
-                            {templates.length} template{templates.length !== 1 ? 's' : ''} · {advisories.length} action{advisories.length !== 1 ? 's' : ''}
+                            {templates.length} template{templates.length !== 1 ? 's' : ''} · {advisories.length} advisor{advisories.length !== 1 ? 'ies' : 'y'} · {actions.length} triggered action{actions.length !== 1 ? 's' : ''}
                         </p>
                     </div>
                     {tab === 'templates' && (
@@ -124,6 +147,18 @@ export default function Advisories({
                         <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full"
                             style={tab === 'advisories' ? { backgroundColor: '#f5a623', color: '#0d1b2a' } : { backgroundColor: '#f1f5f9', color: '#64748b' }}>
                             {advisories.length}
+                        </span>
+                    </button>
+                    <button
+                        onClick={() => setTab('actions')}
+                        className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-colors"
+                        style={tab === 'actions' ? { backgroundColor: '#0d1b2a', color: '#ffffff' } : { color: '#64748b' }}
+                    >
+                        <CheckSquare className="w-4 h-4" />
+                        Advisory Actions
+                        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full"
+                            style={tab === 'actions' ? { backgroundColor: '#f5a623', color: '#0d1b2a' } : { backgroundColor: '#f1f5f9', color: '#64748b' }}>
+                            {actions.length}
                         </span>
                     </button>
                 </div>
@@ -225,6 +260,62 @@ export default function Advisories({
                                                         {a.is_active ? 'Active' : 'Inactive'}
                                                     </span>
                                                 </td>
+                                                <td className="px-5 py-4 text-xs text-gray-400 whitespace-nowrap">{fmtDate(a.created_at)}</td>
+                                            </tr>
+                                        );
+                                    })}
+                                </tbody>
+                            </table>
+                        </div>
+                    )
+                )}
+
+                {/* ── Advisory Actions tab ── */}
+                {tab === 'actions' && (
+                    actions.length === 0 ? (
+                        <EmptyState
+                            label="No advisory actions triggered yet"
+                            hint="Actions are created automatically when an inference triggers an advisory"
+                        />
+                    ) : (
+                        <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-x-auto">
+                            <table className="w-full text-sm">
+                                <thead>
+                                    <tr className="border-b border-gray-100 bg-gray-50">
+                                        {['Hive', 'Action Title', 'Description', 'Priority', 'Confidence', 'Status', 'Completed', 'Created'].map((h) => (
+                                            <th key={h} className="text-left px-5 py-3 text-[10px] font-bold uppercase tracking-widest text-gray-400 whitespace-nowrap">{h}</th>
+                                        ))}
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {actions.map((a) => {
+                                        const pc = priorityConfig[a.priority_level] ?? priorityConfig.medium;
+                                        const sc = statusConfig[a.status] ?? statusConfig.pending;
+                                        return (
+                                            <tr key={a.action_id} className="border-b border-gray-50 hover:bg-gray-50 transition-colors">
+                                                <td className="px-5 py-4 text-sm font-medium whitespace-nowrap" style={{ color: '#0d1b2a' }}>
+                                                    {a.hive?.hive_name ?? a.hive?.hive_location ?? '—'}
+                                                </td>
+                                                <td className="px-5 py-4 text-sm font-medium whitespace-nowrap" style={{ color: '#0d1b2a' }}>
+                                                    {a.action_title}
+                                                </td>
+                                                <td className="px-5 py-4 text-xs text-gray-500 max-w-sm">{a.action_description}</td>
+                                                <td className="px-5 py-4">
+                                                    <span className="text-[10px] font-bold px-2.5 py-1 rounded uppercase tracking-widest whitespace-nowrap"
+                                                        style={{ backgroundColor: pc.bg, color: pc.color }}>
+                                                        {pc.label}
+                                                    </span>
+                                                </td>
+                                                <td className="px-5 py-4 text-xs font-semibold tabular-nums whitespace-nowrap" style={{ color: '#0d1b2a' }}>
+                                                    {fmtPct(a.confidence_score)}
+                                                </td>
+                                                <td className="px-5 py-4">
+                                                    <span className="text-[10px] font-bold px-2.5 py-1 rounded uppercase tracking-widest whitespace-nowrap"
+                                                        style={{ backgroundColor: sc.bg, color: sc.color }}>
+                                                        {sc.label}
+                                                    </span>
+                                                </td>
+                                                <td className="px-5 py-4 text-xs text-gray-400 whitespace-nowrap">{fmtDate(a.completed_at)}</td>
                                                 <td className="px-5 py-4 text-xs text-gray-400 whitespace-nowrap">{fmtDate(a.created_at)}</td>
                                             </tr>
                                         );

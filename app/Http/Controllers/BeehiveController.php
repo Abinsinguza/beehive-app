@@ -6,6 +6,7 @@ use App\Http\Requests\StoreBeehiveRequest;
 use App\Http\Requests\UpdateBeehiveRequest;
 use App\Models\Beehive;
 use App\Models\User;
+use Illuminate\Http\Request;
 
 class BeehiveController extends Controller
 {
@@ -56,7 +57,7 @@ class BeehiveController extends Controller
         return redirect()->back()->with('success', 'Hive added successfully');
     }
 
-    public function show(Beehive $beehive)
+    public function show(Beehive $beehive, Request $request)
     {
         $beehive->load('owner');
 
@@ -89,9 +90,28 @@ class BeehiveController extends Controller
             ]);
 
         $audioSources = $beehive->audioSources()
-            ->latest('captured_at')
-            ->take(3)
-            ->get();
+            ->with(['inferenceResults' => function ($q) {
+                $q->latest('analyzed_at')->limit(1);
+            }])
+            ->latest('created_at')
+            ->paginate(5, ['*'], 'audio_page')
+            ->withQueryString()
+            ->through(function ($audio) {
+                $inference = $audio->inferenceResults->first();
+                return [
+                    'audio_id'             => $audio->audio_id,
+                    'source_url'           => $audio->source_url,
+                    'file_format'          => $audio->file_format,
+                    'duration_seconds'     => $audio->duration_seconds,
+                    'captured_at'          => $audio->captured_at,
+                    'created_at'           => $audio->created_at,
+                    'status'               => $audio->status,
+                    'detected_state'       => $inference?->hive_state,
+                    'confidence_score'     => $inference?->confidence_score,
+                    'analyzed_at'          => $inference?->analyzed_at,
+                    'inference_latency_ms' => $inference?->inference_latency_ms,
+                ];
+            });
 
         $dataSource = $beehive->dataSource;
         if ($dataSource) {

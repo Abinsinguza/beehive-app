@@ -38,7 +38,22 @@ type AudioSource = {
     file_format: string;
     duration_seconds: number | null;
     captured_at: string | null;
+    created_at: string | null;
     status: string;
+    detected_state: string | null;
+    confidence_score: number | null;
+    analyzed_at: string | null;
+    inference_latency_ms: number | null;
+};
+
+type AudioPaginator = {
+    data: AudioSource[];
+    current_page: number;
+    last_page: number;
+    per_page: number;
+    total: number;
+    next_page_url: string | null;
+    prev_page_url: string | null;
 };
 
 type LatestInference = {
@@ -58,12 +73,16 @@ type DataSource = {
 } | null;
 
 const stateColors: Record<string, string> = {
-    'Swarming':    '#ef4444',
-    'Swarm':       '#ef4444',
-    'Pre-swarm':   '#f59e0b',
-    'Normal':      '#22c55e',
-    'Abscondment': '#94a3b8',
-    'Uncertain':   '#3b82f6',
+    swarm:            '#ef4444',
+    pre_swarm:        '#f59e0b',
+    normal:           '#22c55e',
+    abscondment:      '#7c3aed',
+    missing_queen:    '#ea580c',
+    queenbee_present: '#16a34a',
+    pest_infested:    '#ea580c',
+    external_noise:   '#2563eb',
+    uncertain:        '#64748b',
+    unknown:          '#94a3b8',
 };
 
 const severityDot: Record<string, string> = {
@@ -110,11 +129,11 @@ export default function BeehiveShow({
     inferenceDistribution: InferenceItem[];
     latestInference: LatestInference;
     recentAdvisories: Advisory[];
-    audioSources: AudioSource[];
+    audioSources: AudioPaginator;
     dataSource: DataSource;
 }) {
     const stateBadgeColor = stateColors[beehive.current_state] ?? '#94a3b8';
-    const isRisk = ['Swarming', 'Swarm', 'Pre-swarm', 'Abscondment'].includes(beehive.current_state);
+    const isRisk = ['swarm', 'pre_swarm', 'abscondment', 'missing_queen', 'pest_infested'].includes(beehive.current_state);
     const [tab, setTab] = useState<'overview' | 'data-source'>('overview');
 
     function fmtTimeFull(dateStr: string | null | undefined): string {
@@ -315,40 +334,105 @@ export default function BeehiveShow({
                 </div>
 
                 {/* ── Audio recordings ────────────────────────────── */}
-                <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5 flex flex-col gap-4">
-                    <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                            <Mic className="w-4 h-4 text-purple-500" />
-                            <h2 className="font-semibold text-sm" style={{ color: '#0d1b2a' }}>Audio Recordings</h2>
-                        </div>
-                        <button className="text-xs font-semibold" style={{ color: '#f5a623' }}>View all</button>
+                <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+                    <div className="flex items-center gap-2 px-5 py-4 border-b border-gray-100">
+                        <Mic className="w-4 h-4 text-purple-500" />
+                        <h2 className="font-semibold text-sm" style={{ color: '#0d1b2a' }}>Audio Recordings</h2>
+                        <span className="text-xs text-gray-400 ml-1">{audioSources.total} total</span>
                     </div>
-                    {audioSources.length === 0 ? (
-                        <p className="text-xs text-gray-400 italic">No audio recordings for this hive yet.</p>
+
+                    {audioSources.data.length === 0 ? (
+                        <p className="text-xs text-gray-400 italic px-5 py-6">No audio recordings for this hive yet.</p>
                     ) : (
-                        <div className="flex flex-col divide-y divide-gray-50">
-                            {audioSources.map((audio) => (
-                                <div key={audio.audio_id} className="flex items-center gap-3 py-3">
-                                    {/* Play button */}
-                                    <button className="w-8 h-8 rounded-full flex items-center justify-center shrink-0 border border-gray-200 hover:bg-gray-50">
-                                        <Play className="w-3.5 h-3.5 text-gray-500" />
-                                    </button>
-                                    <div className="flex-1 min-w-0">
-                                        <p className="text-sm font-medium text-gray-700 truncate">{filename(audio.source_url)}</p>
-                                        <p className="text-xs text-gray-400">
-                                            {fmtTime(audio.captured_at)}
-                                            {audio.duration_seconds ? ` · ${audio.duration_seconds}s` : ''} · {audio.file_format.toUpperCase()}
-                                        </p>
-                                    </div>
-                                    <span className="text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-widest shrink-0"
-                                        style={{
-                                            backgroundColor: audio.status === 'processed' ? '#fef3c7' : '#f1f5f9',
-                                            color: audio.status === 'processed' ? '#92400e' : '#64748b',
-                                        }}>
-                                        {audio.status}
-                                    </span>
-                                </div>
-                            ))}
+                        <div className="overflow-x-auto">
+                            <table className="w-full text-xs">
+                                <thead>
+                                    <tr className="border-b border-gray-100 bg-gray-50">
+                                        <th className="text-left px-5 py-3 text-[10px] font-bold uppercase tracking-widest text-gray-400"></th>
+                                        <th className="text-left px-5 py-3 text-[10px] font-bold uppercase tracking-widest text-gray-400">File</th>
+                                        <th className="text-left px-5 py-3 text-[10px] font-bold uppercase tracking-widest text-gray-400">Recorded</th>
+                                        <th className="text-left px-5 py-3 text-[10px] font-bold uppercase tracking-widest text-gray-400">ML Detected</th>
+                                        <th className="text-left px-5 py-3 text-[10px] font-bold uppercase tracking-widest text-gray-400">Confidence</th>
+                                        <th className="text-left px-5 py-3 text-[10px] font-bold uppercase tracking-widest text-gray-400">Analysed At</th>
+                                        <th className="text-left px-5 py-3 text-[10px] font-bold uppercase tracking-widest text-gray-400">Latency</th>
+                                        <th className="text-left px-5 py-3 text-[10px] font-bold uppercase tracking-widest text-gray-400">Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {audioSources.data.map((audio) => {
+                                        const stateColor = audio.detected_state ? (stateColors[audio.detected_state] ?? '#94a3b8') : null;
+                                        return (
+                                            <tr key={audio.audio_id} className="border-b border-gray-50 hover:bg-gray-50 transition-colors">
+                                                <td className="px-5 py-3">
+                                                    <button className="w-7 h-7 rounded-full flex items-center justify-center shrink-0 border border-gray-200 hover:bg-gray-100">
+                                                        <Play className="w-3 h-3 text-gray-500" />
+                                                    </button>
+                                                </td>
+                                                <td className="px-5 py-3">
+                                                    <p className="font-medium text-gray-700 truncate max-w-[160px]">{filename(audio.source_url)}</p>
+                                                    <p className="text-gray-400">
+                                                        {audio.file_format.toUpperCase()}
+                                                        {audio.duration_seconds ? ` · ${audio.duration_seconds}s` : ''}
+                                                    </p>
+                                                </td>
+                                                <td className="px-5 py-3 text-gray-500 whitespace-nowrap">{fmtTime(audio.created_at)}</td>
+                                                <td className="px-5 py-3">
+                                                    {audio.detected_state ? (
+                                                        <span className="font-semibold" style={{ color: stateColor ?? undefined }}>
+                                                            {audio.detected_state}
+                                                        </span>
+                                                    ) : (
+                                                        <span className="text-gray-400 italic">Not analysed</span>
+                                                    )}
+                                                </td>
+                                                <td className="px-5 py-3 text-gray-500">
+                                                    {audio.confidence_score != null ? `${(audio.confidence_score * 100).toFixed(1)}%` : '—'}
+                                                </td>
+                                                <td className="px-5 py-3 text-gray-500 whitespace-nowrap">
+                                                    {audio.analyzed_at ? fmtTime(audio.analyzed_at) : '—'}
+                                                </td>
+                                                <td className="px-5 py-3 text-gray-500">
+                                                    {audio.inference_latency_ms != null ? `${audio.inference_latency_ms}ms` : '—'}
+                                                </td>
+                                                <td className="px-5 py-3">
+                                                    <span className="text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-widest whitespace-nowrap"
+                                                        style={{
+                                                            backgroundColor: audio.status === 'processed' ? '#fef3c7' : '#f1f5f9',
+                                                            color: audio.status === 'processed' ? '#92400e' : '#64748b',
+                                                        }}>
+                                                        {audio.status}
+                                                    </span>
+                                                </td>
+                                            </tr>
+                                        );
+                                    })}
+                                </tbody>
+                            </table>
+                        </div>
+                    )}
+
+                    {/* Pagination */}
+                    {audioSources.last_page > 1 && (
+                        <div className="flex items-center justify-between px-5 py-3 border-t border-gray-100">
+                            <p className="text-xs text-gray-400">
+                                Page {audioSources.current_page} of {audioSources.last_page}
+                            </p>
+                            <div className="flex items-center gap-2">
+                                <button
+                                    onClick={() => audioSources.prev_page_url && router.visit(audioSources.prev_page_url, { preserveScroll: true })}
+                                    disabled={!audioSources.prev_page_url}
+                                    className="px-3 py-1.5 text-xs rounded-lg border border-gray-200 text-gray-600 disabled:opacity-40 hover:bg-gray-50 transition-colors"
+                                >
+                                    Previous
+                                </button>
+                                <button
+                                    onClick={() => audioSources.next_page_url && router.visit(audioSources.next_page_url, { preserveScroll: true })}
+                                    disabled={!audioSources.next_page_url}
+                                    className="px-3 py-1.5 text-xs rounded-lg border border-gray-200 text-gray-600 disabled:opacity-40 hover:bg-gray-50 transition-colors"
+                                >
+                                    Next
+                                </button>
+                            </div>
                         </div>
                     )}
                 </div>

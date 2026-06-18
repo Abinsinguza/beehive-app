@@ -34,7 +34,7 @@ class AppServiceProvider extends ServiceProvider
     {
         Date::use(CarbonImmutable::class);
 
-        if ($this->app->isProduction()) {
+        if (filter_var(env('FORCE_HTTPS', false), FILTER_VALIDATE_BOOL)) {
             URL::forceScheme('https');
         }
 

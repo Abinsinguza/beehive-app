@@ -18,7 +18,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('analytics', [InferenceController::class, 'index'])->name('analytics');
     Route::post('analytics', [InferenceController::class, 'store'])->name('analytics.store');
     Route::get('system-logs', [SystemLogsController::class, 'index'])->name('system-logs');
-    Route::inertia('monitoring', 'monitoring')->name('monitoring');
     Route::get('alerts', [AlertsController::class, 'index'])->name('alerts.index');
     Route::post('alerts', [AlertsController::class, 'store'])->name('alerts.store');
     Route::patch('alerts/{alert}/notify', [AlertsController::class, 'notify'])->name('alerts.notify');

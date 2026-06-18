@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\StoreAdvisoryRequest;
 use App\Http\Requests\UpdateAdvisoryRequest;
 use App\Models\Advisory;
+use App\Models\AdvisoryAction;
 use App\Models\AdvisoryTemplate;
 use Inertia\Inertia;
 
@@ -17,6 +18,9 @@ class AdvisoryController extends Controller
             'advisories' => Advisory::with('template:template_id,hive_state')
                                 ->orderBy('template_id')
                                 ->orderBy('action_order')
+                                ->get(),
+            'actions'    => AdvisoryAction::with('hive:hive_id,hive_name,hive_location')
+                                ->latest('created_at')
                                 ->get(),
         ]);
     }
