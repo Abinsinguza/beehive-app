@@ -165,12 +165,6 @@ export default function BeehiveShow({
                             </div>
                         </div>
                     </div>
-                    <button
-                        onClick={() => router.visit(`/beehives/${beehive.id}/edit`)}
-                        className="shrink-0 px-4 py-2 rounded-lg border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-50"
-                    >
-                        Edit
-                    </button>
                 </div>
 
                 {/* ── Tabs ─────────────────────────────────────────── */}
@@ -360,12 +354,6 @@ export default function BeehiveShow({
                             <ClipboardList className="w-4 h-4 text-gray-500" />
                             <h2 className="font-semibold text-sm" style={{ color: '#0d1b2a' }}>Hive Details</h2>
                         </div>
-                        <button
-                            onClick={() => router.visit(`/beehives/${beehive.id}/edit`)}
-                            className="text-xs font-semibold text-gray-500 hover:text-gray-800 flex items-center gap-1"
-                        >
-                            ✎ Edit
-                        </button>
                     </div>
                     <div className="divide-y divide-gray-50">
                         {[

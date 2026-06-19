@@ -1,5 +1,5 @@
-import { Head, router, useForm, usePage } from '@inertiajs/react';
-import { BellRing, CheckCircle, AlertCircle, Download, Inbox, Plus, X } from 'lucide-react';
+import { Head, router, usePage } from '@inertiajs/react';
+import { BellRing, CheckCircle, AlertCircle, Download, Inbox, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
 
 type Inference = { id: number; prediction: string; beehive?: { hive_location: string } };
@@ -36,26 +36,15 @@ export default function AlertsPage({
     const { props } = usePage<{ flash?: { success?: string; error?: string } }>();
     const flash = props.flash;
 
-    const [showModal, setShowModal] = useState(false);
     const [notifying, setNotifying] = useState<number | null>(null);
     const [flashDismissed, setFlashDismissed] = useState(false);
+    const [logTypeFilter, setLogTypeFilter] = useState<'all' | 'normal' | 'alert'>('all');
 
     useEffect(() => { setFlashDismissed(false); }, [flash?.success, flash?.error]);
     const [hiveFilter, setHiveFilter] = useState('All Hives');
     const [severityFilter, setSeverityFilter] = useState('All Levels');
     const [dateFrom, setDateFrom] = useState('');
     const [dateTo, setDateTo]     = useState('');
-
-    const { data, setData, post, reset, processing, errors } = useForm({
-        inference_id: '',
-        alert_type: '',
-        alert_timestamp: '',
-    });
-
-    const submit = (e: React.FormEvent) => {
-        e.preventDefault();
-        post('/alerts', { onSuccess: () => { reset(); setShowModal(false); } });
-    };
 
     const handleNotify = (alert: Alert) => {
         setNotifying(alert.id);
@@ -84,7 +73,7 @@ export default function AlertsPage({
 
     const uniqueHives = [...new Set(logs.map((l) => l.hive))].sort();
 
-    // Filter logs by hive, severity, and date range
+    // Filter logs by hive, severity, date range, and log type
     const filteredLogs = logs.filter((log) => {
         if (hiveFilter !== 'All Hives' && log.hive !== hiveFilter) return false;
         if (severityFilter !== 'All Levels') {
@@ -94,6 +83,8 @@ export default function AlertsPage({
         const isoDate = new Date(log.alertObj.alert_timestamp).toISOString().slice(0, 10);
         if (dateFrom && isoDate < dateFrom) return false;
         if (dateTo   && isoDate > dateTo)   return false;
+        if (logTypeFilter === 'normal' && log.severity !== 'Info') return false;
+        if (logTypeFilter === 'alert' && log.severity === 'Info') return false;
         return true;
     });
 
@@ -189,13 +180,6 @@ export default function AlertsPage({
                     <span className="text-sm font-semibold" style={{ color: '#f5a623' }}>Active Monitoring</span>
                     <div className="ml-auto flex items-center gap-3">
                         <button
-                            onClick={() => setShowModal(true)}
-                            className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold hover:opacity-90 transition-opacity"
-                            style={{ backgroundColor: '#0d1b2a', color: '#ffffff' }}
-                        >
-                            <Plus className="w-4 h-4" /> Add Alert
-                        </button>
-                        <button
                             onClick={exportLog}
                             className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold hover:opacity-90 transition-opacity"
                             style={{ backgroundColor: '#f5a623', color: '#0d1b2a' }}
@@ -207,17 +191,6 @@ export default function AlertsPage({
                             className="px-4 py-2 rounded-lg text-sm font-semibold border border-gray-300 text-gray-600 hover:bg-gray-50 transition-colors"
                         >
                             Generate Report
-                        </button>
-                        <button
-                            onClick={() => {
-                                setHiveFilter('All Hives');
-                                setSeverityFilter('All Levels');
-                                setDateFrom('');
-                                setDateTo('');
-                            }}
-                            className="px-4 py-2 rounded-lg text-sm font-semibold border border-gray-300 text-gray-600 hover:bg-gray-50 transition-colors"
-                        >
-                            Clear All
                         </button>
                     </div>
                 </div>
@@ -329,8 +302,30 @@ export default function AlertsPage({
                             <div className="flex items-center gap-3 px-5 py-4 border-b border-gray-100">
                                 <span className="font-semibold text-sm" style={{ color: '#0d1b2a' }}>System Activity Logs</span>
                                 <div className="ml-auto flex items-center gap-2">
-                                    <span className="text-[10px] font-bold px-2 py-1 rounded border border-gray-300 text-gray-500 uppercase tracking-widest">Normal</span>
-                                    <span className="text-[10px] font-bold px-2 py-1 rounded text-white uppercase tracking-widest" style={{ backgroundColor: '#f5a623' }}>Alert</span>
+                                    <button
+                                        onClick={() => setLogTypeFilter('normal')}
+                                        className="text-[10px] font-bold px-2 py-1 rounded uppercase tracking-widest transition-colors"
+                                        style={{
+                                            backgroundColor: logTypeFilter === 'normal' ? '#f1f5f9' : 'transparent',
+                                            color: logTypeFilter === 'normal' ? '#0d1b2a' : '#64748b',
+                                            border: logTypeFilter === 'normal' ? '1px solid #cbd5e1' : '1px solid #e2e8f0',
+                                            cursor: 'pointer'
+                                        }}
+                                    >
+                                        Normal
+                                    </button>
+                                    <button
+                                        onClick={() => setLogTypeFilter('alert')}
+                                        className="text-[10px] font-bold px-2 py-1 rounded text-white uppercase tracking-widest transition-colors"
+                                        style={{
+                                            backgroundColor: logTypeFilter === 'alert' ? '#f5a623' : '#e8b344',
+                                            opacity: logTypeFilter === 'alert' ? 1 : 0.6,
+                                            cursor: 'pointer',
+                                            border: 'none'
+                                        }}
+                                    >
+                                        Alert
+                                    </button>
                                 </div>
                             </div>
 
@@ -446,56 +441,7 @@ export default function AlertsPage({
                 </div>
             </div>
 
-            {/* Add Alert Modal */}
-            {showModal && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-                    <div className="w-full max-w-md rounded-2xl bg-white shadow-2xl">
-                        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
-                            <h2 className="text-base font-semibold" style={{ color: '#0d1b2a' }}>Add New Alert</h2>
-                            <button onClick={() => setShowModal(false)} className="p-1 rounded hover:bg-gray-100 text-gray-400">
-                                <X className="w-4 h-4" />
-                            </button>
-                        </div>
-                        <form onSubmit={submit} className="p-6 flex flex-col gap-4">
-                            <div>
-                                <label className="text-xs font-semibold uppercase tracking-widest text-gray-400 block mb-1.5">Inference</label>
-                                <select value={data.inference_id} onChange={(e) => setData('inference_id', e.target.value)}
-                                    className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-700 outline-none bg-white" required>
-                                    <option value="" disabled>Select an inference</option>
-                                    {inferences.map((inf) => (
-                                        <option key={inf.id} value={inf.id}>#{inf.id} — {inf.prediction} @ {inf.beehive?.hive_location ?? inf.id}</option>
-                                    ))}
-                                </select>
-                                {errors.inference_id && <p className="text-xs text-red-500 mt-1">{errors.inference_id}</p>}
-                            </div>
-                            <div>
-                                <label className="text-xs font-semibold uppercase tracking-widest text-gray-400 block mb-1.5">Alert Type</label>
-                                <select value={data.alert_type} onChange={(e) => setData('alert_type', e.target.value)}
-                                    className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-700 outline-none bg-white" required>
-                                    <option value="" disabled>Select type</option>
-                                    <option>Info</option><option>Warning</option><option>Critical</option><option>Threat</option>
-                                </select>
-                                {errors.alert_type && <p className="text-xs text-red-500 mt-1">{errors.alert_type}</p>}
-                            </div>
-                            <div>
-                                <label className="text-xs font-semibold uppercase tracking-widest text-gray-400 block mb-1.5">Timestamp</label>
-                                <input type="datetime-local" value={data.alert_timestamp} onChange={(e) => setData('alert_timestamp', e.target.value)}
-                                    className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-700 outline-none bg-white" required />
-                                {errors.alert_timestamp && <p className="text-xs text-red-500 mt-1">{errors.alert_timestamp}</p>}
-                            </div>
-                            <div className="flex justify-end gap-3 pt-2">
-                                <button type="button" onClick={() => setShowModal(false)}
-                                    className="px-4 py-2 rounded-lg border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-50">Cancel</button>
-                                <button type="submit" disabled={processing}
-                                    className="px-4 py-2 rounded-lg text-sm font-semibold hover:opacity-90 disabled:opacity-60"
-                                    style={{ backgroundColor: '#f5a623', color: '#0d1b2a' }}>
-                                    {processing ? 'Saving…' : 'Save Alert'}
-                                </button>
-                            </div>
-                        </form>
-                    </div>
-                </div>
-            )}
+
         </>
     );
 }
