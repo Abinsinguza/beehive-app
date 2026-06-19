@@ -51,6 +51,7 @@ class DashboardController extends Controller
                 WHERE hive_id = b.hive_id
                 ORDER BY analyzed_at DESC LIMIT 1
             ) ir ON true
+            WHERE b.deleted_at IS NULL
             ORDER BY b.updated_at DESC LIMIT 5
         ");
         $hivesList = collect($hivesRaw)->map(fn($h) => [
@@ -74,6 +75,7 @@ class DashboardController extends Controller
                 SELECT hive_state FROM inference_results
                 WHERE hive_id = b.hive_id ORDER BY analyzed_at DESC LIMIT 1
             ) ir ON true
+            WHERE b.deleted_at IS NULL
             GROUP BY category
         ");
         $hiveCategories = [];
