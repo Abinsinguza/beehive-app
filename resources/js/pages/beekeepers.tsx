@@ -1,5 +1,5 @@
 ﻿import { Head, router, useForm } from '@inertiajs/react';
-import { ChevronDown, Download, Edit2, Eye, UserPlus, X } from 'lucide-react';
+import { ChevronDown, ChevronLeft, ChevronRight, Download, Edit2, Eye, Search, UserPlus, X } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 
 type Beekeeper = {
@@ -11,6 +11,16 @@ type Beekeeper = {
     status?: string;
     beehives_count?: number;
     created_at?: string;
+};
+
+type Paginator<T> = {
+    data: T[];
+    current_page: number;
+    last_page: number;
+    per_page: number;
+    total: number;
+    from: number | null;
+    to: number | null;
 };
 
 const roleColors: Record<string, { bg: string; color: string }> = {
@@ -44,7 +54,7 @@ function getStatus(bk: Beekeeper): string {
 // â”€â”€ Add Beekeeper form â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function AddBeekeeperModal({ onClose }: { onClose: () => void }) {
     const { data, setData, post, processing, reset, errors } = useForm({
-        name: '', email: '', phone: '', password: '', address: '',
+        name: '', email: '', phone: '', password: '', address: '', server_url: '', api_key: '',
     });
 
     const submit = (e: React.FormEvent) => {
@@ -53,11 +63,13 @@ function AddBeekeeperModal({ onClose }: { onClose: () => void }) {
     };
 
     const fields: { label: string; key: keyof typeof data; type: string; placeholder: string; required: boolean; hint?: string }[] = [
-        { label: 'Full Name',     key: 'name',     type: 'text',     placeholder: 'e.g. Jane Namutebi',   required: true  },
-        { label: 'Email Address', key: 'email',    type: 'email',    placeholder: 'jane@example.com',      required: true  },
-        { label: 'Phone Number',  key: 'phone',    type: 'text',     placeholder: '+256 700 000 000',      required: true  },
-        { label: 'Password',      key: 'password', type: 'password', placeholder: 'Min. 4 characters',    required: true  },
-        { label: 'Address',       key: 'address',  type: 'text',     placeholder: 'e.g. Kampala, Uganda', required: false, hint: 'Optional' },
+        { label: 'Full Name',     key: 'name',       type: 'text',     placeholder: 'e.g. Jane Namutebi',   required: true  },
+        { label: 'Email Address', key: 'email',      type: 'email',    placeholder: 'jane@example.com',      required: true  },
+        { label: 'Phone Number',  key: 'phone',      type: 'text',     placeholder: '+256 700 000 000',      required: true  },
+        { label: 'Password',      key: 'password',   type: 'password', placeholder: 'Min. 4 characters',    required: true  },
+        { label: 'Address',       key: 'address',    type: 'text',     placeholder: 'e.g. Kampala, Uganda', required: false, hint: 'Optional' },
+        { label: 'Server URL',    key: 'server_url', type: 'text',     placeholder: 'http://192.168.1.10:8085', required: true },
+        { label: 'API Key',       key: 'api_key',    type: 'text',     placeholder: 'Audio server API key', required: true },
     ];
 
     return (
@@ -159,109 +171,6 @@ function EditBeekeeperModal({ beekeeper, onClose }: { beekeeper: Beekeeper; onCl
     );
 }
 
-// â”€â”€ View Beekeeper modal â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
-function ViewBeekeeperModal({ beekeeper, onClose }: { beekeeper: Beekeeper; onClose: () => void }) {
-    const role   = getRole(beekeeper);
-    const status = getStatus(beekeeper);
-    const sc     = statusConfig[status] ?? statusConfig.active;
-    const rc     = roleColors[role]     ?? roleColors.Beekeeper;
-
-    return (
-        <ModalShell title="Beekeeper Details" onClose={onClose}>
-            <div className="p-6 flex flex-col gap-5">
-                {/* Avatar + name + id */}
-                <div className="flex items-center gap-4">
-                    <div
-                        className="w-14 h-14 rounded-full flex items-center justify-center text-base font-bold text-white shrink-0"
-                        style={{ backgroundColor: '#0d1b2a' }}
-                    >
-                        {getInitials(beekeeper.name)}
-                    </div>
-                    <div>
-                        <p className="font-bold text-base" style={{ color: '#0d1b2a' }}>{beekeeper.name}</p>
-                        <p className="text-xs text-gray-400 mt-0.5">{beekeeper.id}</p>
-                    </div>
-                </div>
-
-                {/* Detail rows */}
-                <div className="flex flex-col gap-3 divide-y divide-gray-50">
-                    {/* Full Name */}
-                    <div className="flex flex-col gap-0.5 pb-2">
-                        <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Full Name</span>
-                        <span className="text-sm text-gray-700">{beekeeper.name}</span>
-                    </div>
-                    {/* Email */}
-                    <div className="flex flex-col gap-0.5 py-2">
-                        <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Email</span>
-                        <span className="text-sm text-gray-700">{beekeeper.email ?? 'â€”'}</span>
-                    </div>
-                    {/* Phone */}
-                    <div className="flex flex-col gap-0.5 py-2">
-                        <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Phone</span>
-                        <span className="text-sm text-gray-700">{beekeeper.phone}</span>
-                    </div>
-                    {/* Address */}
-                    <div className="flex flex-col gap-0.5 py-2">
-                        <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Address</span>
-                        <span className="text-sm text-gray-700">{beekeeper.address ?? 'â€”'}</span>
-                    </div>
-                    {/* Role */}
-                    <div className="flex flex-col gap-0.5 py-2">
-                        <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Role</span>
-                        <span className="inline-flex">
-                            <span
-                                className="text-[11px] font-bold px-2.5 py-1 rounded border uppercase tracking-widest"
-                                style={{ backgroundColor: rc.bg, color: rc.color, borderColor: rc.bg === '#f1f5f9' ? '#e5e7eb' : rc.bg }}
-                            >
-                                {role}
-                            </span>
-                        </span>
-                    </div>
-                    {/* Status */}
-                    <div className="flex flex-col gap-0.5 py-2">
-                        <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Status</span>
-                        <div className="flex items-center gap-1.5">
-                            <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: sc.dot }} />
-                            <span className="text-xs font-medium" style={{ color: sc.labelColor }}>{sc.label}</span>
-                        </div>
-                    </div>
-                    {/* Hives */}
-                    <div className="flex flex-col gap-0.5 py-2">
-                        <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Hives</span>
-                        <span
-                            className="inline-flex items-center justify-center w-8 h-6 rounded text-xs font-bold"
-                            style={{ backgroundColor: '#fef3c7', color: '#92400e' }}
-                        >
-                            {beekeeper.beehives_count ?? 0}
-                        </span>
-                    </div>
-                    {/* Sign Up Date */}
-                    <div className="flex flex-col gap-0.5 py-2">
-                        <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Sign Up Date</span>
-                        <span className="text-sm text-gray-700">
-                            {beekeeper.created_at ? new Date(beekeeper.created_at).toLocaleDateString() : ''}
-                        </span>
-                    </div>
-                    {/* Last Login */}
-                    <div className="flex flex-col gap-0.5 pt-2">
-                        <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Last Login</span>
-                        <span className="text-sm text-gray-400">â€”</span>
-                    </div>
-                </div>
-
-                <div className="flex justify-end pt-1">
-                    <button
-                        onClick={onClose}
-                        className="px-4 py-2 rounded-lg border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-50"
-                    >
-                        Close
-                    </button>
-                </div>
-            </div>
-        </ModalShell>
-    );
-}
-
 // â”€â”€ Shared modal shell â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 function ModalShell({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
     useEffect(() => {
@@ -304,14 +213,14 @@ function ModalActions({ onCancel, processing, label }: { onCancel: () => void; p
 
 // â”€â”€ Main page â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€â”€
 export default function Beekeepers({
-    beekeepers = [],
+    beekeepers,
     search: initialSearch = '',
 }: {
-    beekeepers?: Beekeeper[];
+    beekeepers: Paginator<Beekeeper>;
     search?: string;
 }) {
+    const [searchTerm, setSearchTerm]     = useState(initialSearch);
     const [showAddModal, setShowAddModal] = useState(false);
-    const [viewTarget, setViewTarget]     = useState<Beekeeper | null>(null);
     const [editTarget, setEditTarget]     = useState<Beekeeper | null>(null);
     const [revokeTarget, setRevokeTarget]     = useState<Beekeeper | null>(null);
     const [restoreTarget, setRestoreTarget]   = useState<Beekeeper | null>(null);
@@ -360,9 +269,20 @@ export default function Beekeepers({
         setVisibleCols((prev) => ({ ...prev, [col]: !prev[col] }));
     };
 
+    function goToPage(page: number) {
+        router.get('/beekeepers', { search: searchTerm, page: String(page) }, { preserveState: true });
+    }
+
+    useEffect(() => {
+        const t = setTimeout(() => {
+            router.get('/beekeepers', { search: searchTerm }, { preserveState: true, replace: true });
+        }, 350);
+        return () => clearTimeout(t);
+    }, [searchTerm]);
+
     const exportCSV = () => {
         const headers = ['Name', 'Email', 'Phone', 'Role', 'Status', 'Hives', 'Address', 'Sign Up Date'];
-        const rows = beekeepers.map((bk) => [
+        const rows = beekeepers.data.map((bk) => [
             bk.name,
             bk.email ?? '',
             bk.phone,
@@ -385,10 +305,15 @@ export default function Beekeepers({
         URL.revokeObjectURL(url);
     };
 
-    const filtered = beekeepers.filter((bk) => {
+    const filtered = beekeepers.data.filter((bk) => {
         const status = getStatus(bk);
         return statusFilter === 'All Statuses' || status === statusFilter.toLowerCase();
     });
+
+    const pages = Array.from({ length: beekeepers.last_page }, (_, i) => i + 1);
+    const shownPages = pages.filter((p) =>
+        p === 1 || p === beekeepers.last_page || Math.abs(p - beekeepers.current_page) <= 1
+    );
 
     // Count visible columns for colSpan
     const visibleColCount =
@@ -425,8 +350,7 @@ export default function Beekeepers({
                     <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
                         <p className="text-[11px] font-semibold uppercase tracking-widest text-gray-400">Total Beekeepers</p>
                         <div className="flex items-end gap-2 mt-2">
-                            <p className="text-4xl font-bold" style={{ color: '#0d1b2a' }}>{beekeepers.length}</p>
-                            <span className="text-xs font-semibold text-emerald-500 mb-1">â†— +3</span>
+                            <p className="text-4xl font-bold" style={{ color: '#0d1b2a' }}>{beekeepers.total}</p>
                         </div>
                         <div className="mt-3 h-1 w-16 rounded-full" style={{ backgroundColor: '#f5a623' }} />
                     </div>
@@ -442,7 +366,7 @@ export default function Beekeepers({
                         <p className="text-[11px] font-semibold uppercase tracking-widest text-gray-400">Active Beekeepers</p>
                         <div className="flex items-end gap-2 mt-2">
                             <p className="text-4xl font-bold text-emerald-500">
-                                {beekeepers.filter((bk) => getStatus(bk) === 'active').length}
+                                {beekeepers.data.filter((bk) => getStatus(bk) === 'active').length}
                             </p>
                         </div>
                         <div className="mt-3 h-1 w-16 rounded-full bg-emerald-100" />
@@ -451,7 +375,7 @@ export default function Beekeepers({
                         <p className="text-[11px] font-semibold uppercase tracking-widest text-gray-400">Inactive / Revoked</p>
                         <div className="flex items-end gap-2 mt-2">
                             <p className="text-4xl font-bold text-gray-400">
-                                {beekeepers.filter((bk) => getStatus(bk) !== 'active').length}
+                                {beekeepers.data.filter((bk) => getStatus(bk) !== 'active').length}
                             </p>
                         </div>
                         <div className="mt-3 h-1 w-16 rounded-full bg-gray-200" />
@@ -462,6 +386,18 @@ export default function Beekeepers({
                 <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
                     {/* Filter bar */}
                     <div className="flex items-center gap-3 px-5 py-4 border-b border-gray-100 flex-wrap">
+                        {/* Search */}
+                        <div className="relative">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                            <input
+                                type="text"
+                                placeholder="Search name, email or phone…"
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                                className="bg-white border border-gray-200 rounded-lg pl-9 pr-3 py-2 text-sm outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-100"
+                            />
+                        </div>
+
                         {/* Status filter */}
                         <select
                             value={statusFilter}
@@ -513,7 +449,7 @@ export default function Beekeepers({
                         </div>
 
                         <span className="ml-auto text-xs text-gray-400">
-                            Showing {Math.min(10, filtered.length)} of {filtered.length} beekeepers
+                            Showing {beekeepers.from ?? 0}–{beekeepers.to ?? 0} of {beekeepers.total} beekeepers
                         </span>
                     </div>
 
@@ -540,7 +476,7 @@ export default function Beekeepers({
                                     </td>
                                 </tr>
                             ) : (
-                                filtered.slice(0, 10).map((bk) => {
+                                filtered.map((bk) => {
                                     const role      = getRole(bk);
                                     const status    = getStatus(bk);
                                     const sc        = statusConfig[status] ?? statusConfig.active;
@@ -601,7 +537,7 @@ export default function Beekeepers({
                                             <td className="px-5 py-4">
                                                 <div className="flex items-center gap-1">
                                                     <button
-                                                        onClick={() => setViewTarget(bk)}
+                                                        onClick={() => router.visit(`/beekeepers/${bk.id}`)}
                                                         className="p-1.5 rounded hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors"
                                                         title="View beekeeper"
                                                     >
@@ -644,14 +580,38 @@ export default function Beekeepers({
                             <Download className="w-3.5 h-3.5" /> Export CSV
                         </button>
                         <div className="flex items-center gap-1">
-                            {[1, 2, 3, '...', 5].map((p, i) => (
-                                <button key={i}
-                                    className="w-7 h-7 rounded text-xs font-semibold transition-colors"
-                                    style={p === 1 ? { backgroundColor: '#f5a623', color: '#0d1b2a' } : { color: '#6b7280' }}
-                                >
-                                    {p}
-                                </button>
-                            ))}
+                            <button
+                                onClick={() => goToPage(beekeepers.current_page - 1)}
+                                disabled={beekeepers.current_page === 1}
+                                className="w-7 h-7 flex items-center justify-center rounded text-gray-500 hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                            >
+                                <ChevronLeft className="w-3.5 h-3.5" />
+                            </button>
+
+                            {shownPages.map((p, i) => {
+                                const prev = shownPages[i - 1];
+                                const gap  = prev !== undefined && p - prev > 1;
+                                return (
+                                    <span key={p} className="flex items-center gap-1">
+                                        {gap && <span className="text-gray-400 text-xs px-1">…</span>}
+                                        <button
+                                            onClick={() => goToPage(p)}
+                                            className="w-7 h-7 rounded text-xs font-semibold transition-colors"
+                                            style={p === beekeepers.current_page ? { backgroundColor: '#f5a623', color: '#0d1b2a' } : { color: '#6b7280' }}
+                                        >
+                                            {p}
+                                        </button>
+                                    </span>
+                                );
+                            })}
+
+                            <button
+                                onClick={() => goToPage(beekeepers.current_page + 1)}
+                                disabled={beekeepers.current_page === beekeepers.last_page}
+                                className="w-7 h-7 flex items-center justify-center rounded text-gray-500 hover:bg-gray-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                            >
+                                <ChevronRight className="w-3.5 h-3.5" />
+                            </button>
                         </div>
                     </div>
                 </div>
@@ -660,7 +620,6 @@ export default function Beekeepers({
 
             {/* Modals */}
             {showAddModal && <AddBeekeeperModal onClose={() => setShowAddModal(false)} />}
-            {viewTarget   && <ViewBeekeeperModal beekeeper={viewTarget}  onClose={() => setViewTarget(null)}   />}
             {editTarget   && <EditBeekeeperModal beekeeper={editTarget}  onClose={() => setEditTarget(null)}   />}
 
             {/* Revoke confirmation modal */}

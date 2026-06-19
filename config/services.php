@@ -18,6 +18,10 @@ return [
         'key' => env('POSTMARK_API_KEY'),
     ],
 
+    'ml_auth' => [
+        'base_url' => env('ML_AUTH_BASE_URL', 'http://196.43.168.57:8085'),
+    ],
+
     'resend' => [
         'key' => env('RESEND_API_KEY'),
     ],
