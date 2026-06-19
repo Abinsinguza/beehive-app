@@ -4,18 +4,45 @@ import React, { useEffect, useState } from 'react';
 import AppLayout from '@/layouts/app-layout';
 import { Alert } from '@/components/ui/alert';
 
-type Inference = { inference_id: string; hive_id: string; hive_state: string; beehive?: { hive_location: string } };
+type Beehive = {
+    hive_id: string;
+    hive_name: string;
+    hive_location: string;
+    hive_type: string;
+    installation_date: string;
+    current_state: string;
+    owner: { id: string; name: string } | null;
+};
+
+type Beekeeper = {
+    id: string;
+    name: string;
+};
+
+type Inference = { 
+    inference_id: string; 
+    hive_id: string; 
+    hive_state: string; 
+    beehive?: { 
+        hive_location: string; 
+        owner?: { 
+            id: string; 
+            name: string; 
+        }; 
+    }; 
+};
 type Advisory  = { id: number; condition_label: string; advisory_text: string };
 
 type Alert = {
     alert_id: string;
     inference_id: string;
+    hive_id?: string;
     severity_level: string;
     alert_timestamp: string;
     action_status: string;
     recommended_action?: string | null;
     viewed_at?: string | null;
-    inference?: Inference & { beehive?: { hive_location: string; owner?: { name: string } } };
+    inference?: Inference;
 };
 
 const severityConfig: Record<string, { label: string; bg: string; color: string }> = {
@@ -48,10 +75,16 @@ export default function AlertsPage({
     alerts = [],
     inferences = [],
     advisories = [],
+    beehives = [],
+    hives = [],
+    beekeepers = [],
 }: {
     alerts?: Alert[];
     inferences?: Inference[];
     advisories?: Advisory[];
+    beehives?: Beehive[];
+    hives?: Beehive[];
+    beekeepers?: Beekeeper[];
 }) {
     const { props } = usePage<{ flash?: { success?: string; error?: string } }>();
     const flash = props.flash;
@@ -61,10 +94,21 @@ export default function AlertsPage({
     const [flashDismissed, setFlashDismissed] = useState(false);
 
     useEffect(() => { setFlashDismissed(false); }, [flash?.success, flash?.error]);
-    const [hiveFilter, setHiveFilter] = useState('All Hives');
+    const [selectedHiveId, setSelectedHiveId] = useState('all');
+    const [selectedBeekeeperId, setSelectedBeekeeperId] = useState('all');
     const [severityFilter, setSeverityFilter] = useState('All Levels');
-    const [dateFrom, setDateFrom] = useState('');
-    const [dateTo, setDateTo]     = useState('');
+    
+    // Use either beehives or hives prop
+    const hiveList = beehives.length > 0 ? beehives : hives;
+    
+    // Get unique beekeepers from beehives or use beekeepers prop
+    const beekeeperList = (beekeepers.length > 0 
+        ? beekeepers 
+        : [...new Map(hiveList
+            .filter(h => h.owner)
+            .map(h => [h.owner!.id, h.owner])
+        ).values()])
+        .filter((b): b is Beekeeper => b !== null);
 
     const { data, setData, post, reset, processing, errors } = useForm({
         inference_id: '',
@@ -96,7 +140,9 @@ export default function AlertsPage({
     const logs = alerts.map((a) => ({
         ts:          new Date(a.alert_timestamp).toLocaleString(),
         hive:        a.inference?.beehive?.hive_location ?? 'SYSTEM',
+        hiveId:      a.hive_id ?? a.inference?.hive_id ?? null,
         beekeeper:   a.inference?.beehive?.owner?.name   ?? null,
+        beekeeperId: a.inference?.beehive?.owner?.id   ?? null,
         hiveStatus:  a.inference?.hive_state ?? null,
         severity:    a.severity_level,
         desc:        a.recommended_action ?? '—',
@@ -106,31 +152,36 @@ export default function AlertsPage({
         alertObj:    a,
     }));
 
-    const uniqueHives = [...new Set(logs.map((l) => l.hive))].sort();
-
-    // Filter logs by hive, severity, and date range
+    // Filter logs by hive, beekeeper, and severity
     const filteredLogs = logs.filter((log) => {
-        if (hiveFilter !== 'All Hives' && log.hive !== hiveFilter) return false;
-        if (severityFilter !== 'All Levels' && log.severity?.toLowerCase() !== severityFilter.toLowerCase()) return false;
-        const isoDate = new Date(log.alertObj.alert_timestamp).toISOString().slice(0, 10);
-        if (dateFrom && isoDate < dateFrom) return false;
-        if (dateTo   && isoDate > dateTo)   return false;
+        if (selectedHiveId !== 'all') {
+            if (log.hiveId !== selectedHiveId) return false;
+        }
+        if (selectedBeekeeperId !== 'all') {
+            if (log.beekeeperId !== selectedBeekeeperId) return false;
+        }
+        if (severityFilter !== 'All Levels') {
+            const level = log.severity?.toLowerCase();
+            if (severityFilter === 'Critical' && level !== 'critical') return false;
+            if (severityFilter === 'Warning' && !['high', 'medium'].includes(level)) return false;
+            if (severityFilter === 'Info' && !['low', 'info'].includes(level)) return false;
+        }
         return true;
     });
 
     const exportLog = () => {
-        const headers = ['Timestamp', 'Hive ID', 'Severity', 'Event Description', 'Action'];
+        const headers = ['Timestamp', 'Hive ID', 'Severity', 'Event Description', 'Status'];
         const escape  = (v: string) => `"${String(v).replace(/"/g, '""')}"`;
         const rows    = filteredLogs.map((l) => {
             const sc = severityCfg(l.severity);
-            return [l.ts, l.hive, sc.label, l.desc, l.action];
+            return [l.ts, l.hive, sc.label, l.desc, l.status];
         });
         const csv  = [headers, ...rows].map((r) => r.map(escape).join(',')).join('\r\n');
         const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
         const url  = URL.createObjectURL(blob);
         const a    = document.createElement('a');
         a.href     = url;
-        a.download = `alerts-log${dateFrom ? `-from-${dateFrom}` : ''}${dateTo ? `-to-${dateTo}` : ''}.csv`;
+        a.download = `alerts-log.csv`;
         a.click();
         URL.revokeObjectURL(url);
     };
@@ -142,7 +193,7 @@ export default function AlertsPage({
                 <td>${l.hive}</td>
                 <td><strong>${severityCfg(l.severity).label}</strong></td>
                 <td>${l.desc}</td>
-                <td>${l.action}</td>
+                <td>${l.status}</td>
             </tr>`
         ).join('');
 
@@ -171,18 +222,17 @@ export default function AlertsPage({
   <h1>BSADS – Full Alert Report</h1>
   <div class="meta">
     Generated: ${new Date().toLocaleString()}
-    ${dateFrom ? ` &nbsp;|&nbsp; Date filter: ${dateFrom}` : ''}
-    ${hiveFilter !== 'All Hives' ? ` &nbsp;|&nbsp; Hive: ${hiveFilter}` : ''}
+    ${selectedHiveId !== 'all' ? ` &nbsp;|&nbsp; Hive: ${hiveList.find(h => h.hive_id === selectedHiveId)?.hive_name || `Hive #${selectedHiveId}`}` : ''}
     ${severityFilter !== 'All Levels' ? ` &nbsp;|&nbsp; Severity: ${severityFilter}` : ''}
   </div>
   <div class="summary">
     <div class="stat"><div class="stat-val">${filteredLogs.length}</div><div class="stat-lbl">Total Events</div></div>
     <div class="stat"><div class="stat-val">${filteredLogs.filter(l => l.severity?.toLowerCase() === 'critical').length}</div><div class="stat-lbl">Critical</div></div>
-    <div class="stat"><div class="stat-val">${filteredLogs.filter(l => l.severity?.toLowerCase() === 'high').length}</div><div class="stat-lbl">High</div></div>
-    <div class="stat"><div class="stat-val">${filteredLogs.filter(l => ['medium','low','info'].includes(l.severity?.toLowerCase())).length}</div><div class="stat-lbl">Other</div></div>
+    <div class="stat"><div class="stat-val">${filteredLogs.filter(l => ['high', 'medium'].includes(l.severity?.toLowerCase())).length}</div><div class="stat-lbl">Warning</div></div>
+    <div class="stat"><div class="stat-val">${filteredLogs.filter(l => ['low', 'info'].includes(l.severity?.toLowerCase())).length}</div><div class="stat-lbl">Info</div></div>
   </div>
   <table>
-    <thead><tr><th>Timestamp</th><th>Hive ID</th><th>Severity</th><th>Event Description</th><th>Action</th></tr></thead>
+    <thead><tr><th>Timestamp</th><th>Hive ID</th><th>Severity</th><th>Event Description</th><th>Status</th></tr></thead>
     <tbody>${rows}</tbody>
   </table>
   <div class="actions" style="margin-top:24px; display:flex; gap:12px;">
@@ -204,8 +254,6 @@ export default function AlertsPage({
 
                 {/* Sub-header */}
                 <div className="flex items-center gap-3 px-6 py-3 bg-white border-b border-gray-200">
-                    <span className="font-semibold text-sm" style={{ color: '#0d1b2a' }}>Alerts and Logs</span>
-
                     <div className="ml-auto flex items-center gap-3">
                     
                         <button
@@ -255,53 +303,41 @@ export default function AlertsPage({
 
                     {/* Filters */}
                     <div className="flex items-center gap-3 flex-wrap">
-                        <div className="flex flex-col gap-0.5">
-                            <label className="text-[10px] font-semibold uppercase tracking-widest text-gray-400">Hive ID</label>
-                            <select value={hiveFilter} onChange={(e) => setHiveFilter(e.target.value)}
-                                className="border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-600 outline-none bg-white">
-                                <option>All Hives</option>
-                                {uniqueHives.map((h) => <option key={h}>{h}</option>)}
-                            </select>
-                        </div>
-                        <div className="flex flex-col gap-0.5">
-                            <label className="text-[10px] font-semibold uppercase tracking-widest text-gray-400">Severity</label>
-                            <select value={severityFilter} onChange={(e) => setSeverityFilter(e.target.value)}
-                                className="border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-600 outline-none bg-white">
-                                <option>All Levels</option>
-                                {severityLevels.map((level) => <option key={level}>{level}</option>)}
-                            </select>
-                        </div>
-                        <div className="flex flex-col gap-0.5">
-                            <label className="text-[10px] font-semibold uppercase tracking-widest text-gray-400">Date Range</label>
-                            <div className="flex items-center gap-2">
-                                <div className="flex flex-col gap-0.5">
-                                    <span className="text-[9px] font-semibold uppercase tracking-widest text-gray-300">From</span>
-                                    <input
-                                        type="date"
-                                        value={dateFrom}
-                                        onChange={(e) => setDateFrom(e.target.value)}
-                                        onClick={(e) => { try { (e.target as HTMLInputElement).showPicker(); } catch(err) {} }}
-                                        className="border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-700 outline-none bg-white cursor-pointer hover:border-gray-400 transition-colors"
-                                    />
-                                </div>
-                                <span className="text-xs text-gray-400 mt-4">—</span>
-                                <div className="flex flex-col gap-0.5">
-                                    <span className="text-[9px] font-semibold uppercase tracking-widest text-gray-300">To</span>
-                                    <input
-                                        type="date"
-                                        value={dateTo}
-                                        min={dateFrom}
-                                        onChange={(e) => setDateTo(e.target.value)}
-                                        onClick={(e) => { try { (e.target as HTMLInputElement).showPicker(); } catch(err) {} }}
-                                        className="border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-700 outline-none bg-white cursor-pointer hover:border-gray-400 transition-colors"
-                                    />
-                                </div>
-                            </div>
-                        </div>
+                        <select 
+                            value={selectedHiveId} 
+                            onChange={(e) => setSelectedHiveId(e.target.value)} 
+                            className="border border-gray-300 rounded-lg p-2 text-sm bg-white" 
+                        > 
+                            <option value="all">All Hives</option> 
+                            {hiveList?.map((hive) => ( 
+                                <option key={hive.hive_id} value={hive.hive_id}> 
+                                    {hive.hive_name || `Hive #${hive.hive_id}`} 
+                                </option> 
+                            ))} 
+                        </select>
+                        <select 
+                            value={selectedBeekeeperId} 
+                            onChange={(e) => setSelectedBeekeeperId(e.target.value)} 
+                            className="border border-gray-300 rounded-lg p-2 text-sm bg-white" 
+                        > 
+                            <option value="all">All Beekeepers</option> 
+                            {beekeeperList?.map((beekeeper) => ( 
+                                <option key={beekeeper.id} value={beekeeper.id}> 
+                                    {beekeeper.name} 
+                                </option> 
+                            ))} 
+                        </select>
+                        <select value={severityFilter} onChange={(e) => setSeverityFilter(e.target.value)}
+                            className="border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-600 outline-none bg-white">
+                            <option>All Levels</option>
+                            <option>Critical</option>
+                            <option>Warning</option>
+                            <option>Info</option>
+                        </select>
                     </div>
 
                     {/* Cards row */}
-                    <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
+                    <div className="grid grid-cols-1 sm:grid-cols-3 w-full gap-4">
                         {typeCounts.map(({ type, count }) => {
                             const sc = severityCfg(type);
                             return (
@@ -344,13 +380,12 @@ export default function AlertsPage({
                                         <th className="text-left px-4 py-3 text-[10px] font-bold uppercase tracking-widest text-gray-400">Severity</th>
                                         <th className="text-left px-4 py-3 text-[10px] font-bold uppercase tracking-widest text-gray-400">Event Description</th>
                                         <th className="text-left px-4 py-3 text-[10px] font-bold uppercase tracking-widest text-gray-400">Status</th>
-                                        <th className="text-left px-4 py-3 text-[10px] font-bold uppercase tracking-widest text-gray-400">Action</th>
                                     </tr>
                                 </thead>
                                 <tbody>
                                     {filteredLogs.length === 0 ? (
                                         <tr>
-                                            <td colSpan={7} className="px-4 py-16 text-center">
+                                            <td colSpan={6} className="px-4 py-16 text-center">
                                                 <div className="flex flex-col items-center gap-2">
                                                     <Inbox className="w-8 h-8 text-gray-300" />
                                                     <p className="text-sm font-semibold text-gray-500">No alerts found</p>
@@ -412,33 +447,6 @@ export default function AlertsPage({
                                                         </span>
                                                     ) : (
                                                         <span className="text-[10px] text-gray-400">—</span>
-                                                    )}
-                                                </td>
-                                                <td className="px-4 py-4">
-                                                    {isPending ? (
-                                                        <button
-                                                            onClick={() => handleNotify(log.alertObj!)}
-                                                            disabled={notifying === log.alertObj!.alert_id}
-                                                            className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest px-2.5 py-1.5 rounded-lg transition-opacity hover:opacity-80 disabled:opacity-50"
-                                                            style={{ backgroundColor: '#f5a623', color: '#0d1b2a' }}
-                                                        >
-                                                            <BellRing className="w-3 h-3" />
-                                                            {notifying === log.alertObj!.alert_id ? 'Sending…' : 'Notify'}
-                                                        </button>
-                                                    ) : isSent ? (
-                                                        <button
-                                                            onClick={() => handleNotify(log.alertObj!)}
-                                                            disabled={notifying === log.alertObj!.alert_id}
-                                                            className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest px-2.5 py-1.5 rounded-lg border transition-colors hover:bg-gray-50 disabled:opacity-50"
-                                                            style={{ borderColor: '#d1d5db', color: '#6b7280' }}
-                                                        >
-                                                            <BellRing className="w-3 h-3" />
-                                                            {notifying === log.alertObj!.alert_id ? 'Sending…' : 'Resend'}
-                                                        </button>
-                                                    ) : (
-                                                        <button className="text-[10px] font-bold uppercase tracking-widest text-gray-400 hover:text-gray-600 transition-colors">
-                                                            {log.action}
-                                                        </button>
                                                     )}
                                                 </td>
                                             </tr>

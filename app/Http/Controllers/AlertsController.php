@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Models\AdvisoryTemplate;
 use App\Models\Alerts;
+use App\Models\Beehive;
 use App\Models\Inference;
 use App\Services\SmsService;
 use Illuminate\Http\Request;
@@ -27,6 +28,7 @@ class AlertsController extends Controller
             'advisories' => AdvisoryTemplate::orderBy('prediction_code')
                                 ->selectRaw("template_id AS id, hive_state AS condition_label, COALESCE(description, '') AS advisory_text, advisory_type, severity")
                                 ->get(),
+            'beehives'   => Beehive::with('owner')->get(),
         ]);
     }
 
