@@ -2,14 +2,15 @@ import { Head, router } from '@inertiajs/react';
 import {
     AlertTriangle,
     Bell,
-    CheckSquare,
     Clock,
     ExternalLink,
     Hexagon,
     Mic,
     Terminal,
     Users,
+    Video,
 } from 'lucide-react';
+import { useState } from 'react';
 import { dashboard } from '@/routes';
 
 type Stats = {
@@ -45,9 +46,8 @@ type AlertItem = {
     alert_timestamp: string | null;
 };
 
-type ActionItem     = { description: string; hive_name: string | null };
-type ActionCounts   = Record<string, number>;
-type LogItem        = { level: string; message: string; created_at: string | null };
+type LogItem         = { level: string; message: string; created_at: string | null };
+type RecordingVolume = { label: string; [state: string]: string | number };
 
 type DashboardProps = {
     stats: Stats;
@@ -56,8 +56,9 @@ type DashboardProps = {
     hive_categories: HiveCategories;
     inference_distribution: InferenceRow[];
     recent_alerts: AlertItem[];
-    action_counts: ActionCounts;
-    high_priority_actions: ActionItem[];
+    recordings_weekly: RecordingVolume[];
+    recordings_monthly: RecordingVolume[];
+    recording_states: string[];
     system_logs: LogItem[];
 };
 
@@ -181,16 +182,17 @@ function infColor(s: string) { return donutColor(s); }
 export default function Dashboard({
     stats, greeting_name,
     hives_list, hive_categories, inference_distribution,
-    recent_alerts, action_counts, high_priority_actions, system_logs,
+    recent_alerts, recordings_weekly, recordings_monthly, recording_states, system_logs,
 }: DashboardProps) {
     const alertDiff  = stats.active_alerts - stats.alerts_yesterday;
     const recDiff    = stats.recordings_today - stats.recordings_yesterday;
     const donutTotal = Object.values(hive_categories).reduce((sum, n) => sum + n, 0);
-
-    const pendingCount    = action_counts['pending']     ?? 0;
-    const inProgressCount = action_counts['in_progress'] ?? 0;
-    const resolvedCount   = action_counts['resolved']    ?? 0;
-    const actionTotal     = pendingCount + inProgressCount + resolvedCount || 1;
+    const [recordingsRange, setRecordingsRange] = useState<'weekly' | 'monthly'>('weekly');
+    const recordingsData = recordingsRange === 'weekly' ? recordings_weekly : recordings_monthly;
+    const recordingsMax  = Math.max(
+        ...recordingsData.map((d) => recording_states.reduce((sum, s) => sum + (Number(d[s]) || 0), 0)),
+        1
+    );
 
     return (
         <>
@@ -307,52 +309,28 @@ export default function Dashboard({
                             )}
                         </div>
 
-                        {/* Donut + bar */}
-                        <div className="lg:col-span-3 flex flex-col gap-4">
-                            <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
-                                <div className="flex items-center gap-2 mb-4">
-                                    <Hexagon className="w-4 h-4 text-gray-400" />
-                                    <span className="font-semibold text-sm" style={{ color: '#0d1b2a' }}>Hive states</span>
-                                </div>
-                                <div className="flex items-center gap-6">
-                                    <div className="w-40 h-40 shrink-0"><DonutChart categories={hive_categories} /></div>
-                                    <div className="flex flex-col gap-3">
-                                        {Object.entries(hive_categories)
-                                            .sort(([, a], [, b]) => b - a)
-                                            .map(([key, count]) => (
-                                                <div key={key} className="flex items-center gap-2">
-                                                    <span className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: donutColor(key) }} />
-                                                    <span className="text-sm text-gray-600">{stateMeta(key).label}</span>
-                                                    <span className="text-sm font-semibold ml-auto pl-4" style={{ color: '#0d1b2a' }}>
-                                                        {count}
-                                                    </span>
-                                                </div>
-                                            ))}
-                                        {donutTotal === 0 && <p className="text-xs text-gray-400">No inference data yet</p>}
-                                    </div>
-                                </div>
+                        {/* Donut */}
+                        <div className="lg:col-span-3 bg-white rounded-xl border border-gray-200 shadow-sm p-5">
+                            <div className="flex items-center gap-2 mb-4">
+                                <Hexagon className="w-4 h-4 text-gray-400" />
+                                <span className="font-semibold text-sm" style={{ color: '#0d1b2a' }}>Hive states</span>
                             </div>
-
-                            <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
-                                <div className="flex items-center gap-2 mb-4">
-                                    <Hexagon className="w-4 h-4 text-gray-400" />
-                                    <span className="font-semibold text-sm" style={{ color: '#0d1b2a' }}>Inference states</span>
-                                </div>
-                                {inference_distribution.length === 0 ? (
-                                    <p className="text-sm text-gray-400 py-4 text-center">No inference results yet</p>
-                                ) : (
-                                    <div className="flex flex-col gap-3">
-                                        {inference_distribution.map((row) => (
-                                            <div key={row.state} className="flex items-center gap-3">
-                                                <span className="text-sm text-gray-600 w-24 shrink-0">{stateMeta(row.state).label}</span>
-                                                <div className="flex-1 h-2.5 bg-gray-100 rounded-full overflow-hidden">
-                                                    <div className="h-full rounded-full" style={{ width: `${row.percentage}%`, backgroundColor: infColor(row.state) }} />
-                                                </div>
-                                                <span className="text-sm font-medium text-gray-500 w-9 text-right shrink-0">{row.percentage}%</span>
+                            <div className="flex items-center gap-6">
+                                <div className="w-40 h-40 shrink-0"><DonutChart categories={hive_categories} /></div>
+                                <div className="flex flex-col gap-3">
+                                    {Object.entries(hive_categories)
+                                        .sort(([, a], [, b]) => b - a)
+                                        .map(([key, count]) => (
+                                            <div key={key} className="flex items-center gap-2">
+                                                <span className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: donutColor(key) }} />
+                                                <span className="text-sm text-gray-600">{stateMeta(key).label}</span>
+                                                <span className="text-sm font-semibold ml-auto pl-4" style={{ color: '#0d1b2a' }}>
+                                                    {count}
+                                                </span>
                                             </div>
                                         ))}
-                                    </div>
-                                )}
+                                    {donutTotal === 0 && <p className="text-xs text-gray-400">No inference data yet</p>}
+                                </div>
                             </div>
                         </div>
                     </div>
@@ -402,50 +380,77 @@ export default function Dashboard({
                             )}
                         </div>
 
-                        {/* Advisory actions */}
-                        <div className="bg-white rounded-xl border border-gray-200 shadow-sm flex flex-col overflow-hidden">
-                            <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
-                                <div className="flex items-center gap-2">
-                                    <CheckSquare className="w-4 h-4 text-gray-400" />
-                                    <span className="font-semibold text-sm" style={{ color: '#0d1b2a' }}>Advisory actions</span>
-                                </div>
-                                <button onClick={() => router.visit('/advisories')}
-                                    className="flex items-center gap-1 text-xs font-medium text-gray-500 border border-gray-200 rounded-lg px-3 py-1.5 hover:bg-gray-50 transition-colors">
-                                    View all <ExternalLink className="w-3 h-3" />
-                                </button>
-                            </div>
-                            <div className="px-5 py-4 flex flex-col gap-3 border-b border-gray-100">
-                                {[
-                                    { label: 'Pending',     count: pendingCount,    color: '#dc2626' },
-                                    { label: 'In progress', count: inProgressCount, color: '#b45309' },
-                                    { label: 'Resolved',    count: resolvedCount,   color: '#15803d' },
-                                ].map(({ label, count, color }) => (
-                                    <div key={label} className="flex items-center gap-3">
-                                        <span className="text-sm text-gray-600 w-24 shrink-0">{label}</span>
-                                        <div className="flex-1 h-2.5 bg-gray-100 rounded-full overflow-hidden">
-                                            <div className="h-full rounded-full" style={{
-                                                width: `${Math.round((count / actionTotal) * 100)}%`,
-                                                backgroundColor: color,
-                                            }} />
-                                        </div>
-                                        <span className="text-sm font-semibold w-6 text-right shrink-0" style={{ color: '#0d1b2a' }}>{count}</span>
+                        {/* Recordings Volume */}
+                        <div className="bg-white rounded-xl border border-gray-200 shadow-sm flex flex-col overflow-hidden p-5">
+                            <div className="flex items-start justify-between gap-4">
+                                <div className="flex items-start gap-3">
+                                    <div className="w-9 h-9 rounded-lg flex items-center justify-center shrink-0" style={{ backgroundColor: '#eff6ff' }}>
+                                        <Video className="w-4 h-4 text-blue-500" />
                                     </div>
-                                ))}
+                                    <div>
+                                        <p className="font-bold text-base" style={{ color: '#0d1b2a' }}>Recordings Volume</p>
+                                        <p className="text-xs text-gray-400 mt-0.5">Track the number of recordings received over time.</p>
+                                    </div>
+                                </div>
+                                <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1 shrink-0">
+                                    <button
+                                        onClick={() => setRecordingsRange('weekly')}
+                                        className="px-3 py-1.5 rounded-md text-xs font-semibold transition-colors"
+                                        style={recordingsRange === 'weekly' ? { backgroundColor: '#ffffff', color: '#0d1b2a', boxShadow: '0 1px 2px rgba(0,0,0,0.06)' } : { color: '#6b7280' }}
+                                    >
+                                        Weekly
+                                    </button>
+                                    <button
+                                        onClick={() => setRecordingsRange('monthly')}
+                                        className="px-3 py-1.5 rounded-md text-xs font-semibold transition-colors"
+                                        style={recordingsRange === 'monthly' ? { backgroundColor: '#ffffff', color: '#0d1b2a', boxShadow: '0 1px 2px rgba(0,0,0,0.06)' } : { color: '#6b7280' }}
+                                    >
+                                        Monthly
+                                    </button>
+                                </div>
                             </div>
-                            {high_priority_actions.length > 0 && (
-                                <div className="px-5 py-4 flex flex-col gap-2">
-                                    <p className="text-[11px] font-semibold uppercase tracking-widest text-gray-400 mb-1">
-                                        High priority pending
-                                    </p>
-                                    {high_priority_actions.map((a, i) => (
-                                        <div key={i} className="flex items-center gap-2 border-b border-gray-100 pb-2 last:border-0 last:pb-0">
-                                            <p className="text-xs text-gray-700 flex-1">
-                                                {a.description}{a.hive_name ? ` — ${a.hive_name}` : ''}
-                                            </p>
+
+                            <div className="mt-6 flex items-end gap-4" style={{ height: '180px' }}>
+                                <div className="flex flex-col justify-between h-full text-[10px] text-gray-400 pb-5">
+                                    {[4, 3, 2, 1, 0].map((i) => (
+                                        <span key={i}>{Math.round((recordingsMax * i) / 4)}</span>
+                                    ))}
+                                </div>
+                                <div className="flex-1 h-full flex items-end gap-3 relative">
+                                    {[0, 1, 2, 3].map((i) => (
+                                        <div key={i} className="absolute left-0 right-0 border-t border-dashed border-gray-100"
+                                            style={{ bottom: `${20 + i * 25}%` }} />
+                                    ))}
+                                    {recordingsData.map((d) => (
+                                        <div key={d.label} className="flex-1 flex items-end justify-center gap-1 h-full relative z-10">
+                                            {recording_states.map((s) => {
+                                                const count = Number(d[s]) || 0;
+                                                return (
+                                                    <div
+                                                        key={s}
+                                                        className="flex-1 rounded-t-sm transition-all"
+                                                        style={{
+                                                            height: `${Math.max((count / recordingsMax) * 100, count > 0 ? 2 : 0)}%`,
+                                                            backgroundColor: donutColor(s),
+                                                        }}
+                                                        title={`${s}: ${count}`}
+                                                    />
+                                                );
+                                            })}
+                                            <span className="text-[10px] text-gray-500 absolute -bottom-5 left-1/2 -translate-x-1/2">{d.label}</span>
                                         </div>
                                     ))}
                                 </div>
-                            )}
+                            </div>
+
+                            <div className="flex items-center gap-4 mt-8 pt-4 border-t border-gray-100 flex-wrap">
+                                {recording_states.map((s) => (
+                                    <div key={s} className="flex items-center gap-2">
+                                        <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: donutColor(s) }} />
+                                        <span className="text-xs text-gray-500">{stateMeta(s).label}</span>
+                                    </div>
+                                ))}
+                            </div>
                         </div>
                     </div>
 

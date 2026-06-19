@@ -12,7 +12,8 @@ import {
     X,
     XCircle,
 } from 'lucide-react';
-import { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
+import AppLayout from '@/layouts/app-layout';
 
 type HiveRef   = { hive_id: string; hive_name: string; hive_location: string };
 type Recording = {
@@ -22,9 +23,13 @@ type Recording = {
     file_format: string;
     duration_seconds: number | null;
     captured_at: string | null;
-    ingestion_timestamp: string | null;
+    created_at: string | null;
     status: string;
     hive: HiveRef | null;
+    detected_state: string | null;
+    confidence_score: number | null;
+    analyzed_at: string | null;
+    inference_latency_ms: number | null;
 };
 
 type Paginator = {
@@ -39,7 +44,7 @@ type Paginator = {
 
 type Props = {
     recordings: Paginator;
-    stats: { total: number; ingested: number; pending: number; failed: number };
+    stats: { total: number; processed: number; pending: number; failed: number };
     formats: string[];
     hives: HiveRef[];
     filters: { search: string; status: string; format: string; hive: string };
@@ -47,9 +52,9 @@ type Props = {
 
 // ── helpers ──────────────────────────────────────────────────────
 const STATUS_CFG: Record<string, { icon: React.ReactNode; bg: string; text: string; label: string }> = {
-    ingested: {
+    processed: {
         icon: <CheckCircle2 className="w-3.5 h-3.5" />,
-        bg: '#dcfce7', text: '#15803d', label: 'Ingested',
+        bg: '#dcfce7', text: '#15803d', label: 'Processed',
     },
     pending: {
         icon: <Circle className="w-3.5 h-3.5" />,
@@ -60,6 +65,21 @@ const STATUS_CFG: Record<string, { icon: React.ReactNode; bg: string; text: stri
         bg: '#fee2e2', text: '#b91c1c', label: 'Failed',
     },
 };
+
+const HIVE_STATE_COLORS: Record<string, string> = {
+    swarm:            '#dc2626',
+    pre_swarm:        '#d97706',
+    normal:           '#16a34a',
+    abscondment:      '#7c3aed',
+    missing_queen:    '#ea580c',
+    queenbee_present: '#16a34a',
+    pest_infested:    '#ea580c',
+    external_noise:   '#2563eb',
+    uncertain:        '#64748b',
+};
+function hiveStateColor(state: string | null) {
+    return state ? (HIVE_STATE_COLORS[state] ?? '#64748b') : '#94a3b8';
+}
 function statusCfg(s: string) {
     return STATUS_CFG[s?.toLowerCase()] ?? { icon: null, bg: '#f1f5f9', text: '#64748b', label: s };
 }
@@ -195,7 +215,7 @@ function AddRecordingModal({ hives, onClose }: { hives: HiveRef[]; onClose: () =
                             className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-100"
                             required>
                             <option value="pending">Pending</option>
-                            <option value="ingested">Ingested</option>
+                            <option value="processed">Processed</option>
                             <option value="failed">Failed</option>
                         </select>
                     </div>
@@ -306,10 +326,10 @@ export default function AudioRecordings({ recordings, stats, formats, hives, fil
                     {/* ── Stat cards ── */}
                     <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
                         {[
-                            { label: 'Total',    value: stats.total,    icon: null,           color: '#0d1b2a', border: 'border-gray-200' },
-                            { label: 'Ingested', value: stats.ingested, icon: <CheckCircle2 className="w-4 h-4" style={{ color: '#15803d' }} />, color: '#15803d', border: 'border-green-200' },
-                            { label: 'Pending',  value: stats.pending,  icon: <Circle        className="w-4 h-4" style={{ color: '#b45309' }} />, color: '#b45309', border: 'border-amber-200' },
-                            { label: 'Failed',   value: stats.failed,   icon: <XCircle       className="w-4 h-4" style={{ color: '#b91c1c' }} />, color: '#b91c1c', border: 'border-red-200'   },
+                            { label: 'Total',     value: stats.total,     icon: null,           color: '#0d1b2a', border: 'border-gray-200' },
+                            { label: 'Processed', value: stats.processed, icon: <CheckCircle2 className="w-4 h-4" style={{ color: '#15803d' }} />, color: '#15803d', border: 'border-green-200' },
+                            { label: 'Pending',   value: stats.pending,   icon: <Circle        className="w-4 h-4" style={{ color: '#b45309' }} />, color: '#b45309', border: 'border-amber-200' },
+                            { label: 'Failed',    value: stats.failed,    icon: <XCircle       className="w-4 h-4" style={{ color: '#b91c1c' }} />, color: '#b91c1c', border: 'border-red-200'   },
                         ].map(({ label, value, icon, color, border }) => (
                             <div key={label} className={`bg-white rounded-xl border ${border} p-4 shadow-sm flex flex-col gap-1`}>
                                 <div className="flex items-center gap-1.5">
@@ -342,7 +362,7 @@ export default function AudioRecordings({ recordings, stats, formats, hives, fil
                                 onChange={(e) => { setStatus(e.target.value); applyFilters({ status: e.target.value }); }}
                                 className="bg-white border border-gray-200 rounded-xl px-3 py-2 text-sm shadow-sm focus:outline-none focus:border-amber-400 text-gray-600">
                                 <option value="">All statuses</option>
-                                <option value="ingested">Ingested</option>
+                                <option value="processed">Processed</option>
                                 <option value="pending">Pending</option>
                                 <option value="failed">Failed</option>
                             </select>
@@ -387,8 +407,12 @@ export default function AudioRecordings({ recordings, stats, formats, hives, fil
                                         <th className="text-left px-4 py-3 text-[11px] font-semibold uppercase tracking-widest text-gray-400">Format</th>
                                         <th className="text-left px-4 py-3 text-[11px] font-semibold uppercase tracking-widest text-gray-400">Duration</th>
                                         <th className="text-left px-4 py-3 text-[11px] font-semibold uppercase tracking-widest text-gray-400">
-                                            Captured at ↓
+                                            Recorded ↓
                                         </th>
+                                        <th className="text-left px-4 py-3 text-[11px] font-semibold uppercase tracking-widest text-gray-400">ML Detected</th>
+                                        <th className="text-left px-4 py-3 text-[11px] font-semibold uppercase tracking-widest text-gray-400">Confidence</th>
+                                        <th className="text-left px-4 py-3 text-[11px] font-semibold uppercase tracking-widest text-gray-400">Analysed At</th>
+                                        <th className="text-left px-4 py-3 text-[11px] font-semibold uppercase tracking-widest text-gray-400">Latency</th>
                                         <th className="text-left px-4 py-3 text-[11px] font-semibold uppercase tracking-widest text-gray-400">Status</th>
                                         <th className="px-4 py-3" />
                                     </tr>
@@ -396,7 +420,7 @@ export default function AudioRecordings({ recordings, stats, formats, hives, fil
                                 <tbody className="divide-y divide-gray-100">
                                     {recordings.data.length === 0 ? (
                                         <tr>
-                                            <td colSpan={8} className="text-center py-16 text-sm text-gray-400">
+                                            <td colSpan={12} className="text-center py-16 text-sm text-gray-400">
                                                 No recordings found
                                             </td>
                                         </tr>
@@ -435,9 +459,35 @@ export default function AudioRecordings({ recordings, stats, formats, hives, fil
                                                     {formatDuration(rec.duration_seconds)}
                                                 </td>
 
-                                                {/* Captured at */}
+                                                {/* Recorded */}
                                                 <td className="px-4 py-3 text-xs text-gray-500 tabular-nums whitespace-nowrap">
-                                                    {formatDate(rec.captured_at)}
+                                                    {formatDate(rec.created_at)}
+                                                </td>
+
+                                                {/* ML Detected */}
+                                                <td className="px-4 py-3">
+                                                    {rec.detected_state ? (
+                                                        <span className="text-xs font-semibold" style={{ color: hiveStateColor(rec.detected_state) }}>
+                                                            {rec.detected_state}
+                                                        </span>
+                                                    ) : (
+                                                        <span className="text-xs text-gray-400 italic">Not analysed</span>
+                                                    )}
+                                                </td>
+
+                                                {/* Confidence */}
+                                                <td className="px-4 py-3 text-xs text-gray-600 tabular-nums">
+                                                    {rec.confidence_score != null ? `${(rec.confidence_score * 100).toFixed(1)}%` : '—'}
+                                                </td>
+
+                                                {/* Analysed At */}
+                                                <td className="px-4 py-3 text-xs text-gray-500 whitespace-nowrap">
+                                                    {rec.analyzed_at ? formatDate(rec.analyzed_at) : '—'}
+                                                </td>
+
+                                                {/* Latency */}
+                                                <td className="px-4 py-3 text-xs text-gray-600 tabular-nums">
+                                                    {rec.inference_latency_ms != null ? `${rec.inference_latency_ms}ms` : '—'}
                                                 </td>
 
                                                 {/* Status */}
@@ -513,6 +563,11 @@ export default function AudioRecordings({ recordings, stats, formats, hives, fil
     );
 }
 
-AudioRecordings.layout = {
-    breadcrumbs: [{ title: 'Audio Recordings', href: '/audio-recordings' }],
-};
+AudioRecordings.layout = (page: React.ReactElement) => (
+    <AppLayout breadcrumbs={[
+        { title: 'Admin Dashboard',  href: '/dashboard' },
+        { title: 'Audio Recordings', href: '/audio-recordings' },
+    ]}>
+        {page}
+    </AppLayout>
+);

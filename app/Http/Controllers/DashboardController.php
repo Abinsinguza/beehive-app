@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers;
 
-use App\Models\AdvisoryAction;
 use App\Models\Alerts;
 use App\Models\AudioSource;
 use App\Models\Beehive;
@@ -101,23 +100,46 @@ class DashboardController extends Controller
                 'alert_timestamp'  => $a->alert_timestamp?->toIso8601String(),
             ]);
 
-        // ── Advisory action counts + high priority list ────────────
-        $actionCounts = AdvisoryAction::selectRaw('status, count(*) as cnt')
-            ->groupBy('status')->get()
-            ->mapWithKeys(fn($r) => [$r->status => (int) $r->cnt]);
-
-        $highPriorityActions = DB::table('advisory_actions as aa')
-            ->leftJoin('hives as b', 'aa.hive_id', '=', 'b.hive_id')
-            ->where('aa.priority_level', 'high')
-            ->where('aa.status', 'pending')
-            ->orderByDesc('aa.created_at')
-            ->limit(3)
-            ->select('aa.action_description', 'b.hive_name')
+        // ── Recordings volume by ML-detected state — weekly (last 7 days) + monthly (last 6 months) ──
+        $weeklyRaw = DB::table('audio_sources as a')
+            ->leftJoin('inference_results as ir', 'ir.audio_id', '=', 'a.audio_id')
+            ->selectRaw("DATE(a.created_at) as day, COALESCE(ir.hive_state, 'unanalyzed') as state, count(*) as cnt")
+            ->where('a.created_at', '>=', $now->copy()->subDays(6)->startOfDay())
+            ->groupBy('day', 'state')
             ->get()
-            ->map(fn($r) => [
-                'description' => $r->action_description,
-                'hive_name'   => $r->hive_name,
-            ]);
+            ->groupBy('day');
+
+        $monthlyRaw = DB::table('audio_sources as a')
+            ->leftJoin('inference_results as ir', 'ir.audio_id', '=', 'a.audio_id')
+            ->selectRaw("to_char(a.created_at, 'YYYY-MM') as month, COALESCE(ir.hive_state, 'unanalyzed') as state, count(*) as cnt")
+            ->where('a.created_at', '>=', $now->copy()->subMonths(5)->startOfMonth())
+            ->groupBy('month', 'state')
+            ->get()
+            ->groupBy('month');
+
+        // Only include states that actually occur, so the legend isn't cluttered with unused categories
+        $recordingStates = $weeklyRaw->flatten(1)->merge($monthlyRaw->flatten(1))
+            ->pluck('state')->unique()->values();
+
+        $recordingsWeekly = collect(range(6, 0))->map(function ($daysAgo) use ($now, $weeklyRaw, $recordingStates) {
+            $date = $now->copy()->subDays($daysAgo);
+            $rows = $weeklyRaw[$date->toDateString()] ?? collect();
+            $entry = ['label' => $date->format('D')];
+            foreach ($recordingStates as $s) {
+                $entry[$s] = (int) ($rows->firstWhere('state', $s)->cnt ?? 0);
+            }
+            return $entry;
+        })->values();
+
+        $recordingsMonthly = collect(range(5, 0))->map(function ($monthsAgo) use ($now, $monthlyRaw, $recordingStates) {
+            $date = $now->copy()->subMonths($monthsAgo);
+            $rows = $monthlyRaw[$date->format('Y-m')] ?? collect();
+            $entry = ['label' => $date->format('M')];
+            foreach ($recordingStates as $s) {
+                $entry[$s] = (int) ($rows->firstWhere('state', $s)->cnt ?? 0);
+            }
+            return $entry;
+        })->values();
 
         // ── System logs (last 6) ───────────────────────────────────
         $systemLogs = SystemLog::latest('created_at')
@@ -147,8 +169,9 @@ class DashboardController extends Controller
             'hive_categories'        => $hiveCategories,
             'inference_distribution' => $inferenceDistribution,
             'recent_alerts'          => $recentAlerts,
-            'action_counts'          => $actionCounts,
-            'high_priority_actions'  => $highPriorityActions,
+            'recordings_weekly'      => $recordingsWeekly,
+            'recordings_monthly'     => $recordingsMonthly,
+            'recording_states'      => $recordingStates,
             'system_logs'            => $systemLogs,
         ]);
     }
