@@ -1,28 +1,47 @@
 import { Head, router, usePage } from '@inertiajs/react';
 import { BellRing, CheckCircle, AlertCircle, Download, Inbox, X } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import AppLayout from '@/layouts/app-layout';
 
-type Inference = { id: number; prediction: string; beehive?: { hive_location: string } };
+type Inference = { inference_id: string; hive_id: string; hive_state: string; beehive?: { hive_location: string } };
 type Advisory  = { id: number; condition_label: string; advisory_text: string };
 
 type Alert = {
-    id: number;
     alert_id: string;
-    inference_id: number;
-    alert_type: string;
+    inference_id: string;
+    severity_level: string;
     alert_timestamp: string;
-    status: 'pending' | 'sent';
+    action_status: string;
     recommended_action?: string | null;
     viewed_at?: string | null;
     inference?: Inference & { beehive?: { hive_location: string; owner?: { name: string } } };
 };
 
 const severityConfig: Record<string, { label: string; bg: string; color: string }> = {
-    Critical: { label: 'CRITICAL', bg: '#0d1b2a', color: '#ffffff' },
-    Warning:  { label: 'ELEVATED', bg: '#fff7ed', color: '#f5a623' },
-    Info:     { label: 'NORMAL',   bg: '#f1f5f9', color: '#64748b' },
-    Threat:   { label: 'CRITICAL', bg: '#0d1b2a', color: '#ffffff' },
+    critical: { label: 'CRITICAL', bg: '#0d1b2a', color: '#ffffff' },
+    high:     { label: 'HIGH',     bg: '#fff7ed', color: '#f5a623' },
+    medium:   { label: 'MEDIUM',   bg: '#fffbeb', color: '#d97706' },
+    low:      { label: 'LOW',      bg: '#eff6ff', color: '#1d4ed8' },
+    info:     { label: 'NORMAL',   bg: '#f1f5f9', color: '#64748b' },
 };
+function severityCfg(level: string) {
+    return severityConfig[level?.toLowerCase()] ?? { label: level?.toUpperCase() ?? '—', bg: '#f1f5f9', color: '#64748b' };
+}
+
+const hiveStateColors: Record<string, string> = {
+    swarm:            '#dc2626',
+    pre_swarm:        '#d97706',
+    normal:           '#16a34a',
+    abscondment:      '#7c3aed',
+    missing_queen:    '#ea580c',
+    queenbee_present: '#16a34a',
+    pest_infested:    '#ea580c',
+    external_noise:   '#2563eb',
+    uncertain:        '#64748b',
+};
+function hiveStateColor(state: string | null) {
+    return state ? (hiveStateColors[state] ?? '#64748b') : '#94a3b8';
+}
 
 export default function AlertsPage({
     alerts = [],
@@ -36,7 +55,7 @@ export default function AlertsPage({
     const { props } = usePage<{ flash?: { success?: string; error?: string } }>();
     const flash = props.flash;
 
-    const [notifying, setNotifying] = useState<number | null>(null);
+    const [notifying, setNotifying] = useState<string | null>(null);
     const [flashDismissed, setFlashDismissed] = useState(false);
     const [logTypeFilter, setLogTypeFilter] = useState<'all' | 'normal' | 'alert'>('all');
 
@@ -47,28 +66,30 @@ export default function AlertsPage({
     const [dateTo, setDateTo]     = useState('');
 
     const handleNotify = (alert: Alert) => {
-        setNotifying(alert.id);
-        router.patch(`/alerts/${alert.id}/notify`, {}, { onFinish: () => setNotifying(null) });
+        setNotifying(alert.alert_id);
+        router.patch(`/alerts/${alert.alert_id}/notify`, {}, { onFinish: () => setNotifying(null) });
     };
 
-    const pendingCount  = alerts.filter((a) => a.status === 'pending').length;
-    const sentCount     = alerts.filter((a) => a.status === 'sent').length;
+    const pendingCount  = alerts.filter((a) => a.action_status === 'pending').length;
+    const sentCount     = alerts.filter((a) => a.action_status === 'sent').length;
 
-    const typeCounts = (['Critical', 'Threat', 'Warning', 'Info'] as const).map((type) => ({
-        type,
-        count: alerts.filter((a) => a.alert_type === type).length,
+    const severityLevels = [...new Set(alerts.map((a) => a.severity_level))];
+    const typeCounts = severityLevels.map((level) => ({
+        type:  level,
+        count: alerts.filter((a) => a.severity_level === level).length,
     }));
 
     const logs = alerts.map((a) => ({
-        ts:         new Date(a.alert_timestamp).toLocaleString(),
-        hive:       a.inference?.beehive?.hive_location ?? 'SYSTEM',
-        beekeeper:  a.inference?.beehive?.owner?.name   ?? null,
-        severity:   a.alert_type,
-        desc:       a.recommended_action ?? '—',
-        status:     a.status,
-        action:     a.status === 'pending' ? 'NOTIFY' : 'SENT',
-        viewedAt:   a.viewed_at ?? null,
-        alertObj:   a,
+        ts:          new Date(a.alert_timestamp).toLocaleString(),
+        hive:        a.inference?.beehive?.hive_location ?? 'SYSTEM',
+        beekeeper:   a.inference?.beehive?.owner?.name   ?? null,
+        hiveStatus:  a.inference?.hive_state ?? null,
+        severity:    a.severity_level,
+        desc:        a.recommended_action ?? '—',
+        status:      a.action_status,
+        action:      a.action_status === 'pending' ? 'NOTIFY' : 'SENT',
+        viewedAt:    a.viewed_at ?? null,
+        alertObj:    a,
     }));
 
     const uniqueHives = [...new Set(logs.map((l) => l.hive))].sort();
@@ -76,10 +97,7 @@ export default function AlertsPage({
     // Filter logs by hive, severity, date range, and log type
     const filteredLogs = logs.filter((log) => {
         if (hiveFilter !== 'All Hives' && log.hive !== hiveFilter) return false;
-        if (severityFilter !== 'All Levels') {
-            const sc = severityConfig[log.severity] ?? severityConfig.Info;
-            if (sc.label.toLowerCase() !== severityFilter.toLowerCase()) return false;
-        }
+        if (severityFilter !== 'All Levels' && log.severity?.toLowerCase() !== severityFilter.toLowerCase()) return false;
         const isoDate = new Date(log.alertObj.alert_timestamp).toISOString().slice(0, 10);
         if (dateFrom && isoDate < dateFrom) return false;
         if (dateTo   && isoDate > dateTo)   return false;
@@ -92,7 +110,7 @@ export default function AlertsPage({
         const headers = ['Timestamp', 'Hive ID', 'Severity', 'Event Description', 'Action'];
         const escape  = (v: string) => `"${String(v).replace(/"/g, '""')}"`;
         const rows    = filteredLogs.map((l) => {
-            const sc = severityConfig[l.severity] ?? severityConfig.Info;
+            const sc = severityCfg(l.severity);
             return [l.ts, l.hive, sc.label, l.desc, l.action];
         });
         const csv  = [headers, ...rows].map((r) => r.map(escape).join(',')).join('\r\n');
@@ -106,12 +124,11 @@ export default function AlertsPage({
     };
 
     const generateReport = () => {
-        const sc = (sev: string) => (severityConfig[sev] ?? severityConfig.Info).label;
         const rows = filteredLogs.map((l) =>
             `<tr>
                 <td>${l.ts}</td>
                 <td>${l.hive}</td>
-                <td><strong>${sc(l.severity)}</strong></td>
+                <td><strong>${severityCfg(l.severity).label}</strong></td>
                 <td>${l.desc}</td>
                 <td>${l.action}</td>
             </tr>`
@@ -148,9 +165,9 @@ export default function AlertsPage({
   </div>
   <div class="summary">
     <div class="stat"><div class="stat-val">${filteredLogs.length}</div><div class="stat-lbl">Total Events</div></div>
-    <div class="stat"><div class="stat-val">${filteredLogs.filter(l => l.severity === 'Critical' || l.severity === 'Threat').length}</div><div class="stat-lbl">Critical</div></div>
-    <div class="stat"><div class="stat-val">${filteredLogs.filter(l => l.severity === 'Warning').length}</div><div class="stat-lbl">Elevated</div></div>
-    <div class="stat"><div class="stat-val">${filteredLogs.filter(l => l.severity === 'Info').length}</div><div class="stat-lbl">Normal</div></div>
+    <div class="stat"><div class="stat-val">${filteredLogs.filter(l => l.severity?.toLowerCase() === 'critical').length}</div><div class="stat-lbl">Critical</div></div>
+    <div class="stat"><div class="stat-val">${filteredLogs.filter(l => l.severity?.toLowerCase() === 'high').length}</div><div class="stat-lbl">High</div></div>
+    <div class="stat"><div class="stat-val">${filteredLogs.filter(l => ['medium','low','info'].includes(l.severity?.toLowerCase())).length}</div><div class="stat-lbl">Other</div></div>
   </div>
   <table>
     <thead><tr><th>Timestamp</th><th>Hive ID</th><th>Severity</th><th>Event Description</th><th>Action</th></tr></thead>
@@ -176,8 +193,7 @@ export default function AlertsPage({
                 {/* Sub-header */}
                 <div className="flex items-center gap-3 px-6 py-3 bg-white border-b border-gray-200">
                     <span className="font-semibold text-sm" style={{ color: '#0d1b2a' }}>Alerts and Logs</span>
-                    <span className="text-sm text-gray-400">System Health:</span>
-                    <span className="text-sm font-semibold" style={{ color: '#f5a623' }}>Active Monitoring</span>
+
                     <div className="ml-auto flex items-center gap-3">
                         <button
                             onClick={exportLog}
@@ -238,9 +254,7 @@ export default function AlertsPage({
                             <select value={severityFilter} onChange={(e) => setSeverityFilter(e.target.value)}
                                 className="border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-600 outline-none bg-white">
                                 <option>All Levels</option>
-                                <option>Critical</option>
-                                <option>Elevated</option>
-                                <option>Normal</option>
+                                {severityLevels.map((level) => <option key={level}>{level}</option>)}
                             </select>
                         </div>
                         <div className="flex flex-col gap-0.5">
@@ -275,7 +289,7 @@ export default function AlertsPage({
                     {/* Cards row */}
                     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
                         {typeCounts.map(({ type, count }) => {
-                            const sc = severityConfig[type];
+                            const sc = severityCfg(type);
                             return (
                                 <div key={type} className="bg-white rounded-lg border border-gray-200 shadow-sm px-4 py-3">
                                     <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-400">{type}</p>
@@ -300,7 +314,7 @@ export default function AlertsPage({
                     {/* System Activity Logs table — full width */}
                     <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
                             <div className="flex items-center gap-3 px-5 py-4 border-b border-gray-100">
-                                <span className="font-semibold text-sm" style={{ color: '#0d1b2a' }}>System Activity Logs</span>
+                                <span className="font-semibold text-sm" style={{ color: '#0d1b2a' }}>All Alert Logs</span>
                                 <div className="ml-auto flex items-center gap-2">
                                     <button
                                         onClick={() => setLogTypeFilter('normal')}
@@ -334,6 +348,7 @@ export default function AlertsPage({
                                     <tr className="border-b border-gray-100">
                                         <th className="text-left px-4 py-3 text-[10px] font-bold uppercase tracking-widest text-gray-400">Timestamp</th>
                                         <th className="text-left px-4 py-3 text-[10px] font-bold uppercase tracking-widest text-gray-400">Hive / Beekeeper</th>
+                                        <th className="text-left px-4 py-3 text-[10px] font-bold uppercase tracking-widest text-gray-400">Hive Status</th>
                                         <th className="text-left px-4 py-3 text-[10px] font-bold uppercase tracking-widest text-gray-400">Severity</th>
                                         <th className="text-left px-4 py-3 text-[10px] font-bold uppercase tracking-widest text-gray-400">Event Description</th>
                                         <th className="text-left px-4 py-3 text-[10px] font-bold uppercase tracking-widest text-gray-400">Status</th>
@@ -343,7 +358,7 @@ export default function AlertsPage({
                                 <tbody>
                                     {filteredLogs.length === 0 ? (
                                         <tr>
-                                            <td colSpan={6} className="px-4 py-16 text-center">
+                                            <td colSpan={7} className="px-4 py-16 text-center">
                                                 <div className="flex flex-col items-center gap-2">
                                                     <Inbox className="w-8 h-8 text-gray-300" />
                                                     <p className="text-sm font-semibold text-gray-500">No alerts found</p>
@@ -356,9 +371,9 @@ export default function AlertsPage({
                                             </td>
                                         </tr>
                                     ) : filteredLogs.map((log, i) => {
-                                        const sc        = severityConfig[log.severity] ?? severityConfig.Info;
-                                        const isPending = log.alertObj.status === 'pending';
-                                        const isSent    = log.alertObj.status === 'sent';
+                                        const sc        = severityCfg(log.severity);
+                                        const isPending = log.alertObj.action_status === 'pending';
+                                        const isSent    = log.alertObj.action_status === 'sent';
                                         return (
                                             <tr key={i} className="border-b border-gray-50 hover:bg-gray-50 transition-colors">
                                                 <td className="px-4 py-4 text-gray-400 whitespace-nowrap font-mono">
@@ -373,6 +388,16 @@ export default function AlertsPage({
                                                     <p className="font-semibold text-xs" style={{ color: '#0d1b2a' }}>{log.hive}</p>
                                                     {log.beekeeper && (
                                                         <p className="text-[10px] text-gray-400 mt-0.5">{log.beekeeper}</p>
+                                                    )}
+                                                </td>
+                                                <td className="px-4 py-4">
+                                                    {log.hiveStatus ? (
+                                                        <span className="text-[10px] font-bold px-2 py-1 rounded uppercase tracking-widest"
+                                                            style={{ backgroundColor: `${hiveStateColor(log.hiveStatus)}15`, color: hiveStateColor(log.hiveStatus) }}>
+                                                            {log.hiveStatus}
+                                                        </span>
+                                                    ) : (
+                                                        <span className="text-[10px] text-gray-400">—</span>
                                                     )}
                                                 </td>
                                                 <td className="px-4 py-4">
@@ -401,22 +426,22 @@ export default function AlertsPage({
                                                     {isPending ? (
                                                         <button
                                                             onClick={() => handleNotify(log.alertObj!)}
-                                                            disabled={notifying === log.alertObj!.id}
+                                                            disabled={notifying === log.alertObj!.alert_id}
                                                             className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest px-2.5 py-1.5 rounded-lg transition-opacity hover:opacity-80 disabled:opacity-50"
                                                             style={{ backgroundColor: '#f5a623', color: '#0d1b2a' }}
                                                         >
                                                             <BellRing className="w-3 h-3" />
-                                                            {notifying === log.alertObj!.id ? 'Sending…' : 'Notify'}
+                                                            {notifying === log.alertObj!.alert_id ? 'Sending…' : 'Notify'}
                                                         </button>
                                                     ) : isSent ? (
                                                         <button
                                                             onClick={() => handleNotify(log.alertObj!)}
-                                                            disabled={notifying === log.alertObj!.id}
+                                                            disabled={notifying === log.alertObj!.alert_id}
                                                             className="flex items-center gap-1.5 text-[10px] font-bold uppercase tracking-widest px-2.5 py-1.5 rounded-lg border transition-colors hover:bg-gray-50 disabled:opacity-50"
                                                             style={{ borderColor: '#d1d5db', color: '#6b7280' }}
                                                         >
                                                             <BellRing className="w-3 h-3" />
-                                                            {notifying === log.alertObj!.id ? 'Sending…' : 'Resend'}
+                                                            {notifying === log.alertObj!.alert_id ? 'Sending…' : 'Resend'}
                                                         </button>
                                                     ) : (
                                                         <button className="text-[10px] font-bold uppercase tracking-widest text-gray-400 hover:text-gray-600 transition-colors">
@@ -440,15 +465,15 @@ export default function AlertsPage({
 
                 </div>
             </div>
-
-
         </>
     );
 }
 
-AlertsPage.layout = {
-    breadcrumbs: [
+AlertsPage.layout = (page: React.ReactElement) => (
+    <AppLayout breadcrumbs={[
         { title: 'Admin Dashboard', href: '/dashboard' },
         { title: 'Alerts & Logs', href: '/alerts' },
-    ],
-};
+    ]}>
+        {page}
+    </AppLayout>
+);
