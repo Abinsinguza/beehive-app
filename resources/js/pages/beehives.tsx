@@ -1,6 +1,9 @@
 import { Head, router, useForm } from '@inertiajs/react';
 import { Eye, Pencil, Plus, Trash2, X } from 'lucide-react';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
+import { MaterialReactTable, useMaterialReactTable, type MRT_ColumnDef, type MRT_SortingState, type MRT_ColumnFiltersState, type MRT_VisibilityState, type MRT_RowSelectionState } from 'material-react-table';
+import { MenuItem } from '@mui/material';
+import { createTheme, ThemeProvider } from '@mui/material/styles';
 
 type Owner = { id: string; name: string };
 type Beehive = {
@@ -23,11 +26,34 @@ const statusConfig: Record<string, { label: string; bg: string; color: string }>
 
 const defaultStatusStyle = { label: 'UNKNOWN', bg: '#f1f5f9', color: '#64748b' };
 
-
+const theme = createTheme({
+    components: {
+        MuiPopover: {
+            defaultProps: { style: { zIndex: 99999 } },
+        },
+        MuiMenu: {
+            defaultProps: { style: { zIndex: 99999 } },
+        },
+        MuiPopper: {
+            defaultProps: { style: { zIndex: 99999 } },
+        },
+    },
+});
 
 export default function Beehives({ beehives = [], owners = [], search: initialSearch = '' }: { beehives?: Beehive[]; owners?: Owner[]; search?: string }) {
     const [showModal, setShowModal] = useState(false);
     const [editTarget, setEditTarget] = useState<Beehive | null>(null);
+
+    // Debug: Check beehives reference stability
+    console.log('beehives reference same:', beehives === (window as any).__lastBeehives);
+    (window as any).__lastBeehives = beehives;
+    
+    // MRT State
+    const [sorting, setSorting] = useState<MRT_SortingState>([]);
+    const [columnFilters, setColumnFilters] = useState<MRT_ColumnFiltersState>([]);
+    const [columnVisibility, setColumnVisibility] = useState<MRT_VisibilityState>({});
+    const [rowSelection, setRowSelection] = useState<MRT_RowSelectionState>({});
+    const [globalFilter, setGlobalFilter] = useState<string>('');
 
     const { data, setData, post, reset, processing, errors } = useForm({
         owner_id:          '',
@@ -57,7 +83,7 @@ export default function Beehives({ beehives = [], owners = [], search: initialSe
     const exportCSV = () => {
         const headers = ['Hive Name', 'Location', 'Hive Type', 'Current Status', 'Owner', 'Installation Date'];
         const escape  = (v: string) => `"${v.replace(/"/g, '""')}"`;
-        const csvRows = filteredHives.map((h) => {
+        const csvRows = beehives.map((h) => {
             const sc = statusConfig[h.current_state] ?? statusConfig.active;
             return [h.hive_name ?? '—', h.hive_location, h.hive_type, sc.label, h.owner?.name ?? '—', h.installation_date];
         });
@@ -77,8 +103,145 @@ export default function Beehives({ beehives = [], owners = [], search: initialSe
         }
     };
 
+    const columns = useMemo<MRT_ColumnDef<Beehive>[]>(() => [
+        {
+            accessorKey: 'hive_name',
+            header: 'Hive Name',
+            enableSorting: true,
+            enableColumnFilter: true,
+            Cell: ({ row }) => {
+                return (
+                    <div>
+                        <p className="font-semibold text-sm" style={{ color: '#0d1b2a' }}>{row.original.hive_name || '—'}</p>
+                        <p className="text-xs text-gray-400">{row.original.hive_type}</p>
+                    </div>
+                );
+            },
+        },
+        {
+            accessorKey: 'hive_location',
+            header: 'Location',
+            enableSorting: true,
+            enableColumnFilter: true,
+            Cell: ({ cell }) => {
+                return <p className="text-sm text-gray-600">{cell.getValue<string>()}</p>;
+            },
+        },
+        {
+            accessorKey: 'current_state',
+            header: 'Current Status',
+            enableSorting: true,
+            enableColumnFilter: true,
+            filterVariant: 'select',
+            filterSelectOptions: ['active', 'inactive', 'migrated', 'lost', 'unknown'],
+            Cell: ({ row }) => {
+                const sc = statusConfig[row.original.current_state] ?? defaultStatusStyle;
+                return (
+                    <span className="text-[10px] font-bold px-2.5 py-1 rounded uppercase tracking-widest"
+                        style={{ backgroundColor: sc.bg, color: sc.color }}>
+                        {row.original.current_state}
+                    </span>
+                );
+            },
+        },
+        {
+            accessorKey: 'owner.name',
+            header: 'Owner',
+            enableSorting: true,
+            enableColumnFilter: true,
+            Cell: ({ row }) => {
+                return <p className="text-sm text-gray-600">{row.original.owner?.name ?? '—'}</p>;
+            },
+        },
+        {
+            accessorKey: 'installation_date',
+            header: 'Installation Date',
+            enableSorting: true,
+            enableColumnFilter: false,
+            Cell: ({ cell }) => {
+                return <p className="text-xs text-gray-400">{cell.getValue<string>()}</p>;
+            },
+        },
+    ], []);
+
+    const tableData = useMemo(() => beehives, [beehives]);
+
+    const table = useMaterialReactTable({
+        columns,
+        data: tableData,
+        getRowId: (row) => row.id,
+        enableSorting: true,
+        enableColumnFilters: true,
+        enableColumnActions: true,
+        enableHiding: true,
+        enableRowActions: true,
+        positionActionsColumn: 'last',
+        manualSorting: false,
+        manualFiltering: false,
+        state: {
+            sorting,
+            columnFilters,
+            columnVisibility,
+            rowSelection,
+            globalFilter,
+        },
+        onSortingChange: (updater) => {
+            console.log('onSortingChange called:', updater);
+            setSorting(updater);
+        },
+        onColumnFiltersChange: (updater) => {
+            console.log('onColumnFiltersChange called:', updater);
+            setColumnFilters(updater);
+        },
+        onColumnVisibilityChange: (updater) => {
+            console.log('onColumnVisibilityChange called:', updater);
+            setColumnVisibility(updater);
+        },
+        onRowSelectionChange: (updater) => {
+            console.log('onRowSelectionChange called:', updater);
+            setRowSelection(updater);
+        },
+        onGlobalFilterChange: (updater) => {
+            console.log('onGlobalFilterChange called:', updater);
+            setGlobalFilter(updater);
+        },
+        renderRowActionMenuItems: ({ closeMenu, row }) => [
+            <MenuItem
+                key="view"
+                onClick={() => {
+                    router.visit(`/beehives/${row.original.id}`);
+                    closeMenu();
+                }}
+            >
+                <Eye className="mr-2" />
+                View
+            </MenuItem>,
+            <MenuItem
+                key="edit"
+                onClick={() => {
+                    setEditTarget(row.original);
+                    closeMenu();
+                }}
+            >
+                <Pencil className="mr-2" />
+                Edit
+            </MenuItem>,
+            <MenuItem
+                key="delete"
+                onClick={() => {
+                    handleDelete(row.original);
+                    closeMenu();
+                }}
+                sx={{ color: '#ef4444' }}
+            >
+                <Trash2 className="mr-2" />
+                Delete
+            </MenuItem>,
+        ],
+    });
+
     return (
-        <>
+        <ThemeProvider theme={theme}>
             <Head title="Hive Inventory" />
             <div className="min-h-screen p-6 flex flex-col gap-5" style={{ backgroundColor: '#f8f9fa' }}>
 
@@ -116,13 +279,13 @@ export default function Beehives({ beehives = [], owners = [], search: initialSe
                     })}
                 </div>
 
-                {/* Active Monitoring Registry table */}
+                {/* Material React Table */}
                 <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
                     <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
                         <h2 className="font-semibold text-sm" style={{ color: '#0d1b2a' }}>Active Monitoring Registry</h2>
                         <div className="flex items-center gap-2">
                             <span className="text-xs text-gray-400">
-                                {initialSearch ? `Results for "${initialSearch}"` : `${filteredHives.length} hives`}
+                                {initialSearch ? `Results for "${initialSearch}"` : `${beehives.length} hives`}
                             </span>
                             <button
                                 onClick={exportCSV}
@@ -133,85 +296,7 @@ export default function Beehives({ beehives = [], owners = [], search: initialSe
                         </div>
                     </div>
 
-                    <table className="w-full text-sm">
-                        <thead>
-                            <tr className="border-b border-gray-100">
-                                <th className="text-left px-5 py-3 text-[10px] font-bold uppercase tracking-widest text-gray-400">Hive Name</th>
-                                <th className="text-left px-5 py-3 text-[10px] font-bold uppercase tracking-widest text-gray-400">Location</th>
-                                <th className="text-left px-5 py-3 text-[10px] font-bold uppercase tracking-widest text-gray-400">Current Status</th>
-                                <th className="text-left px-5 py-3 text-[10px] font-bold uppercase tracking-widest text-gray-400">Owner</th>
-                                <th className="text-left px-5 py-3 text-[10px] font-bold uppercase tracking-widest text-gray-400">Installation Date</th>
-                                <th className="text-left px-5 py-3 text-[10px] font-bold uppercase tracking-widest text-gray-400">Actions</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {filteredHives.length === 0 ? (
-                                <tr>
-                                    <td colSpan={6} className="px-5 py-12 text-center text-sm text-gray-400">
-                                        No hives yet. Click <span className="font-semibold">Add New Hive</span> to get started.
-                                    </td>
-                                </tr>
-                            ) : (
-                                filteredHives.map((hive) => {
-                                const sc = statusConfig[hive.current_state] ?? statusConfig.active;
-                                return (
-                                    <tr key={hive.id} className="border-b border-gray-50 hover:bg-gray-50 transition-colors">
-                                        <td className="px-5 py-4">
-                                            <p className="font-semibold text-sm" style={{ color: '#0d1b2a' }}>{hive.hive_name || '—'}</p>
-                                            <p className="text-xs text-gray-400">{hive.hive_type}</p>
-                                        </td>
-                                        <td className="px-5 py-4 text-sm text-gray-600">{hive.hive_location}</td>
-                                        <td className="px-5 py-4">
-                                            <span className="text-[10px] font-bold px-2.5 py-1 rounded uppercase tracking-widest"
-                                                style={{ backgroundColor: sc.bg, color: sc.color }}>
-                                                {hive.current_state}
-                                            </span>
-                                        </td>
-                                        <td className="px-5 py-4 text-sm text-gray-600">{hive.owner?.name ?? '—'}</td>
-                                        <td className="px-5 py-4 text-xs text-gray-400">{hive.installation_date}</td>
-                                        <td className="px-5 py-4">
-                                            <div className="flex items-center gap-1.5">
-                                                <button
-                                                    onClick={() => router.visit(`/beehives/${hive.id}`)}
-                                                    className="p-1.5 rounded hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors"
-                                                    title="View hive"
-                                                >
-                                                    <Eye className="w-3.5 h-3.5" />
-                                                </button>
-                                                <button
-                                                    onClick={() => setEditTarget(hive)}
-                                                    className="p-1.5 rounded hover:bg-blue-50 text-gray-400 hover:text-blue-500 transition-colors"
-                                                    title="Edit hive"
-                                                >
-                                                    <Pencil className="w-3.5 h-3.5" />
-                                                </button>
-                                                <button
-                                                    onClick={() => handleDelete(hive)}
-                                                    className="p-1.5 rounded hover:bg-red-50 text-gray-400 hover:text-red-500 transition-colors"
-                                                    title="Delete hive"
-                                                >
-                                                    <Trash2 className="w-3.5 h-3.5" />
-                                                </button>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                );
-                            }))}
-                        </tbody>
-                    </table>
-
-                    {/* Pagination */}
-                    <div className="flex items-center justify-between px-5 py-4 border-t border-gray-100">
-                        <span className="text-xs text-gray-400">Showing 1 to {Math.min(10, filteredHives.length)} of {filteredHives.length} Hives</span>
-                        <div className="flex items-center gap-1">
-                            {[1, 2, 3, '...', 25].map((p, i) => (
-                                <button key={i} className="w-7 h-7 rounded text-xs font-semibold transition-colors"
-                                    style={p === 1 ? { backgroundColor: '#f5a623', color: '#0d1b2a' } : { color: '#6b7280' }}>
-                                    {p}
-                                </button>
-                            ))}
-                        </div>
-                    </div>
+                    <MaterialReactTable table={table} />
                 </div>
 
             </div>
@@ -373,7 +458,7 @@ export default function Beehives({ beehives = [], owners = [], search: initialSe
 
             {/* Edit Hive Modal */}
             {editTarget && <EditHiveModal hive={editTarget} owners={owners} onClose={() => setEditTarget(null)} />}
-        </>
+        </ThemeProvider>
     );
 }
 
