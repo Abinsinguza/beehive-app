@@ -1,7 +1,7 @@
 import { Head, router, useForm } from '@inertiajs/react';
 import { Eye, Pencil, Plus, Trash2, X } from 'lucide-react';
 import { useMemo, useState } from 'react';
-import { MaterialReactTable, useMaterialReactTable, type MRT_ColumnDef, type MRT_SortingState, type MRT_ColumnFiltersState, type MRT_VisibilityState, type MRT_RowSelectionState } from 'material-react-table';
+import { MaterialReactTable, useMaterialReactTable, type MRT_ColumnDef } from 'material-react-table';
 import { MenuItem } from '@mui/material';
 import { createTheme, ThemeProvider } from '@mui/material/styles';
 
@@ -45,15 +45,12 @@ export default function Beehives({ beehives = [], owners = [], search: initialSe
     const [editTarget, setEditTarget] = useState<Beehive | null>(null);
 
     // Debug: Check beehives reference stability
-    console.log('beehives reference same:', beehives === (window as any).__lastBeehives);
-    (window as any).__lastBeehives = beehives;
+    if (typeof window !== 'undefined') {
+        console.log('beehives reference same:', beehives === (window as any).__lastBeehives);
+        (window as any).__lastBeehives = beehives;
+    }
     
-    // MRT State
-    const [sorting, setSorting] = useState<MRT_SortingState>([]);
-    const [columnFilters, setColumnFilters] = useState<MRT_ColumnFiltersState>([]);
-    const [columnVisibility, setColumnVisibility] = useState<MRT_VisibilityState>({});
-    const [rowSelection, setRowSelection] = useState<MRT_RowSelectionState>({});
-    const [globalFilter, setGlobalFilter] = useState<string>('');
+    // No extra MRT state needed - let MRT handle it internally
 
     const { data, setData, post, reset, processing, errors } = useForm({
         owner_id:          '',
@@ -175,36 +172,9 @@ export default function Beehives({ beehives = [], owners = [], search: initialSe
         enableColumnActions: true,
         enableHiding: true,
         enableRowActions: true,
+        enableRowSelection: false,
+        enableMultiRowSelection: false,
         positionActionsColumn: 'last',
-        manualSorting: false,
-        manualFiltering: false,
-        state: {
-            sorting,
-            columnFilters,
-            columnVisibility,
-            rowSelection,
-            globalFilter,
-        },
-        onSortingChange: (updater) => {
-            console.log('onSortingChange called:', updater);
-            setSorting(updater);
-        },
-        onColumnFiltersChange: (updater) => {
-            console.log('onColumnFiltersChange called:', updater);
-            setColumnFilters(updater);
-        },
-        onColumnVisibilityChange: (updater) => {
-            console.log('onColumnVisibilityChange called:', updater);
-            setColumnVisibility(updater);
-        },
-        onRowSelectionChange: (updater) => {
-            console.log('onRowSelectionChange called:', updater);
-            setRowSelection(updater);
-        },
-        onGlobalFilterChange: (updater) => {
-            console.log('onGlobalFilterChange called:', updater);
-            setGlobalFilter(updater);
-        },
         renderRowActionMenuItems: ({ closeMenu, row }) => [
             <MenuItem
                 key="view"

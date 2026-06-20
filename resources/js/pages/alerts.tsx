@@ -1,8 +1,10 @@
 import { Head, router, useForm, usePage } from '@inertiajs/react';
 import { BellRing, CheckCircle, AlertCircle, Download, Inbox, Plus, X } from 'lucide-react';
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useMemo, useState } from 'react';
 import AppLayout from '@/layouts/app-layout';
 import { Alert } from '@/components/ui/alert';
+import { MaterialReactTable, useMaterialReactTable, type MRT_ColumnDef } from 'material-react-table';
+import { createTheme, ThemeProvider } from '@mui/material/styles';
 
 type Beehive = {
     hive_id: string;
@@ -71,6 +73,37 @@ function hiveStateColor(state: string | null) {
     return state ? (hiveStateColors[state] ?? '#64748b') : '#94a3b8';
 }
 
+// MUI Theme for z-index fixes
+const theme = createTheme({
+    components: {
+        MuiPopover: {
+            defaultProps: { style: { zIndex: 99999 } },
+        },
+        MuiMenu: {
+            defaultProps: { style: { zIndex: 99999 } },
+        },
+        MuiPopper: {
+            defaultProps: { style: { zIndex: 99999 } },
+        },
+    },
+});
+
+// Create a type for our log objects since we're using them in MRT
+type Log = {
+    ts: string;
+    hive: string;
+    hiveId: string | null;
+    beekeeper: string | null;
+    beekeeperId: string | null;
+    hiveStatus: string | null;
+    severity: string;
+    desc: string;
+    status: string;
+    action: string;
+    viewedAt: string | null;
+    alertObj: Alert;
+};
+
 export default function AlertsPage({
     alerts = [],
     inferences = [],
@@ -98,6 +131,8 @@ export default function AlertsPage({
     const [selectedBeekeeperId, setSelectedBeekeeperId] = useState('all');
     const [severityFilter, setSeverityFilter] = useState('All Levels');
     
+    // No extra MRT state needed - let MRT handle it internally
+
     // Use either beehives or hives prop
     const hiveList = beehives.length > 0 ? beehives : hives;
     
@@ -247,8 +282,145 @@ export default function AlertsPage({
         if (win) { win.document.write(html); win.document.close(); }
     };
 
+    // Define MRT Columns
+    const columns = useMemo<MRT_ColumnDef<Log>[]>(() => [
+        {
+            accessorKey: 'ts',
+            header: 'Timestamp',
+            enableSorting: true,
+            enableColumnFilter: true,
+            Cell: ({ cell, row }) => {
+                return (
+                    <div>
+                        <p className="text-gray-400 whitespace-nowrap font-mono text-xs">{cell.getValue<string>()}</p>
+                        <p className="text-[9px] mt-0.5" style={{ color: row.original.viewedAt ? '#16a34a' : '#94a3b8' }}>
+                            {row.original.viewedAt
+                                ? `Viewed ${new Date(row.original.viewedAt).toLocaleString()}`
+                                : 'Not yet viewed'}
+                        </p>
+                    </div>
+                );
+            },
+        },
+        {
+            id: 'hive',
+            header: 'Hive / Beekeeper',
+            accessorFn: (row) => row.hive,
+            enableSorting: true,
+            enableColumnFilter: true,
+            Cell: ({ row }) => {
+                return (
+                    <div>
+                        <p className="font-semibold text-xs" style={{ color: '#0d1b2a' }}>{row.original.hive}</p>
+                        {row.original.beekeeper && (
+                            <p className="text-[10px] text-gray-400 mt-0.5">{row.original.beekeeper}</p>
+                        )}
+                    </div>
+                );
+            },
+        },
+        {
+            id: 'hiveStatus',
+            header: 'Hive Status',
+            accessorFn: (row) => row.hiveStatus,
+            enableSorting: true,
+            enableColumnFilter: true,
+            filterVariant: 'select',
+            filterSelectOptions: ['swarm', 'pre_swarm', 'normal', 'abscondment', 'missing_queen', 'queenbee_present', 'pest_infested', 'external_noise', 'uncertain'],
+            Cell: ({ row }) => {
+                return row.original.hiveStatus ? (
+                    <span className="text-[10px] font-bold px-2 py-1 rounded uppercase tracking-widest"
+                        style={{ backgroundColor: `${hiveStateColor(row.original.hiveStatus)}15`, color: hiveStateColor(row.original.hiveStatus) }}>
+                        {row.original.hiveStatus}
+                    </span>
+                ) : (
+                    <span className="text-[10px] text-gray-400">—</span>
+                );
+            },
+        },
+        {
+            accessorKey: 'severity',
+            header: 'Severity',
+            enableSorting: true,
+            enableColumnFilter: true,
+            filterVariant: 'select',
+            filterSelectOptions: ['critical', 'high', 'medium', 'low', 'info'],
+            Cell: ({ cell }) => {
+                const sc = severityCfg(cell.getValue<string>());
+                return (
+                    <span className="text-[10px] font-bold px-2 py-1 rounded uppercase tracking-widest"
+                        style={{ backgroundColor: sc.bg, color: sc.color }}>
+                        {sc.label}
+                    </span>
+                );
+            },
+        },
+        {
+            accessorKey: 'desc',
+            header: 'Event Description',
+            enableSorting: true,
+            enableColumnFilter: true,
+            Cell: ({ cell }) => <p className="text-gray-600 leading-snug max-w-xs text-xs">{cell.getValue<string>()}</p>,
+        },
+        {
+            accessorKey: 'status',
+            header: 'Status',
+            enableSorting: true,
+            enableColumnFilter: true,
+            filterVariant: 'select',
+            filterSelectOptions: ['pending', 'sent'],
+            Cell: ({ row }) => {
+                const isSent = row.original.status === 'sent';
+                const isPending = row.original.status === 'pending';
+                return isSent ? (
+                    <span className="text-[10px] font-bold px-2 py-1 rounded uppercase tracking-widest"
+                        style={{ backgroundColor: '#ecfdf5', color: '#065f46' }}>
+                        Sent
+                    </span>
+                ) : isPending ? (
+                    <span className="text-[10px] font-bold px-2 py-1 rounded uppercase tracking-widest"
+                        style={{ backgroundColor: '#fff7ed', color: '#c2410c' }}>
+                        Pending
+                    </span>
+                ) : (
+                    <span className="text-[10px] text-gray-400">—</span>
+                );
+            },
+        },
+    ], []);
+
+    const tableData = useMemo(() => filteredLogs, [filteredLogs]);
+
+    // Set up Material React Table
+    const table = useMaterialReactTable({
+        columns,
+        data: tableData,
+        getRowId: (row) => row.alertObj.alert_id,
+        enableSorting: true,
+        enableColumnFilters: true,
+        enableColumnActions: true,
+        enableHiding: true,
+        enableRowActions: false,
+        enableRowSelection: false,
+        enableMultiRowSelection: false,
+        // Custom empty state
+        renderEmptyRowsFallback: () => (
+            <div className="px-4 py-16 text-center">
+                <div className="flex flex-col items-center gap-2">
+                    <Inbox className="w-8 h-8 text-gray-300" />
+                    <p className="text-sm font-semibold text-gray-500">No alerts found</p>
+                    <p className="text-xs text-gray-400">
+                        {alerts.length === 0
+                            ? 'No alerts have been recorded yet.'
+                            : 'No alerts match the current filters.'}
+                    </p>
+                </div>
+            </div>
+        ),
+    });
+
     return (
-        <>
+        <ThemeProvider theme={theme}>
             <Head title="Alerts & Logs" />
             <div className="min-h-screen" style={{ backgroundColor: '#f8f9fa' }}>
 
@@ -361,7 +533,7 @@ export default function AlertsPage({
                         </div>
                     </div>
 
-                    {/* System Activity Logs table — full width */}
+                    {/* Material React Table */}
                     <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
                             <div className="flex items-center gap-3 px-5 py-4 border-b border-gray-100">
                                 <span className="font-semibold text-sm" style={{ color: '#0d1b2a' }}>All Alert Logs</span>
@@ -371,96 +543,7 @@ export default function AlertsPage({
                                 </div>
                             </div>
 
-                            <table className="w-full text-xs">
-                                <thead>
-                                    <tr className="border-b border-gray-100">
-                                        <th className="text-left px-4 py-3 text-[10px] font-bold uppercase tracking-widest text-gray-400">Timestamp</th>
-                                        <th className="text-left px-4 py-3 text-[10px] font-bold uppercase tracking-widest text-gray-400">Hive / Beekeeper</th>
-                                        <th className="text-left px-4 py-3 text-[10px] font-bold uppercase tracking-widest text-gray-400">Hive Status</th>
-                                        <th className="text-left px-4 py-3 text-[10px] font-bold uppercase tracking-widest text-gray-400">Severity</th>
-                                        <th className="text-left px-4 py-3 text-[10px] font-bold uppercase tracking-widest text-gray-400">Event Description</th>
-                                        <th className="text-left px-4 py-3 text-[10px] font-bold uppercase tracking-widest text-gray-400">Status</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {filteredLogs.length === 0 ? (
-                                        <tr>
-                                            <td colSpan={6} className="px-4 py-16 text-center">
-                                                <div className="flex flex-col items-center gap-2">
-                                                    <Inbox className="w-8 h-8 text-gray-300" />
-                                                    <p className="text-sm font-semibold text-gray-500">No alerts found</p>
-                                                    <p className="text-xs text-gray-400">
-                                                        {alerts.length === 0
-                                                            ? 'No alerts have been recorded yet.'
-                                                            : 'No alerts match the current filters.'}
-                                                    </p>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    ) : filteredLogs.map((log, i) => {
-                                        const sc        = severityCfg(log.severity);
-                                        const isPending = log.alertObj.action_status === 'pending';
-                                        const isSent    = log.alertObj.action_status === 'sent';
-                                        return (
-                                            <tr key={i} className="border-b border-gray-50 hover:bg-gray-50 transition-colors">
-                                                <td className="px-4 py-4 text-gray-400 whitespace-nowrap font-mono">
-                                                    {log.ts}
-                                                    <p className="text-[9px] mt-0.5" style={{ color: log.viewedAt ? '#16a34a' : '#94a3b8' }}>
-                                                        {log.viewedAt
-                                                            ? `Viewed ${new Date(log.viewedAt).toLocaleString()}`
-                                                            : 'Not yet viewed'}
-                                                    </p>
-                                                </td>
-                                                <td className="px-4 py-4">
-                                                    <p className="font-semibold text-xs" style={{ color: '#0d1b2a' }}>{log.hive}</p>
-                                                    {log.beekeeper && (
-                                                        <p className="text-[10px] text-gray-400 mt-0.5">{log.beekeeper}</p>
-                                                    )}
-                                                </td>
-                                                <td className="px-4 py-4">
-                                                    {log.hiveStatus ? (
-                                                        <span className="text-[10px] font-bold px-2 py-1 rounded uppercase tracking-widest"
-                                                            style={{ backgroundColor: `${hiveStateColor(log.hiveStatus)}15`, color: hiveStateColor(log.hiveStatus) }}>
-                                                            {log.hiveStatus}
-                                                        </span>
-                                                    ) : (
-                                                        <span className="text-[10px] text-gray-400">—</span>
-                                                    )}
-                                                </td>
-                                                <td className="px-4 py-4">
-                                                    <span className="text-[10px] font-bold px-2 py-1 rounded uppercase tracking-widest"
-                                                        style={{ backgroundColor: sc.bg, color: sc.color }}>
-                                                        {sc.label}
-                                                    </span>
-                                                </td>
-                                                <td className="px-4 py-4 text-gray-600 leading-snug max-w-xs">{log.desc}</td>
-                                                <td className="px-4 py-4">
-                                                    {isSent ? (
-                                                        <span className="text-[10px] font-bold px-2 py-1 rounded uppercase tracking-widest"
-                                                            style={{ backgroundColor: '#ecfdf5', color: '#065f46' }}>
-                                                            Sent
-                                                        </span>
-                                                    ) : isPending ? (
-                                                        <span className="text-[10px] font-bold px-2 py-1 rounded uppercase tracking-widest"
-                                                            style={{ backgroundColor: '#fff7ed', color: '#c2410c' }}>
-                                                            Pending
-                                                        </span>
-                                                    ) : (
-                                                        <span className="text-[10px] text-gray-400">—</span>
-                                                    )}
-                                                </td>
-                                            </tr>
-                                        );
-                                    })}
-                                </tbody>
-                            </table>
-
-                            {/* Footer */}
-                            <div className="flex items-center justify-between px-5 py-4 border-t border-gray-100">
-                                <span className="text-xs text-gray-400">
-                                    Showing {filteredLogs.length} of {alerts.length} alert{alerts.length !== 1 ? 's' : ''}
-                                </span>
-                            </div>
+                            <MaterialReactTable table={table} />
                         </div>
 
                 </div>
@@ -527,7 +610,7 @@ export default function AlertsPage({
                     </div>
                 </div>
             )}
-        </>
+        </ThemeProvider>
     );
 }
 

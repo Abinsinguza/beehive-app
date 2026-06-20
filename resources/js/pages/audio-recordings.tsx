@@ -1,8 +1,6 @@
 import { Head, router, useForm } from '@inertiajs/react';
 import {
     CheckCircle2,
-    ChevronLeft,
-    ChevronRight,
     Circle,
     ExternalLink,
     Mic,
@@ -12,8 +10,11 @@ import {
     X,
     XCircle,
 } from 'lucide-react';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
 import AppLayout from '@/layouts/app-layout';
+import { MaterialReactTable, useMaterialReactTable, type MRT_ColumnDef, type MRT_PaginationState } from 'material-react-table';
+import { MenuItem } from '@mui/material';
+import { createTheme, ThemeProvider } from '@mui/material/styles';
 
 type HiveRef   = { hive_id: string; hive_name: string; hive_location: string };
 type Recording = {
@@ -104,6 +105,21 @@ function truncatePath(url: string, max = 28) {
     return full.length > max ? full.substring(0, max) + '…' : full;
 }
 
+// MUI Theme for z-index fixes
+const theme = createTheme({
+    components: {
+        MuiPopover: {
+            defaultProps: { style: { zIndex: 99999 } },
+        },
+        MuiMenu: {
+            defaultProps: { style: { zIndex: 99999 } },
+        },
+        MuiPopper: {
+            defaultProps: { style: { zIndex: 99999 } },
+        },
+    },
+});
+
 // ── Add recording modal ──────────────────────────────────────────
 function AddRecordingModal({ hives, onClose }: { hives: HiveRef[]; onClose: () => void }) {
     const { data, setData, post, processing, reset, errors } = useForm({
@@ -175,7 +191,7 @@ function AddRecordingModal({ hives, onClose }: { hives: HiveRef[]; onClose: () =
                             <select
                                 value={data.file_format}
                                 onChange={(e) => setData('file_format', e.target.value)}
-                                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-100"
+                                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-100"
                                 required>
                                 {['WAV', 'MP3', 'FLAC', 'OGG', 'AAC'].map((f) => (
                                     <option key={f} value={f}>{f}</option>
@@ -190,7 +206,7 @@ function AddRecordingModal({ hives, onClose }: { hives: HiveRef[]; onClose: () =
                                 onChange={(e) => setData('duration_seconds', e.target.value)}
                                 placeholder="e.g. 30"
                                 min="0"
-                                className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-100" />
+                                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-100" />
                         </div>
                     </div>
 
@@ -203,7 +219,7 @@ function AddRecordingModal({ hives, onClose }: { hives: HiveRef[]; onClose: () =
                             type="datetime-local"
                             value={data.captured_at}
                             onChange={(e) => setData('captured_at', e.target.value)}
-                            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-100" />
+                            className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-100" />
                     </div>
 
                     {/* Status */}
@@ -212,7 +228,7 @@ function AddRecordingModal({ hives, onClose }: { hives: HiveRef[]; onClose: () =
                         <select
                             value={data.status}
                             onChange={(e) => setData('status', e.target.value)}
-                            className="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-100"
+                            className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-100"
                             required>
                             <option value="pending">Pending</option>
                             <option value="processed">Processed</option>
@@ -245,6 +261,14 @@ export default function AudioRecordings({ recordings, stats, formats, hives, fil
     const [format, setFormat]       = useState(filters.format);
     const [hive, setHive]           = useState(filters.hive);
 
+    // Debug: Check recordings data reference stability
+    if (typeof window !== 'undefined') {
+        console.log('recordings data reference same:', recordings.data === (window as any).__lastRecordingData);
+        (window as any).__lastRecordingData = recordings.data;
+    }
+
+    // Only keep pagination state controlled (for server-side pagination)
+
     // Debounce search
     useEffect(() => {
         const t = setTimeout(() => applyFilters({ search }), 350);
@@ -268,12 +292,6 @@ export default function AudioRecordings({ recordings, stats, formats, hives, fil
         router.get('/audio-recordings', {}, { preserveState: false });
     }
 
-    function goToPage(page: number) {
-        router.get('/audio-recordings', {
-            search, status, format, hive, page: String(page),
-        }, { preserveState: true });
-    }
-
     const hasFilters = search || status || format || hive;
 
     const formatBadge = (f: string) => (
@@ -282,14 +300,208 @@ export default function AudioRecordings({ recordings, stats, formats, hives, fil
         </span>
     );
 
-    const pages = Array.from({ length: recordings.last_page }, (_, i) => i + 1);
-    const shownPages = pages.filter(p =>
-        p === 1 || p === recordings.last_page ||
-        Math.abs(p - recordings.current_page) <= 1
-    );
+    // Define MRT Columns
+    const columns = useMemo<MRT_ColumnDef<Recording>[]>(() => [
+        {
+            id: 'play',
+            header: '',
+            enableSorting: false,
+            enableColumnFilter: false,
+            enableHiding: false,
+            size: 60,
+            Cell: () => (
+                <button className="w-7 h-7 rounded-full flex items-center justify-center border border-gray-200 hover:border-amber-400 hover:bg-amber-50 transition-colors">
+                    <Play className="w-3 h-3 text-gray-400 ml-0.5" />
+                </button>
+            ),
+        },
+        {
+            id: 'hive',
+            header: 'Hive',
+            accessorFn: (row) => row.hive?.hive_name ?? '—',
+            enableSorting: true,
+            enableColumnFilter: true,
+            Cell: ({ row }) => {
+                const hiveShort = row.original.audio_id.substring(0, 4);
+                return (
+                    <div>
+                        <p className="font-semibold text-xs leading-tight" style={{ color: '#0d1b2a' }}>
+                            {row.original.hive?.hive_name ?? '—'}
+                        </p>
+                        <p className="text-[11px] text-gray-400 mt-0.5">{hiveShort}</p>
+                    </div>
+                );
+            },
+        },
+        {
+            accessorKey: 'source_url',
+            header: 'Source file',
+            enableSorting: true,
+            enableColumnFilter: true,
+            Cell: ({ cell }) => (
+                <span className="text-xs text-gray-600 font-mono">
+                    {truncatePath(cell.getValue<string>())}
+                </span>
+            ),
+        },
+        {
+            accessorKey: 'file_format',
+            header: 'Format',
+            enableSorting: true,
+            enableColumnFilter: true,
+            filterVariant: 'select',
+            filterSelectOptions: formats,
+            Cell: ({ cell }) => formatBadge(cell.getValue<string>()),
+        },
+        {
+            accessorKey: 'duration_seconds',
+            header: 'Duration',
+            enableSorting: true,
+            enableColumnFilter: false,
+            Cell: ({ cell }) => (
+                <span className="text-xs text-gray-600 tabular-nums">
+                    {formatDuration(cell.getValue<number | null>())}
+                </span>
+            ),
+        },
+        {
+            accessorKey: 'created_at',
+            header: 'Recorded',
+            enableSorting: true,
+            enableColumnFilter: false,
+            Cell: ({ cell }) => (
+                <span className="text-xs text-gray-500 tabular-nums whitespace-nowrap">
+                    {formatDate(cell.getValue<string | null>())}
+                </span>
+            ),
+        },
+        {
+            accessorKey: 'detected_state',
+            header: 'ML Detected',
+            enableSorting: true,
+            enableColumnFilter: true,
+            filterVariant: 'select',
+            filterSelectOptions: ['swarm', 'pre_swarm', 'normal', 'abscondment', 'missing_queen', 'queenbee_present', 'pest_infested', 'external_noise', 'uncertain'],
+            Cell: ({ cell }) => {
+                const val = cell.getValue<string | null>();
+                return val ? (
+                    <span className="text-xs font-semibold" style={{ color: hiveStateColor(val) }}>
+                        {val}
+                    </span>
+                ) : (
+                    <span className="text-xs text-gray-400 italic">Not analysed</span>
+                );
+            },
+        },
+        {
+            accessorKey: 'confidence_score',
+            header: 'Confidence',
+            enableSorting: true,
+            enableColumnFilter: false,
+            Cell: ({ cell }) => {
+                const val = cell.getValue<number | null>();
+                return val != null ? (
+                    <span className="text-xs text-gray-600 tabular-nums">
+                        {(val * 100).toFixed(1)}%
+                    </span>
+                ) : '—';
+            },
+        },
+        {
+            accessorKey: 'analyzed_at',
+            header: 'Analysed At',
+            enableSorting: true,
+            enableColumnFilter: false,
+            Cell: ({ cell }) => (
+                <span className="text-xs text-gray-500 whitespace-nowrap">
+                    {formatDate(cell.getValue<string | null>())}
+                </span>
+            ),
+        },
+        {
+            accessorKey: 'inference_latency_ms',
+            header: 'Latency',
+            enableSorting: true,
+            enableColumnFilter: false,
+            Cell: ({ cell }) => {
+                const val = cell.getValue<number | null>();
+                return val != null ? (
+                    <span className="text-xs text-gray-600 tabular-nums">{val}ms</span>
+                ) : '—';
+            },
+        },
+        {
+            accessorKey: 'status',
+            header: 'Status',
+            enableSorting: true,
+            enableColumnFilter: true,
+            filterVariant: 'select',
+            filterSelectOptions: ['processed', 'pending', 'failed'],
+            Cell: ({ row }) => {
+                const cfg = statusCfg(row.original.status);
+                return (
+                    <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full"
+                        style={{ backgroundColor: cfg.bg, color: cfg.text }}>
+                        {cfg.icon}
+                        {cfg.label}
+                    </span>
+                );
+            },
+        },
+        {
+            id: 'link',
+            header: '',
+            enableSorting: false,
+            enableColumnFilter: false,
+            enableHiding: false,
+            size: 60,
+            Cell: ({ row }) => (
+                <button
+                    onClick={() => row.original.hive && router.visit(`/beehives/${row.original.hive_id}`)}
+                    className="w-7 h-7 flex items-center justify-center rounded-lg border border-gray-200 hover:bg-gray-100 transition-colors">
+                    <ExternalLink className="w-3.5 h-3.5 text-gray-400" />
+                </button>
+            ),
+        },
+    ], [formats]);
+
+    const tableData = useMemo(() => recordings.data, [recordings.data]);
+
+    // Add MRT state for pagination
+    const [pagination, setPagination] = useState<MRT_PaginationState>({
+        pageIndex: recordings.current_page - 1, // MRT is 0-based, our server is 1-based
+        pageSize: recordings.per_page,
+    });
+
+    // Set up Material React Table
+    const table = useMaterialReactTable({
+        columns,
+        data: tableData,
+        getRowId: (row) => row.audio_id,
+        enableSorting: true,
+        enableColumnFilters: true,
+        enableColumnActions: true,
+        enableHiding: true,
+        enableRowActions: false,
+        enableRowSelection: false,
+        enableMultiRowSelection: false,
+        manualPagination: true, // since server does pagination
+        rowCount: recordings.total,
+        state: {
+            pagination: pagination,
+        },
+        onPaginationChange: (updater) => {
+            const newPagination = typeof updater === 'function' ? updater(pagination) : updater;
+            setPagination(newPagination);
+            // Update the page in the router (convert to 1-based index)
+            router.get('/audio-recordings', {
+                search, status, format, hive, page: String(newPagination.pageIndex + 1),
+            }, { preserveState: true });
+        },
+    });
 
     return (
-        <>
+        <ThemeProvider theme={theme}>
             <Head title="Audio Recordings" />
             {showAdd && <AddRecordingModal hives={hives} onClose={() => setShowAdd(false)} />}
 
@@ -352,7 +564,7 @@ export default function AudioRecordings({ recordings, stats, formats, hives, fil
                                 value={search}
                                 onChange={(e) => setSearch(e.target.value)}
                                 className="w-full bg-white border border-gray-200 rounded-xl pl-10 pr-4 py-2.5 text-sm shadow-sm focus:outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-100"
-                            />
+                                />
                         </div>
 
                         {/* Dropdowns row */}
@@ -395,171 +607,14 @@ export default function AudioRecordings({ recordings, stats, formats, hives, fil
                         </div>
                     </div>
 
-                    {/* ── Table ── */}
+                    {/* ── Material React Table ── */}
                     <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-                        <div className="overflow-x-auto">
-                            <table className="w-full text-sm">
-                                <thead>
-                                    <tr className="border-b border-gray-100">
-                                        <th className="text-left px-4 py-3 text-[11px] font-semibold uppercase tracking-widest text-gray-400 w-10" />
-                                        <th className="text-left px-4 py-3 text-[11px] font-semibold uppercase tracking-widest text-gray-400">Hive</th>
-                                        <th className="text-left px-4 py-3 text-[11px] font-semibold uppercase tracking-widest text-gray-400">Source file</th>
-                                        <th className="text-left px-4 py-3 text-[11px] font-semibold uppercase tracking-widest text-gray-400">Format</th>
-                                        <th className="text-left px-4 py-3 text-[11px] font-semibold uppercase tracking-widest text-gray-400">Duration</th>
-                                        <th className="text-left px-4 py-3 text-[11px] font-semibold uppercase tracking-widest text-gray-400">
-                                            Recorded ↓
-                                        </th>
-                                        <th className="text-left px-4 py-3 text-[11px] font-semibold uppercase tracking-widest text-gray-400">ML Detected</th>
-                                        <th className="text-left px-4 py-3 text-[11px] font-semibold uppercase tracking-widest text-gray-400">Confidence</th>
-                                        <th className="text-left px-4 py-3 text-[11px] font-semibold uppercase tracking-widest text-gray-400">Analysed At</th>
-                                        <th className="text-left px-4 py-3 text-[11px] font-semibold uppercase tracking-widest text-gray-400">Latency</th>
-                                        <th className="text-left px-4 py-3 text-[11px] font-semibold uppercase tracking-widest text-gray-400">Status</th>
-                                        <th className="px-4 py-3" />
-                                    </tr>
-                                </thead>
-                                <tbody className="divide-y divide-gray-100">
-                                    {recordings.data.length === 0 ? (
-                                        <tr>
-                                            <td colSpan={12} className="text-center py-16 text-sm text-gray-400">
-                                                No recordings found
-                                            </td>
-                                        </tr>
-                                    ) : recordings.data.map((rec) => {
-                                        const cfg  = statusCfg(rec.status);
-                                        const hiveShort = rec.audio_id.substring(0, 4);
-                                        return (
-                                            <tr key={rec.audio_id} className="hover:bg-gray-50 transition-colors">
-                                                {/* Play button */}
-                                                <td className="px-4 py-3">
-                                                    <button className="w-7 h-7 rounded-full flex items-center justify-center border border-gray-200 hover:border-amber-400 hover:bg-amber-50 transition-colors">
-                                                        <Play className="w-3 h-3 text-gray-400 ml-0.5" />
-                                                    </button>
-                                                </td>
-
-                                                {/* Hive */}
-                                                <td className="px-4 py-3">
-                                                    <p className="font-semibold text-xs leading-tight" style={{ color: '#0d1b2a' }}>
-                                                        {rec.hive?.hive_name ?? '—'}
-                                                    </p>
-                                                    <p className="text-[11px] text-gray-400 mt-0.5">{hiveShort}</p>
-                                                </td>
-
-                                                {/* Source file */}
-                                                <td className="px-4 py-3">
-                                                    <span className="text-xs text-gray-600 font-mono">
-                                                        {truncatePath(rec.source_url)}
-                                                    </span>
-                                                </td>
-
-                                                {/* Format */}
-                                                <td className="px-4 py-3">{formatBadge(rec.file_format)}</td>
-
-                                                {/* Duration */}
-                                                <td className="px-4 py-3 text-xs text-gray-600 tabular-nums">
-                                                    {formatDuration(rec.duration_seconds)}
-                                                </td>
-
-                                                {/* Recorded */}
-                                                <td className="px-4 py-3 text-xs text-gray-500 tabular-nums whitespace-nowrap">
-                                                    {formatDate(rec.created_at)}
-                                                </td>
-
-                                                {/* ML Detected */}
-                                                <td className="px-4 py-3">
-                                                    {rec.detected_state ? (
-                                                        <span className="text-xs font-semibold" style={{ color: hiveStateColor(rec.detected_state) }}>
-                                                            {rec.detected_state}
-                                                        </span>
-                                                    ) : (
-                                                        <span className="text-xs text-gray-400 italic">Not analysed</span>
-                                                    )}
-                                                </td>
-
-                                                {/* Confidence */}
-                                                <td className="px-4 py-3 text-xs text-gray-600 tabular-nums">
-                                                    {rec.confidence_score != null ? `${(rec.confidence_score * 100).toFixed(1)}%` : '—'}
-                                                </td>
-
-                                                {/* Analysed At */}
-                                                <td className="px-4 py-3 text-xs text-gray-500 whitespace-nowrap">
-                                                    {rec.analyzed_at ? formatDate(rec.analyzed_at) : '—'}
-                                                </td>
-
-                                                {/* Latency */}
-                                                <td className="px-4 py-3 text-xs text-gray-600 tabular-nums">
-                                                    {rec.inference_latency_ms != null ? `${rec.inference_latency_ms}ms` : '—'}
-                                                </td>
-
-                                                {/* Status */}
-                                                <td className="px-4 py-3">
-                                                    <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full"
-                                                        style={{ backgroundColor: cfg.bg, color: cfg.text }}>
-                                                        {cfg.icon}
-                                                        {cfg.label}
-                                                    </span>
-                                                </td>
-
-                                                {/* Link */}
-                                                <td className="px-4 py-3">
-                                                    <button
-                                                        onClick={() => rec.hive && router.visit(`/beehives/${rec.hive_id}`)}
-                                                        className="w-7 h-7 flex items-center justify-center rounded-lg border border-gray-200 hover:bg-gray-100 transition-colors">
-                                                        <ExternalLink className="w-3.5 h-3.5 text-gray-400" />
-                                                    </button>
-                                                </td>
-                                            </tr>
-                                        );
-                                    })}
-                                </tbody>
-                            </table>
-                        </div>
-
-                        {/* Pagination */}
-                        {recordings.total > 0 && (
-                            <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100">
-                                <p className="text-xs text-gray-500">
-                                    {recordings.from ?? 0}–{recordings.to ?? 0} of {recordings.total} recordings
-                                </p>
-                                <div className="flex items-center gap-1">
-                                    <button
-                                        onClick={() => goToPage(recordings.current_page - 1)}
-                                        disabled={recordings.current_page === 1}
-                                        className="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
-                                        <ChevronLeft className="w-4 h-4" />
-                                    </button>
-
-                                    {shownPages.map((p, i) => {
-                                        const prev = shownPages[i - 1];
-                                        const gap  = prev !== undefined && p - prev > 1;
-                                        return (
-                                            <span key={p} className="flex items-center gap-1">
-                                                {gap && <span className="text-gray-400 text-xs px-1">…</span>}
-                                                <button
-                                                    onClick={() => goToPage(p)}
-                                                    className="w-8 h-8 flex items-center justify-center rounded-lg text-xs font-medium border transition-colors"
-                                                    style={p === recordings.current_page
-                                                        ? { backgroundColor: '#0d1b2a', color: 'white', borderColor: '#0d1b2a' }
-                                                        : { backgroundColor: 'white', color: '#374151', borderColor: '#e5e7eb' }}>
-                                                    {p}
-                                                </button>
-                                            </span>
-                                        );
-                                    })}
-
-                                    <button
-                                        onClick={() => goToPage(recordings.current_page + 1)}
-                                        disabled={recordings.current_page === recordings.last_page}
-                                        className="w-8 h-8 flex items-center justify-center rounded-lg border border-gray-200 text-gray-500 hover:bg-gray-50 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
-                                        <ChevronRight className="w-4 h-4" />
-                                    </button>
-                                </div>
-                            </div>
-                        )}
+                        <MaterialReactTable table={table} />
                     </div>
 
                 </div>
             </div>
-        </>
+        </ThemeProvider>
     );
 }
 
@@ -571,3 +626,4 @@ AudioRecordings.layout = (page: React.ReactElement) => (
         {page}
     </AppLayout>
 );
+

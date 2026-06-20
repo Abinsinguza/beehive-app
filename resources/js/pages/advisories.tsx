@@ -1,6 +1,8 @@
 import { Head, useForm } from '@inertiajs/react';
 import { CheckSquare, ClipboardList, MessageSquareWarning, Plus, X } from 'lucide-react';
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
+import { createTheme, ThemeProvider } from '@mui/material/styles';
+import { MaterialReactTable, useMaterialReactTable, type MRT_ColumnDef } from 'material-react-table';
 import AppLayout from '@/layouts/app-layout';
 
 type Template = {
@@ -85,6 +87,283 @@ export default function Advisories({
     const [tab, setTab] = useState<'templates' | 'advisories' | 'actions'>('templates');
     const [showModal, setShowModal] = useState(false);
 
+    // MUI Theme for high z-index on MRT popups
+    const theme = useMemo(() => createTheme({
+        components: {
+            MuiPopover: { defaultProps: { style: { zIndex: 99999 } } },
+            MuiMenu: { defaultProps: { style: { zIndex: 99999 } } },
+            MuiPopper: { defaultProps: { style: { zIndex: 99999 } } },
+        },
+    }), []);
+
+    // --- Templates MRT columns ---
+    const templateColumns = useMemo<MRT_ColumnDef<Template>[]>(() => [
+        {
+            accessorKey: 'prediction_code',
+            header: 'Code',
+            Cell: ({ cell }) => (
+                <span className="font-mono text-xs font-semibold" style={{ color: '#0d1b2a' }}>
+                    #{cell.getValue<number>()}
+                </span>
+            ),
+        },
+        {
+            accessorKey: 'hive_state',
+            header: 'Hive State',
+            Cell: ({ cell }) => (
+                <span className="text-sm font-medium" style={{ color: '#0d1b2a' }}>
+                    {cell.getValue<string>()}
+                </span>
+            ),
+        },
+        {
+            accessorKey: 'advisory_type',
+            header: 'Type',
+        },
+        {
+            accessorKey: 'severity',
+            header: 'Severity',
+            filterVariant: 'select',
+            filterSelectOptions: [
+                { text: 'Info', value: 'info' },
+                { text: 'Low', value: 'low' },
+                { text: 'Medium', value: 'medium' },
+                { text: 'High', value: 'high' },
+                { text: 'Critical', value: 'critical' },
+            ],
+            Cell: ({ cell }) => {
+                const sc = severityConfig[cell.getValue<string>()] ?? severityConfig.medium;
+                return (
+                    <span className="text-[10px] font-bold px-2.5 py-1 rounded uppercase tracking-widest"
+                        style={{ backgroundColor: sc.bg, color: sc.color }}>
+                        {sc.label}
+                    </span>
+                );
+            },
+        },
+        {
+            accessorKey: 'min_confidence_threshold',
+            header: 'Min Confidence',
+            Cell: ({ cell }) => fmtPct(cell.getValue<number | null>()),
+        },
+        {
+            accessorKey: 'description',
+            header: 'Description',
+            Cell: ({ cell }) => cell.getValue<string | null>() ?? '—',
+        },
+        {
+            accessorKey: 'created_at',
+            header: 'Created',
+            Cell: ({ cell }) => fmtDate(cell.getValue<string | null>()),
+        },
+    ], []);
+
+    // --- Advisories MRT columns ---
+    const advisoryColumns = useMemo<MRT_ColumnDef<Advisory>[]>(() => [
+        {
+            id: 'hive_state',
+            accessorKey: 'template.hive_state',
+            header: 'Hive State',
+            Cell: ({ row }) => (
+                <span className="text-sm font-medium" style={{ color: '#0d1b2a' }}>
+                    {row.original.template?.hive_state ?? `#${row.original.template_id}`}
+                </span>
+            ),
+        },
+        {
+            accessorKey: 'action_title',
+            header: 'Action Title',
+            Cell: ({ cell }) => (
+                <span className="text-sm font-medium" style={{ color: '#0d1b2a' }}>
+                    {cell.getValue<string>()}
+                </span>
+            ),
+        },
+        {
+            accessorKey: 'action_description',
+            header: 'Description',
+        },
+        {
+            accessorKey: 'priority_level',
+            header: 'Priority',
+            filterVariant: 'select',
+            filterSelectOptions: [
+                { text: 'Low', value: 'low' },
+                { text: 'Medium', value: 'medium' },
+                { text: 'High', value: 'high' },
+            ],
+            Cell: ({ cell }) => {
+                const pc = priorityConfig[cell.getValue<string>()] ?? priorityConfig.medium;
+                return (
+                    <span className="text-[10px] font-bold px-2.5 py-1 rounded uppercase tracking-widest"
+                        style={{ backgroundColor: pc.bg, color: pc.color }}>
+                        {pc.label}
+                    </span>
+                );
+            },
+        },
+        {
+            id: 'confidence_range',
+            header: 'Confidence Range',
+            accessorKey: 'confidence_threshold_min', // For sorting purposes
+            Cell: ({ row }) => (
+                `${fmtPct(row.original.confidence_threshold_min)} – ${fmtPct(row.original.confidence_threshold_max)}`
+            ),
+        },
+        {
+            accessorKey: 'action_order',
+            header: 'Order',
+        },
+        {
+            accessorKey: 'is_active',
+            header: 'Active',
+            filterVariant: 'select',
+            filterSelectOptions: [
+                { text: 'Active', value: true },
+                { text: 'Inactive', value: false },
+            ],
+            Cell: ({ cell }) => (
+                <span className="text-[10px] font-bold px-2.5 py-1 rounded uppercase tracking-widest"
+                    style={cell.getValue<boolean>()
+                        ? { backgroundColor: '#f0fdf4', color: '#16a34a' }
+                        : { backgroundColor: '#f1f5f9', color: '#94a3b8' }}>
+                    {cell.getValue<boolean>() ? 'Active' : 'Inactive'}
+                </span>
+            ),
+        },
+        {
+            accessorKey: 'created_at',
+            header: 'Created',
+            Cell: ({ cell }) => fmtDate(cell.getValue<string | null>()),
+        },
+    ], []);
+
+    // --- Advisory Actions MRT columns ---
+    const actionColumns = useMemo<MRT_ColumnDef<ActionItem>[]>(() => [
+        {
+            id: 'hive',
+            header: 'Hive',
+            accessorKey: 'hive.hive_name',
+            Cell: ({ row }) => (
+                <span className="text-sm font-medium" style={{ color: '#0d1b2a' }}>
+                    {row.original.hive?.hive_name ?? row.original.hive?.hive_location ?? '—'}
+                </span>
+            ),
+        },
+        {
+            accessorKey: 'action_title',
+            header: 'Action Title',
+            Cell: ({ cell }) => (
+                <span className="text-sm font-medium" style={{ color: '#0d1b2a' }}>
+                    {cell.getValue<string>()}
+                </span>
+            ),
+        },
+        {
+            accessorKey: 'action_description',
+            header: 'Description',
+        },
+        {
+            accessorKey: 'priority_level',
+            header: 'Priority',
+            filterVariant: 'select',
+            filterSelectOptions: [
+                { text: 'Low', value: 'low' },
+                { text: 'Medium', value: 'medium' },
+                { text: 'High', value: 'high' },
+            ],
+            Cell: ({ cell }) => {
+                const pc = priorityConfig[cell.getValue<string>()] ?? priorityConfig.medium;
+                return (
+                    <span className="text-[10px] font-bold px-2.5 py-1 rounded uppercase tracking-widest"
+                        style={{ backgroundColor: pc.bg, color: pc.color }}>
+                        {pc.label}
+                    </span>
+                );
+            },
+        },
+        {
+            accessorKey: 'confidence_score',
+            header: 'Confidence',
+            Cell: ({ cell }) => fmtPct(cell.getValue<number | null>()),
+        },
+        {
+            accessorKey: 'status',
+            header: 'Status',
+            filterVariant: 'select',
+            filterSelectOptions: [
+                { text: 'Pending', value: 'pending' },
+                { text: 'In Progress', value: 'in_progress' },
+                { text: 'Completed', value: 'completed' },
+                { text: 'Resolved', value: 'resolved' },
+            ],
+            Cell: ({ cell }) => {
+                const sc = statusConfig[cell.getValue<string>()] ?? statusConfig.pending;
+                return (
+                    <span className="text-[10px] font-bold px-2.5 py-1 rounded uppercase tracking-widest"
+                        style={{ backgroundColor: sc.bg, color: sc.color }}>
+                        {sc.label}
+                    </span>
+                );
+            },
+        },
+        {
+            accessorKey: 'completed_at',
+            header: 'Completed',
+            Cell: ({ cell }) => fmtDate(cell.getValue<string | null>()),
+        },
+        {
+            accessorKey: 'created_at',
+            header: 'Created',
+            Cell: ({ cell }) => fmtDate(cell.getValue<string | null>()),
+        },
+    ], []);
+
+    // Memoize table data for stable references
+    const templateTableData = useMemo(() => templates, [templates]);
+    const advisoryTableData = useMemo(() => advisories, [advisories]);
+    const actionTableData = useMemo(() => actions, [actions]);
+
+    // Set up the three MRT tables
+    const templateTable = useMaterialReactTable({
+        columns: templateColumns,
+        data: templateTableData,
+        getRowId: (row) => String(row.template_id),
+        enableSorting: true,
+        enableColumnFilters: true,
+        enableColumnActions: true,
+        enableHiding: true,
+        enableRowActions: false,
+        enableRowSelection: false,
+        enableMultiRowSelection: false,
+    });
+
+    const advisoryTable = useMaterialReactTable({
+        columns: advisoryColumns,
+        data: advisoryTableData,
+        getRowId: (row) => row.advisory_id, // advisory_id is already a string
+        enableSorting: true,
+        enableColumnFilters: true,
+        enableColumnActions: true,
+        enableHiding: true,
+        enableRowActions: false,
+        enableRowSelection: false,
+        enableMultiRowSelection: false,
+    });
+
+    const actionTable = useMaterialReactTable({
+        columns: actionColumns,
+        data: actionTableData,
+        getRowId: (row) => row.action_id, // action_id is already a string
+        enableSorting: true,
+        enableColumnFilters: true,
+        enableColumnActions: true,
+        enableHiding: true,
+        enableRowActions: false,
+        enableRowSelection: false,
+        enableMultiRowSelection: false,
+    });
+
     const { data, setData, post, reset, processing, errors } = useForm({
         prediction_code: '',
         hive_state: '',
@@ -102,230 +381,112 @@ export default function Advisories({
     return (
         <>
             <Head title="Advisories" />
-            <div className="min-h-screen p-6 flex flex-col gap-5" style={{ backgroundColor: '#f8f9fa' }}>
+            <ThemeProvider theme={theme}>
+                <div className="min-h-screen p-6 flex flex-col gap-5" style={{ backgroundColor: '#f8f9fa' }}>
 
-                {/* Page heading */}
-                <div className="flex items-start justify-between gap-4">
-                    <div>
-                        <h1 className="text-2xl font-bold" style={{ color: '#0d1b2a' }}>Advisories</h1>
-                        <p className="text-sm text-gray-500 mt-1">
-                            {templates.length} template{templates.length !== 1 ? 's' : ''} · {advisories.length} advisor{advisories.length !== 1 ? 'ies' : 'y'} · {actions.length} triggered action{actions.length !== 1 ? 's' : ''}
-                        </p>
+                    {/* Page heading */}
+                    <div className="flex items-start justify-between gap-4">
+                        <div>
+                            <h1 className="text-2xl font-bold" style={{ color: '#0d1b2a' }}>Advisories</h1>
+                            <p className="text-sm text-gray-500 mt-1">
+                                {templates.length} template{templates.length !== 1 ? 's' : ''} · {advisories.length} advisor{advisories.length !== 1 ? 'ies' : 'y'} · {actions.length} triggered action{actions.length !== 1 ? 's' : ''}
+                            </p>
+                        </div>
+                        {tab === 'templates' && (
+                            <button
+                                onClick={() => setShowModal(true)}
+                                className="shrink-0 flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold hover:opacity-90 transition-opacity"
+                                style={{ backgroundColor: '#f5a623', color: '#0d1b2a' }}
+                            >
+                                <Plus className="w-4 h-4" /> Add Template
+                            </button>
+                        )}
                     </div>
-                    {tab === 'templates' && (
+
+                    {/* Tabs */}
+                    <div className="flex items-center gap-1 bg-white rounded-xl border border-gray-200 shadow-sm p-1 w-fit">
                         <button
-                            onClick={() => setShowModal(true)}
-                            className="shrink-0 flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold hover:opacity-90 transition-opacity"
-                            style={{ backgroundColor: '#f5a623', color: '#0d1b2a' }}
+                            onClick={() => setTab('templates')}
+                            className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-colors"
+                            style={tab === 'templates' ? { backgroundColor: '#0d1b2a', color: '#ffffff' } : { color: '#64748b' }}
                         >
-                            <Plus className="w-4 h-4" /> Add Template
+                            <MessageSquareWarning className="w-4 h-4" />
+                            Templates
+                            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full"
+                                style={tab === 'templates' ? { backgroundColor: '#f5a623', color: '#0d1b2a' } : { backgroundColor: '#f1f5f9', color: '#64748b' }}>
+                                {templates.length}
+                            </span>
                         </button>
+                        <button
+                            onClick={() => setTab('advisories')}
+                            className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-colors"
+                            style={tab === 'advisories' ? { backgroundColor: '#0d1b2a', color: '#ffffff' } : { color: '#64748b' }}
+                        >
+                            <ClipboardList className="w-4 h-4" />
+                            Advisories
+                            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full"
+                                style={tab === 'advisories' ? { backgroundColor: '#f5a623', color: '#0d1b2a' } : { backgroundColor: '#f1f5f9', color: '#64748b' }}>
+                                {advisories.length}
+                            </span>
+                        </button>
+                        <button
+                            onClick={() => setTab('actions')}
+                            className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-colors"
+                            style={tab === 'actions' ? { backgroundColor: '#0d1b2a', color: '#ffffff' } : { color: '#64748b' }}
+                        >
+                            <CheckSquare className="w-4 h-4" />
+                            Advisory Actions
+                            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full"
+                                style={tab === 'actions' ? { backgroundColor: '#f5a623', color: '#0d1b2a' } : { backgroundColor: '#f1f5f9', color: '#64748b' }}>
+                                {actions.length}
+                            </span>
+                        </button>
+                    </div>
+
+                    {/* ── Templates tab ── */}
+                    {tab === 'templates' && (
+                        templates.length === 0 ? (
+                            <EmptyState
+                                label="No advisory templates yet"
+                                hint="Add your first template to get started"
+                                onAdd={() => setShowModal(true)}
+                            />
+                        ) : (
+                            <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+                                <MaterialReactTable table={templateTable} />
+                            </div>
+                        )
+                    )}
+
+                    {/* ── Advisories tab ── */}
+                    {tab === 'advisories' && (
+                        advisories.length === 0 ? (
+                            <EmptyState
+                                label="No advisory actions yet"
+                                hint="Advisory actions are created per template and appear here"
+                            />
+                        ) : (
+                            <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+                                <MaterialReactTable table={advisoryTable} />
+                            </div>
+                        )
+                    )}
+
+                    {/* ── Advisory Actions tab ── */}
+                    {tab === 'actions' && (
+                        actions.length === 0 ? (
+                            <EmptyState
+                                label="No advisory actions triggered yet"
+                                hint="Actions are created automatically when an inference triggers an advisory"
+                            />
+                        ) : (
+                            <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+                                <MaterialReactTable table={actionTable} />
+                            </div>
+                        )
                     )}
                 </div>
-
-                {/* Tabs */}
-                <div className="flex items-center gap-1 bg-white rounded-xl border border-gray-200 shadow-sm p-1 w-fit">
-                    <button
-                        onClick={() => setTab('templates')}
-                        className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-colors"
-                        style={tab === 'templates' ? { backgroundColor: '#0d1b2a', color: '#ffffff' } : { color: '#64748b' }}
-                    >
-                        <MessageSquareWarning className="w-4 h-4" />
-                        Templates
-                        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full"
-                            style={tab === 'templates' ? { backgroundColor: '#f5a623', color: '#0d1b2a' } : { backgroundColor: '#f1f5f9', color: '#64748b' }}>
-                            {templates.length}
-                        </span>
-                    </button>
-                    <button
-                        onClick={() => setTab('advisories')}
-                        className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-colors"
-                        style={tab === 'advisories' ? { backgroundColor: '#0d1b2a', color: '#ffffff' } : { color: '#64748b' }}
-                    >
-                        <ClipboardList className="w-4 h-4" />
-                        Advisories
-                        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full"
-                            style={tab === 'advisories' ? { backgroundColor: '#f5a623', color: '#0d1b2a' } : { backgroundColor: '#f1f5f9', color: '#64748b' }}>
-                            {advisories.length}
-                        </span>
-                    </button>
-                    <button
-                        onClick={() => setTab('actions')}
-                        className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-colors"
-                        style={tab === 'actions' ? { backgroundColor: '#0d1b2a', color: '#ffffff' } : { color: '#64748b' }}
-                    >
-                        <CheckSquare className="w-4 h-4" />
-                        Advisory Actions
-                        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full"
-                            style={tab === 'actions' ? { backgroundColor: '#f5a623', color: '#0d1b2a' } : { backgroundColor: '#f1f5f9', color: '#64748b' }}>
-                            {actions.length}
-                        </span>
-                    </button>
-                </div>
-
-                {/* ── Templates tab ── */}
-                {tab === 'templates' && (
-                    templates.length === 0 ? (
-                        <EmptyState
-                            label="No advisory templates yet"
-                            hint="Add your first template to get started"
-                            onAdd={() => setShowModal(true)}
-                        />
-                    ) : (
-                        <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-x-auto">
-                            <table className="w-full text-sm">
-                                <thead>
-                                    <tr className="border-b border-gray-100 bg-gray-50">
-                                        {['Code', 'Hive State', 'Type', 'Severity', 'Min Confidence', 'Description', 'Created'].map((h) => (
-                                            <th key={h} className="text-left px-5 py-3 text-[10px] font-bold uppercase tracking-widest text-gray-400 whitespace-nowrap">{h}</th>
-                                        ))}
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {templates.map((t) => {
-                                        const sc = severityConfig[t.severity] ?? severityConfig.medium;
-                                        return (
-                                            <tr key={t.template_id} className="border-b border-gray-50 hover:bg-gray-50 transition-colors">
-                                                <td className="px-5 py-4 font-mono text-xs font-semibold whitespace-nowrap" style={{ color: '#0d1b2a' }}>
-                                                    #{t.prediction_code}
-                                                </td>
-                                                <td className="px-5 py-4 text-sm font-medium whitespace-nowrap" style={{ color: '#0d1b2a' }}>
-                                                    {t.hive_state}
-                                                </td>
-                                                <td className="px-5 py-4 text-xs text-gray-500 whitespace-nowrap">{t.advisory_type}</td>
-                                                <td className="px-5 py-4">
-                                                    <span className="text-[10px] font-bold px-2.5 py-1 rounded uppercase tracking-widest whitespace-nowrap"
-                                                        style={{ backgroundColor: sc.bg, color: sc.color }}>
-                                                        {sc.label}
-                                                    </span>
-                                                </td>
-                                                <td className="px-5 py-4 text-xs font-semibold tabular-nums whitespace-nowrap" style={{ color: '#0d1b2a' }}>
-                                                    {fmtPct(t.min_confidence_threshold)}
-                                                </td>
-                                                <td className="px-5 py-4 text-xs text-gray-500 max-w-xs">{t.description ?? '—'}</td>
-                                                <td className="px-5 py-4 text-xs text-gray-400 whitespace-nowrap">{fmtDate(t.created_at)}</td>
-                                            </tr>
-                                        );
-                                    })}
-                                </tbody>
-                            </table>
-                        </div>
-                    )
-                )}
-
-                {/* ── Advisories tab ── */}
-                {tab === 'advisories' && (
-                    advisories.length === 0 ? (
-                        <EmptyState
-                            label="No advisory actions yet"
-                            hint="Advisory actions are created per template and appear here"
-                        />
-                    ) : (
-                        <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-x-auto">
-                            <table className="w-full text-sm">
-                                <thead>
-                                    <tr className="border-b border-gray-100 bg-gray-50">
-                                        {['Hive State', 'Action Title', 'Description', 'Priority', 'Confidence Range', 'Order', 'Active', 'Created'].map((h) => (
-                                            <th key={h} className="text-left px-5 py-3 text-[10px] font-bold uppercase tracking-widest text-gray-400 whitespace-nowrap">{h}</th>
-                                        ))}
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {advisories.map((a) => {
-                                        const pc = priorityConfig[a.priority_level] ?? priorityConfig.medium;
-                                        return (
-                                            <tr key={a.advisory_id} className="border-b border-gray-50 hover:bg-gray-50 transition-colors">
-                                                <td className="px-5 py-4 text-sm font-medium whitespace-nowrap" style={{ color: '#0d1b2a' }}>
-                                                    {a.template?.hive_state ?? `#${a.template_id}`}
-                                                </td>
-                                                <td className="px-5 py-4 text-sm font-medium whitespace-nowrap" style={{ color: '#0d1b2a' }}>
-                                                    {a.action_title}
-                                                </td>
-                                                <td className="px-5 py-4 text-xs text-gray-500 max-w-sm">{a.action_description}</td>
-                                                <td className="px-5 py-4">
-                                                    <span className="text-[10px] font-bold px-2.5 py-1 rounded uppercase tracking-widest whitespace-nowrap"
-                                                        style={{ backgroundColor: pc.bg, color: pc.color }}>
-                                                        {pc.label}
-                                                    </span>
-                                                </td>
-                                                <td className="px-5 py-4 text-xs font-mono text-gray-500 whitespace-nowrap">
-                                                    {fmtPct(a.confidence_threshold_min)} – {fmtPct(a.confidence_threshold_max)}
-                                                </td>
-                                                <td className="px-5 py-4 text-xs tabular-nums text-gray-500">{a.action_order}</td>
-                                                <td className="px-5 py-4">
-                                                    <span className="text-[10px] font-bold px-2.5 py-1 rounded uppercase tracking-widest whitespace-nowrap"
-                                                        style={a.is_active
-                                                            ? { backgroundColor: '#f0fdf4', color: '#16a34a' }
-                                                            : { backgroundColor: '#f1f5f9', color: '#94a3b8' }}>
-                                                        {a.is_active ? 'Active' : 'Inactive'}
-                                                    </span>
-                                                </td>
-                                                <td className="px-5 py-4 text-xs text-gray-400 whitespace-nowrap">{fmtDate(a.created_at)}</td>
-                                            </tr>
-                                        );
-                                    })}
-                                </tbody>
-                            </table>
-                        </div>
-                    )
-                )}
-
-                {/* ── Advisory Actions tab ── */}
-                {tab === 'actions' && (
-                    actions.length === 0 ? (
-                        <EmptyState
-                            label="No advisory actions triggered yet"
-                            hint="Actions are created automatically when an inference triggers an advisory"
-                        />
-                    ) : (
-                        <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-x-auto">
-                            <table className="w-full text-sm">
-                                <thead>
-                                    <tr className="border-b border-gray-100 bg-gray-50">
-                                        {['Hive', 'Action Title', 'Description', 'Priority', 'Confidence', 'Status', 'Completed', 'Created'].map((h) => (
-                                            <th key={h} className="text-left px-5 py-3 text-[10px] font-bold uppercase tracking-widest text-gray-400 whitespace-nowrap">{h}</th>
-                                        ))}
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {actions.map((a) => {
-                                        const pc = priorityConfig[a.priority_level] ?? priorityConfig.medium;
-                                        const sc = statusConfig[a.status] ?? statusConfig.pending;
-                                        return (
-                                            <tr key={a.action_id} className="border-b border-gray-50 hover:bg-gray-50 transition-colors">
-                                                <td className="px-5 py-4 text-sm font-medium whitespace-nowrap" style={{ color: '#0d1b2a' }}>
-                                                    {a.hive?.hive_name ?? a.hive?.hive_location ?? '—'}
-                                                </td>
-                                                <td className="px-5 py-4 text-sm font-medium whitespace-nowrap" style={{ color: '#0d1b2a' }}>
-                                                    {a.action_title}
-                                                </td>
-                                                <td className="px-5 py-4 text-xs text-gray-500 max-w-sm">{a.action_description}</td>
-                                                <td className="px-5 py-4">
-                                                    <span className="text-[10px] font-bold px-2.5 py-1 rounded uppercase tracking-widest whitespace-nowrap"
-                                                        style={{ backgroundColor: pc.bg, color: pc.color }}>
-                                                        {pc.label}
-                                                    </span>
-                                                </td>
-                                                <td className="px-5 py-4 text-xs font-semibold tabular-nums whitespace-nowrap" style={{ color: '#0d1b2a' }}>
-                                                    {fmtPct(a.confidence_score)}
-                                                </td>
-                                                <td className="px-5 py-4">
-                                                    <span className="text-[10px] font-bold px-2.5 py-1 rounded uppercase tracking-widest whitespace-nowrap"
-                                                        style={{ backgroundColor: sc.bg, color: sc.color }}>
-                                                        {sc.label}
-                                                    </span>
-                                                </td>
-                                                <td className="px-5 py-4 text-xs text-gray-400 whitespace-nowrap">{fmtDate(a.completed_at)}</td>
-                                                <td className="px-5 py-4 text-xs text-gray-400 whitespace-nowrap">{fmtDate(a.created_at)}</td>
-                                            </tr>
-                                        );
-                                    })}
-                                </tbody>
-                            </table>
-                        </div>
-                    )
-                )}
-            </div>
+            </ThemeProvider>
 
             {/* Add Template Modal */}
             {showModal && (

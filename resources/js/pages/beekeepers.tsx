@@ -1,7 +1,7 @@
 ﻿import { Head, router, useForm } from '@inertiajs/react';
 import { Download, Edit2, Eye, UserPlus, X } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
-import { MaterialReactTable, useMaterialReactTable, type MRT_ColumnDef, type MRT_SortingState, type MRT_ColumnFiltersState, type MRT_VisibilityState, type MRT_RowSelectionState } from 'material-react-table';
+import { MaterialReactTable, useMaterialReactTable, type MRT_ColumnDef } from 'material-react-table';
 import { MenuItem } from '@mui/material';
 import { createTheme, ThemeProvider } from '@mui/material/styles';
 
@@ -280,8 +280,10 @@ function ViewBeekeeperModal({ beekeeper, onClose }: { beekeeper: Beekeeper; onCl
 // ── Shared modal shell ───────────────────────────────────────────────────
 function ModalShell({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
     useEffect(() => {
-        document.body.classList.add('overflow-hidden');
-        return () => document.body.classList.remove('overflow-hidden');
+        if (typeof window !== 'undefined') {
+            document.body.classList.add('overflow-hidden');
+            return () => document.body.classList.remove('overflow-hidden');
+        }
     }, []);
 
     return (
@@ -328,8 +330,10 @@ export default function Beekeepers({
     search?: string;
 }) {
     // Debug: Check beekeepers reference stability
-    console.log('beekeepers reference same:', beekeepers === (window as any).__lastBeekeepers);
-    (window as any).__lastBeekeepers = beekeepers;
+    if (typeof window !== 'undefined') {
+        console.log('beekeepers reference same:', beekeepers === (window as any).__lastBeekeepers);
+        (window as any).__lastBeekeepers = beekeepers;
+    }
     
     const [showAddModal, setShowAddModal] = useState(false);
     const [viewTarget, setViewTarget]     = useState<Beekeeper | null>(null);
@@ -337,12 +341,7 @@ export default function Beekeepers({
     const [revokeTarget, setRevokeTarget]     = useState<Beekeeper | null>(null);
     const [restoreTarget, setRestoreTarget]   = useState<Beekeeper | null>(null);
     
-    // MRT State
-    const [sorting, setSorting] = useState<MRT_SortingState>([]);
-    const [columnFilters, setColumnFilters] = useState<MRT_ColumnFiltersState>([]);
-    const [columnVisibility, setColumnVisibility] = useState<MRT_VisibilityState>({});
-    const [rowSelection, setRowSelection] = useState<MRT_RowSelectionState>({});
-    const [globalFilter, setGlobalFilter] = useState<string>('');
+    // No extra MRT state needed - let MRT handle it internally
 
     // Revoke logic
     const { patch: revokePatch, processing: revoking } = useForm({});
@@ -491,36 +490,9 @@ export default function Beekeepers({
         enableColumnActions: true,
         enableHiding: true,
         enableRowActions: true,
+        enableRowSelection: false,
+        enableMultiRowSelection: false,
         positionActionsColumn: 'last',
-        manualSorting: false,
-        manualFiltering: false,
-        state: {
-            sorting,
-            columnFilters,
-            columnVisibility,
-            rowSelection,
-            globalFilter,
-        },
-        onSortingChange: (updater) => {
-            console.log('onSortingChange called:', updater);
-            setSorting(updater);
-        },
-        onColumnFiltersChange: (updater) => {
-            console.log('onColumnFiltersChange called:', updater);
-            setColumnFilters(updater);
-        },
-        onColumnVisibilityChange: (updater) => {
-            console.log('onColumnVisibilityChange called:', updater);
-            setColumnVisibility(updater);
-        },
-        onRowSelectionChange: (updater) => {
-            console.log('onRowSelectionChange called:', updater);
-            setRowSelection(updater);
-        },
-        onGlobalFilterChange: (updater) => {
-            console.log('onGlobalFilterChange called:', updater);
-            setGlobalFilter(updater);
-        },
         renderRowActionMenuItems: ({ closeMenu, row }) => [
             <MenuItem
                 key="view"
