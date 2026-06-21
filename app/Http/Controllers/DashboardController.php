@@ -6,9 +6,9 @@ use App\Models\Alerts;
 use App\Models\AudioSource;
 use App\Models\Beehive;
 use App\Models\Inference;
-use App\Models\SystemLog;
 use App\Models\User;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
 class DashboardController extends Controller
@@ -23,21 +23,26 @@ class DashboardController extends Controller
         $hivesThisMonth  = Beehive::whereMonth('created_at', $now->month)
                                   ->whereYear('created_at', $now->year)
                                   ->count();
-        $totalBeekeepers = User::whereIn('role', ['farmer', 'farmer_pending'])->count();
-        $activeAlerts    = Alerts::whereNotIn('action_status', ['resolved', 'dismissed'])->count();
+        $totalBeekeepers     = User::whereIn('role', ['farmer', 'farmer_pending'])->count();
+        $beekeepersThisMonth = User::whereIn('role', ['farmer', 'farmer_pending'])
+                                   ->whereMonth('created_at', $now->month)
+                                   ->whereYear('created_at', $now->year)
+                                   ->count();
+        $activeAlerts    = Alerts::whereDate('created_at', $today)
+                                 ->whereNotIn('action_status', ['resolved', 'dismissed'])->count();
         $alertsYesterday = Alerts::whereDate('created_at', $now->copy()->subDay()->toDateString())
                                  ->whereNotIn('action_status', ['resolved', 'dismissed'])
                                  ->count();
-        $recordingsToday = AudioSource::whereDate('captured_at', $today)->count();
-        $recordingsYest  = AudioSource::whereDate('captured_at', Carbon::yesterday()->toDateString())->count();
+        $recordingsToday = AudioSource::whereDate('created_at', $today)->count();
+        $recordingsYest  = AudioSource::whereDate('created_at', Carbon::yesterday()->toDateString())->count();
         $needAttention   = Alerts::whereNotIn('action_status', ['resolved', 'dismissed'])
                                  ->whereIn('severity_level', ['critical', 'high'])
                                  ->count();
 
-        // ── Top 5 hives with latest inference (LATERAL join) ───────
+        // ── Top 5 most recently updated hives with latest inference (LATERAL join) ───────
         $hivesRaw = DB::select("
             SELECT
-                b.hive_id, b.hive_name, b.hive_type, b.hive_location,
+                b.hive_id, b.hive_name, b.hive_type, b.hive_location, b.updated_at,
                 COALESCE(ir.hive_state, 'unknown') AS hive_state,
                 ir.confidence_score
             FROM hives b
@@ -47,7 +52,8 @@ class DashboardController extends Controller
                 WHERE hive_id = b.hive_id
                 ORDER BY analyzed_at DESC LIMIT 1
             ) ir ON true
-            ORDER BY b.created_at DESC LIMIT 5
+            WHERE b.deleted_at IS NULL
+            ORDER BY b.updated_at DESC LIMIT 5
         ");
         $hivesList = collect($hivesRaw)->map(fn($h) => [
             'id'         => $h->hive_id,
@@ -57,6 +63,7 @@ class DashboardController extends Controller
             'hive_state' => $h->hive_state,
             'confidence' => $h->confidence_score !== null
                                 ? round((float) $h->confidence_score * 100) : null,
+            'updated_at' => Carbon::parse($h->updated_at)->toIso8601String(),
         ])->values();
 
         // ── Hive state breakdown for donut — one bucket per real hive_state ──
@@ -69,6 +76,7 @@ class DashboardController extends Controller
                 SELECT hive_state FROM inference_results
                 WHERE hive_id = b.hive_id ORDER BY analyzed_at DESC LIMIT 1
             ) ir ON true
+            WHERE b.deleted_at IS NULL
             GROUP BY category
         ");
         $hiveCategories = [];
@@ -141,28 +149,19 @@ class DashboardController extends Controller
             return $entry;
         })->values();
 
-        // ── System logs (last 6) ───────────────────────────────────
-        $systemLogs = SystemLog::latest('created_at')
-            ->take(6)
-            ->get()
-            ->map(fn($l) => [
-                'level'      => strtoupper($l->level),
-                'message'    => $l->message,
-                'created_at' => $l->created_at?->format('H:i'),
-            ]);
-
         return inertia('dashboard', [
             'stats' => [
                 'total_hives'          => $totalHives,
                 'hives_this_month'     => $hivesThisMonth,
                 'total_beekeepers'     => $totalBeekeepers,
+                'beekeepers_this_month' => $beekeepersThisMonth,
                 'active_alerts'        => $activeAlerts,
                 'alerts_yesterday'     => $alertsYesterday,
                 'recordings_today'     => $recordingsToday,
                 'recordings_yesterday' => $recordingsYest,
                 'need_attention'       => $needAttention,
             ],
-            'greeting_name'          => ($authUser = auth()->user()) && $authUser->full_name
+            'greeting_name'          => ($authUser = Auth::user()) && $authUser->full_name
                                           ? explode(' ', $authUser->full_name)[0]
                                           : 'Admin',
             'hives_list'             => $hivesList,
@@ -172,7 +171,6 @@ class DashboardController extends Controller
             'recordings_weekly'      => $recordingsWeekly,
             'recordings_monthly'     => $recordingsMonthly,
             'recording_states'      => $recordingStates,
-            'system_logs'            => $systemLogs,
         ]);
     }
 }

@@ -17,11 +17,11 @@ class UpdateBeekeeperRequest extends FormRequest
         $userId = $this->route('beekeeper')?->getKey();
 
         return [
-            'name'     => ['required', 'string', 'max:100'],
-            'email'    => ['nullable', 'email', 'max:100', Rule::unique('users', 'email')->ignore($userId, 'user_id')],
-            'phone'    => ['required', 'string', 'max:20', Rule::unique('users', 'phone')->ignore($userId, 'user_id')],
-            'address'  => ['nullable', 'string'],
-            'password' => ['nullable', 'string', 'min:4'],
+            'full_name' => ['required', 'string', 'max:100'],
+            'email'     => ['nullable', 'email', 'max:100', Rule::unique('users', 'email')->ignore($userId, 'user_id')],
+            'phone'     => ['required', 'string', 'max:20', Rule::unique('users', 'phone')->ignore($userId, 'user_id')],
+            'address'   => ['nullable', 'string'],
+            'password'  => ['nullable', 'string', 'min:4'],
         ];
     }
 }

@@ -1,7 +1,7 @@
 import { Head, router, useForm } from '@inertiajs/react';
 import AppLayout from '@/layouts/app-layout';
 import React, { useState, useMemo } from 'react';
-import { X } from 'lucide-react';
+import { FileBarChart2, FlaskConical, Hexagon, X } from 'lucide-react';
 import { type MRT_ColumnDef } from 'material-react-table';
 import { DataTable } from '@/components/data-table';
 
@@ -40,12 +40,259 @@ type Stats = {
     swarm_count: number;
 };
 
+type GrowthPoint = { label: string; beekeepers: number; hives: number };
+type HiveCategories = Record<string, number>;
+
+type ConfidencePoint = { t: string | null; confidence: number; latency: number | null };
+type ConfidenceStats = {
+    min_confidence: number | null;
+    max_confidence: number | null;
+    min_latency: number | null;
+    max_latency: number | null;
+};
+type ConfidenceRange = '1h' | '24h' | '7d';
+
 type Props = {
     inferences: Paginator;
     beehives: Beehive[];
     stats: Stats;
     filters: { state: string; search: string };
+    growth_weekly: GrowthPoint[];
+    growth_yearly: GrowthPoint[];
+    hive_categories: HiveCategories;
+    confidence_series: ConfidencePoint[];
+    confidence_stats: ConfidenceStats;
+    confidence_range: ConfidenceRange;
 };
+
+// ── Hive status donut (mirrors dashboard.tsx) ──────────────────────
+const DONUT_STATE_META: Record<string, { label: string; color: string }> = {
+    normal:           { label: 'Normal',           color: '#3d7a3d' },
+    pre_swarm:        { label: 'Pre-Swarm',         color: '#d97706' },
+    swarm:            { label: 'Swarm',             color: '#dc2626' },
+    abscondment:      { label: 'Abscondment',       color: '#7c3aed' },
+    missing_queen:    { label: 'Missing Queen',     color: '#ea580c' },
+    queenbee_present: { label: 'Queenbee Present',  color: '#16a34a' },
+    pest_infested:    { label: 'Pest Infested',     color: '#ea580c' },
+    external_noise:   { label: 'External Noise',    color: '#2563eb' },
+    uncertain:        { label: 'Uncertain',         color: '#64748b' },
+    unknown:          { label: 'Unknown',           color: '#94a3b8' },
+};
+function donutMeta(state: string) {
+    return DONUT_STATE_META[state] ?? {
+        label: state.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()),
+        color: '#94a3b8',
+    };
+}
+
+function polar(cx: number, cy: number, r: number, deg: number) {
+    const rad = ((deg - 90) * Math.PI) / 180;
+    return { x: cx + r * Math.cos(rad), y: cy + r * Math.sin(rad) };
+}
+function donutArc(cx: number, cy: number, outerR: number, innerR: number, startDeg: number, endDeg: number) {
+    const gap = 2; const s = startDeg + gap / 2; const e = endDeg - gap / 2;
+    if (e <= s) return '';
+    const o1 = polar(cx, cy, outerR, s), o2 = polar(cx, cy, outerR, e);
+    const i1 = polar(cx, cy, innerR, e), i2 = polar(cx, cy, innerR, s);
+    const large = e - s > 180 ? 1 : 0;
+    return [
+        `M ${o1.x.toFixed(2)} ${o1.y.toFixed(2)}`,
+        `A ${outerR} ${outerR} 0 ${large} 1 ${o2.x.toFixed(2)} ${o2.y.toFixed(2)}`,
+        `L ${i1.x.toFixed(2)} ${i1.y.toFixed(2)}`,
+        `A ${innerR} ${innerR} 0 ${large} 0 ${i2.x.toFixed(2)} ${i2.y.toFixed(2)}`, 'Z',
+    ].join(' ');
+}
+
+function HiveStatusDonut({ categories }: { categories: HiveCategories }) {
+    const entries = Object.entries(categories);
+    const total   = entries.reduce((sum, [, count]) => sum + count, 0);
+    const cx = 80, cy = 80, outerR = 68, innerR = 42;
+    let cursor = 0;
+    const arcs = entries.map(([key, count]) => {
+        const sweep = total > 0 ? (count / total) * 360 : 0;
+        const path  = donutArc(cx, cy, outerR, innerR, cursor, cursor + sweep);
+        cursor += sweep;
+        return { key, path };
+    });
+    return (
+        <svg viewBox="0 0 160 160" className="w-full h-full">
+            {total === 0
+                ? <circle cx={cx} cy={cy} r={outerR} fill="none" stroke="#e5e7eb" strokeWidth={outerR - innerR} />
+                : arcs.map((arc) => arc.path ? <path key={arc.key} d={arc.path} fill={donutMeta(arc.key).color} /> : null)
+            }
+        </svg>
+    );
+}
+
+// ── Growth trends line chart ────────────────────────────────────────
+function GrowthLineChart({ data }: { data: GrowthPoint[] }) {
+    const width = 640, height = 220, padX = 30, padY = 24;
+    const maxVal = Math.max(...data.map((d) => Math.max(d.beekeepers, d.hives)), 1);
+    const innerW = width - padX * 2;
+    const innerH = height - padY * 2;
+    const stepX  = data.length > 1 ? innerW / (data.length - 1) : 0;
+
+    const pointsFor = (key: 'beekeepers' | 'hives') =>
+        data.map((d, i) => ({
+            x: padX + i * stepX,
+            y: padY + innerH - (d[key] / maxVal) * innerH,
+            value: d[key],
+        }));
+
+    const toPath = (pts: { x: number; y: number }[]) =>
+        pts.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(' ');
+
+    const beekeeperPts = pointsFor('beekeepers');
+    const hivePts      = pointsFor('hives');
+    const gridLines    = [0, 0.25, 0.5, 0.75, 1];
+
+    return (
+        <svg viewBox={`0 0 ${width} ${height + 24}`} className="w-full h-auto">
+            {/* Grid lines + Y labels */}
+            {gridLines.map((g) => {
+                const y = padY + innerH - g * innerH;
+                return (
+                    <g key={g}>
+                        <line x1={padX} y1={y} x2={width - padX} y2={y} stroke="#f1f5f9" strokeWidth={1} />
+                        <text x={2} y={y + 3} fontSize={9} fill="#9ca3af">{Math.round(maxVal * g)}</text>
+                    </g>
+                );
+            })}
+
+            {/* Hives area + line (amber) */}
+            <path d={toPath(hivePts)} fill="none" stroke="#f5a623" strokeWidth={2} />
+            {hivePts.map((p, i) => <circle key={i} cx={p.x} cy={p.y} r={3} fill="#f5a623" />)}
+
+            {/* Beekeepers line (navy) */}
+            <path d={toPath(beekeeperPts)} fill="none" stroke="#0d1b2a" strokeWidth={2} />
+            {beekeeperPts.map((p, i) => <circle key={i} cx={p.x} cy={p.y} r={3} fill="#0d1b2a" />)}
+
+            {/* X labels */}
+            {data.map((d, i) => (
+                <text key={d.label} x={padX + i * stepX} y={height + 18} fontSize={9} fill="#9ca3af" textAnchor="middle">
+                    {d.label}
+                </text>
+            ))}
+        </svg>
+    );
+}
+
+// ── Confidence / latency over time chart ───────────────────────────
+function ConfidenceLatencyChart({ data }: { data: ConfidencePoint[] }) {
+    const width = 640, height = 220, padX = 30, padY = 24;
+    const innerW = width - padX * 2;
+    const innerH = height - padY * 2;
+    const [hovered, setHovered] = useState<number | null>(null);
+
+    if (data.length === 0) {
+        return (
+            <div className="flex items-center justify-center text-sm text-gray-400" style={{ height }}>
+                No inference data in this range.
+            </div>
+        );
+    }
+
+    const stepX = data.length > 1 ? innerW / (data.length - 1) : 0;
+    const maxLatency = Math.max(...data.map((d) => d.latency ?? 0), 1);
+
+    // Confidence is 0–1, plotted directly as a percentage of chart height.
+    const confidencePts = data.map((d, i) => ({
+        x: padX + i * stepX,
+        y: padY + innerH - d.confidence * innerH,
+    }));
+    // Latency is in ms with its own scale — normalized against this range's own max so both fit the same chart.
+    const latencyPts = data
+        .map((d, i) => (d.latency == null ? null : { x: padX + i * stepX, y: padY + innerH - (d.latency / maxLatency) * innerH }))
+        .filter((p): p is { x: number; y: number } => p !== null);
+
+    const toPath = (pts: { x: number; y: number }[]) =>
+        pts.map((p, i) => `${i === 0 ? 'M' : 'L'} ${p.x.toFixed(1)} ${p.y.toFixed(1)}`).join(' ');
+
+    const areaPath = `${toPath(confidencePts)} L ${confidencePts[confidencePts.length - 1].x.toFixed(1)} ${padY + innerH} L ${confidencePts[0].x.toFixed(1)} ${padY + innerH} Z`;
+    const gridLines = [0, 0.25, 0.5, 0.75, 1];
+    const labelStep = Math.max(1, Math.ceil(data.length / 6));
+
+    return (
+        <svg viewBox={`0 0 ${width} ${height + 24}`} className="w-full h-auto">
+            {/* Grid lines + confidence % labels */}
+            {gridLines.map((g) => {
+                const y = padY + innerH - g * innerH;
+                return (
+                    <g key={g}>
+                        <line x1={padX} y1={y} x2={width - padX} y2={y} stroke="#f1f5f9" strokeWidth={1} />
+                        <text x={2} y={y + 3} fontSize={9} fill="#9ca3af">{Math.round(g * 100)}%</text>
+                    </g>
+                );
+            })}
+
+            {/* Confidence area + line (navy, solid) */}
+            <path d={areaPath} fill="#fdebd0" opacity={0.6} />
+            <path d={toPath(confidencePts)} fill="none" stroke="#0d1b2a" strokeWidth={2} />
+
+            {/* Latency line (amber, dotted) */}
+            <path d={toPath(latencyPts)} fill="none" stroke="#f5a623" strokeWidth={2} strokeDasharray="4 3" />
+
+            {/* X labels */}
+            {data.map((d, i) => (
+                i % labelStep === 0 ? (
+                    <text key={i} x={padX + i * stepX} y={height + 18} fontSize={9} fill="#9ca3af" textAnchor="middle">
+                        {d.t ? new Date(d.t).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' }) : ''}
+                    </text>
+                ) : null
+            ))}
+
+            {/* Hover guideline + markers */}
+            {hovered !== null && (
+                <>
+                    <line x1={confidencePts[hovered].x} y1={padY} x2={confidencePts[hovered].x} y2={padY + innerH}
+                        stroke="#cbd5e1" strokeWidth={1} strokeDasharray="3 3" />
+                    <circle cx={confidencePts[hovered].x} cy={confidencePts[hovered].y} r={4} fill="#0d1b2a" stroke="#fff" strokeWidth={1.5} />
+                    {data[hovered].latency != null && (
+                        <circle
+                            cx={padX + hovered * stepX}
+                            cy={padY + innerH - ((data[hovered].latency as number) / maxLatency) * innerH}
+                            r={4} fill="#f5a623" stroke="#fff" strokeWidth={1.5}
+                        />
+                    )}
+                </>
+            )}
+
+            {/* Invisible hit areas — one per data point, full chart height */}
+            {data.map((_, i) => (
+                <rect
+                    key={i}
+                    x={padX + i * stepX - stepX / 2}
+                    y={0}
+                    width={stepX || innerW}
+                    height={height}
+                    fill="transparent"
+                    onMouseEnter={() => setHovered(i)}
+                    onMouseLeave={() => setHovered(null)}
+                />
+            ))}
+
+            {/* Tooltip */}
+            {hovered !== null && (() => {
+                const boxW = 124, boxH = 54;
+                const px = confidencePts[hovered].x;
+                const boxX = Math.min(Math.max(px - boxW / 2, 2), width - boxW - 2);
+                const boxY = 2;
+                const d = data[hovered];
+                return (
+                    <foreignObject x={boxX} y={boxY} width={boxW} height={boxH} style={{ pointerEvents: 'none' }}>
+                        <div className="bg-gray-900 text-white text-[10px] leading-snug rounded-lg p-2 shadow-lg">
+                            <p className="text-gray-300">
+                                {d.t ? new Date(d.t).toLocaleString('en-GB', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' }) : ''}
+                            </p>
+                            <p>Confidence: <span className="font-semibold">{(d.confidence * 100).toFixed(1)}%</span></p>
+                            <p>Latency: <span className="font-semibold">{d.latency != null ? `${d.latency.toFixed(1)}ms` : '—'}</span></p>
+                        </div>
+                    </foreignObject>
+                );
+            })()}
+        </svg>
+    );
+}
 
 const STATE_COLORS: Record<string, { bg: string; text: string }> = {
     // DB values (lowercase / snake_case)
@@ -85,17 +332,21 @@ function shortId(id: string | null) {
     return id.slice(0, 8) + '…';
 }
 
-function getPageNumbers(current: number, last: number): (number | '…')[] {
-    if (last <= 7) return Array.from({ length: last }, (_, i) => i + 1);
-    if (current <= 4) return [1, 2, 3, 4, 5, '…', last];
-    if (current >= last - 3) return [1, '…', last - 4, last - 3, last - 2, last - 1, last];
-    return [1, '…', current - 1, current, current + 1, '…', last];
-}
-
-export default function Inferences({ inferences, beehives = [], stats, filters }: Props) {
+export default function Inferences({
+    inferences, beehives = [], stats, filters, growth_weekly, growth_yearly, hive_categories,
+    confidence_series, confidence_stats, confidence_range,
+}: Props) {
     const [search, setSearch]       = useState(filters?.search ?? '');
     const [stateFilter, setStateFilter] = useState(filters?.state ?? '');
     const [showModal, setShowModal] = useState(false);
+    const [tab, setTab] = useState<'reports' | 'ml-results'>('reports');
+    const [growthRange, setGrowthRange] = useState<'weekly' | 'yearly'>('yearly');
+    const growthData = growthRange === 'weekly' ? growth_weekly : growth_yearly;
+    const donutTotal = Object.values(hive_categories).reduce((sum, n) => sum + n, 0);
+
+    function setConfidenceRange(range: ConfidenceRange) {
+        router.get('/analytics', { search, state: stateFilter, confidence_range: range }, { preserveState: true, preserveScroll: true });
+    }
 
     const columns = useMemo<MRT_ColumnDef<Inference>[]>(() => [
         {
@@ -223,19 +474,7 @@ export default function Inferences({ inferences, beehives = [], stats, filters }
         }, { preserveScroll: true, preserveState: true });
     }
 
-    function goToPage(url: string | null) {
-        if (url) router.visit(url, { preserveScroll: true });
-    }
-
-    function goToPageNum(page: number) {
-        router.get('/analytics', { search, state: stateFilter, page }, { preserveScroll: true });
-    }
-
-    const rows    = inferences?.data ?? [];
-    const from    = ((inferences?.current_page ?? 1) - 1) * (inferences?.per_page ?? 10) + 1;
-    const to      = Math.min((inferences?.current_page ?? 1) * (inferences?.per_page ?? 10), inferences?.total ?? 0);
-    const pages   = getPageNumbers(inferences?.current_page ?? 1, inferences?.last_page ?? 1);
-    const uniqueStates = [...new Set(rows.map((r) => r.hive_state))].sort();
+    const rows = inferences?.data ?? [];
 
     const handleExportCSV = () => {
         const header = [
@@ -413,31 +652,191 @@ export default function Inferences({ inferences, beehives = [], stats, filters }
                 {/* ── Page heading ── */}
                 <div className="flex items-start justify-between gap-4 flex-wrap">
                     <div>
-                        <h1 className="text-2xl font-bold" style={{ color: '#0d1b2a' }}>ML Inference Results</h1>
-                        <p className="text-sm text-gray-500 mt-1">
-                            Audio classification results from the hive monitoring ML engine.
-                        </p>
+                        {tab === 'reports' ? (
+                            <>
+                                <h1 className="text-2xl font-bold" style={{ color: '#0d1b2a' }}>Reports</h1>
+                                <p className="text-sm text-gray-500 mt-1">
+                                    Summary and trend reports across hive monitoring activity.
+                                </p>
+                            </>
+                        ) : (
+                            <>
+                                <h1 className="text-2xl font-bold" style={{ color: '#0d1b2a' }}>ML Inference Results</h1>
+                                <p className="text-sm text-gray-500 mt-1">
+                                    Audio classification results from the hive monitoring ML engine.
+                                </p>
+                            </>
+                        )}
                     </div>
-                    <div className="flex items-center gap-3 flex-wrap">
-                        <button
-                            onClick={() => setShowModal(true)}
-                            className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold hover:opacity-90 transition-opacity"
-                            style={{ backgroundColor: '#0d1b2a', color: 'white' }}
-                        >
-                            + Log Inference
-                        </button>
-                        <button
-                            onClick={handleExportCSV}
-                            className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold hover:opacity-90 transition-opacity"
-                            style={{ backgroundColor: '#f5a623', color: '#0d1b2a' }}
-                        >
-                            <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                                <path strokeLinecap="round" strokeLinejoin="round" d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
-                            </svg>
-                            Export CSV
-                        </button>
-                    </div>
+                    {tab === 'ml-results' && (
+                        <div className="flex items-center gap-3 flex-wrap">
+                            <button
+                                onClick={() => setShowModal(true)}
+                                className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold hover:opacity-90 transition-opacity"
+                                style={{ backgroundColor: '#0d1b2a', color: 'white' }}
+                            >
+                                + Log Inference
+                            </button>
+                            <button
+                                onClick={handleExportCSV}
+                                className="flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold hover:opacity-90 transition-opacity"
+                                style={{ backgroundColor: '#f5a623', color: '#0d1b2a' }}
+                            >
+                                <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                                    <path strokeLinecap="round" strokeLinejoin="round" d="M3 10h18M3 14h18m-9-4v8m-7 0h14a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
+                                </svg>
+                                Export CSV
+                            </button>
+                        </div>
+                    )}
                 </div>
+
+                {/* ── Tabs ── */}
+                <div className="flex items-center gap-1 bg-white rounded-xl border border-gray-200 shadow-sm p-1 w-fit">
+                    <button
+                        onClick={() => setTab('reports')}
+                        className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-colors"
+                        style={tab === 'reports' ? { backgroundColor: '#0d1b2a', color: '#ffffff' } : { color: '#64748b' }}
+                    >
+                        <FileBarChart2 className="w-4 h-4" />
+                        Reports
+                    </button>
+                    <button
+                        onClick={() => setTab('ml-results')}
+                        className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-colors"
+                        style={tab === 'ml-results' ? { backgroundColor: '#0d1b2a', color: '#ffffff' } : { color: '#64748b' }}
+                    >
+                        <FlaskConical className="w-4 h-4" />
+                        ML Results
+                    </button>
+                </div>
+
+                {tab === 'reports' && (
+                    <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
+
+                        {/* Growth trends */}
+                        <div className="lg:col-span-3 bg-white rounded-xl border border-gray-200 shadow-sm p-5">
+                            <div className="flex items-center justify-between gap-4 flex-wrap mb-2">
+                                <div>
+                                    <p className="font-bold text-sm uppercase tracking-wide" style={{ color: '#0d1b2a' }}>
+                                        Beehive Management System: Growth Trends
+                                    </p>
+                                    <p className="text-xs text-gray-400 mt-0.5">Cumulative beekeepers and hives over time.</p>
+                                </div>
+                                <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1 shrink-0">
+                                    <button
+                                        onClick={() => setGrowthRange('weekly')}
+                                        className="px-3 py-1.5 rounded-md text-xs font-semibold transition-colors"
+                                        style={growthRange === 'weekly' ? { backgroundColor: '#ffffff', color: '#0d1b2a', boxShadow: '0 1px 2px rgba(0,0,0,0.06)' } : { color: '#6b7280' }}
+                                    >
+                                        Weekly
+                                    </button>
+                                    <button
+                                        onClick={() => setGrowthRange('yearly')}
+                                        className="px-3 py-1.5 rounded-md text-xs font-semibold transition-colors"
+                                        style={growthRange === 'yearly' ? { backgroundColor: '#ffffff', color: '#0d1b2a', boxShadow: '0 1px 2px rgba(0,0,0,0.06)' } : { color: '#6b7280' }}
+                                    >
+                                        Yearly
+                                    </button>
+                                </div>
+                            </div>
+
+                            <GrowthLineChart data={growthData} />
+
+                            <div className="flex items-center gap-4 mt-2 pt-3 border-t border-gray-100">
+                                <div className="flex items-center gap-2">
+                                    <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: '#0d1b2a' }} />
+                                    <span className="text-xs text-gray-500">Beekeepers Joining</span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: '#f5a623' }} />
+                                    <span className="text-xs text-gray-500">New Bee Hives Registered</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Hive status donut — matches dashboard's "Current Hive Status Distribution" card */}
+                        <div className="lg:col-span-2 bg-white rounded-xl border border-gray-200 shadow-sm p-5 flex flex-col">
+                            <div className="flex items-center gap-2 mb-4">
+                                <Hexagon className="w-4 h-4 text-gray-400" />
+                                <span className="font-semibold text-sm" style={{ color: '#0d1b2a' }}>Current Hive Status Distribution</span>
+                            </div>
+                            <div className="flex-1 flex items-center justify-center gap-8">
+                                <div className="w-56 h-56 shrink-0"><HiveStatusDonut categories={hive_categories} /></div>
+                                <div className="flex flex-col gap-3">
+                                    {Object.entries(hive_categories)
+                                        .sort(([, a], [, b]) => b - a)
+                                        .map(([key, count]) => (
+                                            <div key={key} className="flex items-center gap-2">
+                                                <span className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: donutMeta(key).color }} />
+                                                <span className="text-sm text-gray-600">{donutMeta(key).label}</span>
+                                                <span className="text-sm font-semibold ml-auto pl-4" style={{ color: '#0d1b2a' }}>{count}</span>
+                                            </div>
+                                        ))}
+                                    {donutTotal === 0 && <p className="text-xs text-gray-400">No hives yet</p>}
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Confidence / Latency over time */}
+                        <div className="lg:col-span-3 bg-white rounded-xl border border-gray-200 shadow-sm p-5">
+                            <div className="flex items-center justify-between gap-4 flex-wrap mb-2">
+                                <div>
+                                    <p className="font-bold text-sm uppercase tracking-wide" style={{ color: '#0d1b2a' }}>
+                                        Confidence &amp; Latency Over Time
+                                    </p>
+                                    <p className="text-xs text-gray-400 mt-0.5">Prediction confidence and processing latency across recent inferences.</p>
+                                </div>
+                                <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1 shrink-0">
+                                    {(['1h', '24h', '7d'] as ConfidenceRange[]).map((r) => (
+                                        <button
+                                            key={r}
+                                            onClick={() => setConfidenceRange(r)}
+                                            className="px-3 py-1.5 rounded-md text-xs font-semibold transition-colors uppercase"
+                                            style={confidence_range === r ? { backgroundColor: '#0d1b2a', color: '#ffffff' } : { color: '#6b7280' }}
+                                        >
+                                            {r}
+                                        </button>
+                                    ))}
+                                </div>
+                            </div>
+
+                            <ConfidenceLatencyChart data={confidence_series} />
+
+                            <div className="flex items-center gap-4 mt-2 pt-3 border-t border-gray-100">
+                                <div className="flex items-center gap-2">
+                                    <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: '#0d1b2a' }} />
+                                    <span className="text-xs text-gray-500">Confidence</span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <span className="w-2.5 h-2.5 rounded-full border-2 border-dashed" style={{ borderColor: '#f5a623' }} />
+                                    <span className="text-xs text-gray-500">Latency (ms)</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        {/* Min/Max stats panel */}
+                        <div className="lg:col-span-2 bg-white rounded-xl border border-gray-200 shadow-sm p-5 flex flex-col gap-4">
+                            <p className="font-bold text-sm uppercase tracking-wide" style={{ color: '#0d1b2a' }}>
+                                Range Summary
+                            </p>
+                            {[
+                                { label: 'Min Confidence', value: confidence_stats.min_confidence != null ? `${(confidence_stats.min_confidence * 100).toFixed(1)}%` : '—' },
+                                { label: 'Max Confidence', value: confidence_stats.max_confidence != null ? `${(confidence_stats.max_confidence * 100).toFixed(1)}%` : '—' },
+                                { label: 'Min Latency',    value: confidence_stats.min_latency    != null ? `${confidence_stats.min_latency.toFixed(1)}ms` : '—' },
+                                { label: 'Max Latency',    value: confidence_stats.max_latency    != null ? `${confidence_stats.max_latency.toFixed(1)}ms` : '—' },
+                            ].map((s, i) => (
+                                <div key={s.label} className={`flex items-center justify-between ${i > 0 ? 'pt-3 border-t border-gray-100' : ''}`}>
+                                    <span className="text-sm text-gray-500">{s.label}</span>
+                                    <span className="text-sm font-mono font-semibold" style={{ color: '#0d1b2a' }}>{s.value}</span>
+                                </div>
+                            ))}
+                        </div>
+                    </div>
+                )}
+
+                {tab === 'ml-results' && (
+                <>
 
                 {/* ── Summary cards ── */}
                 <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
@@ -493,10 +892,13 @@ export default function Inferences({ inferences, beehives = [], stats, filters }
                 <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-x-auto">
                     <DataTable
                         columns={columns}
-                        data={inferences?.data ?? []}
+                        data={rows}
                         getRowId={(row) => row.inference_id}
                     />
                 </div>
+
+                </>
+                )}
 
             </div>
         </>

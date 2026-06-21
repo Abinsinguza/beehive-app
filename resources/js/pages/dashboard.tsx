@@ -5,8 +5,8 @@ import {
     Clock,
     ExternalLink,
     Hexagon,
+    Info,
     Mic,
-    Terminal,
     Users,
     Video,
 } from 'lucide-react';
@@ -17,6 +17,7 @@ type Stats = {
     total_hives: number;
     hives_this_month: number;
     total_beekeepers: number;
+    beekeepers_this_month: number;
     active_alerts: number;
     alerts_yesterday: number;
     recordings_today: number;
@@ -31,10 +32,10 @@ type HiveItem = {
     location: string;
     hive_state: string;
     confidence: number | null;
+    updated_at: string | null;
 };
 
 type HiveCategories = Record<string, number>;
-type InferenceRow   = { state: string; percentage: number };
 
 type AlertItem = {
     id: string;
@@ -46,7 +47,6 @@ type AlertItem = {
     alert_timestamp: string | null;
 };
 
-type LogItem         = { level: string; message: string; created_at: string | null };
 type RecordingVolume = { label: string; [state: string]: string | number };
 
 type DashboardProps = {
@@ -54,12 +54,10 @@ type DashboardProps = {
     greeting_name: string;
     hives_list: HiveItem[];
     hive_categories: HiveCategories;
-    inference_distribution: InferenceRow[];
     recent_alerts: AlertItem[];
     recordings_weekly: RecordingVolume[];
     recordings_monthly: RecordingVolume[];
     recording_states: string[];
-    system_logs: LogItem[];
 };
 
 // ── Helpers ──────────────────────────────────────────────────────
@@ -116,12 +114,14 @@ function timeAgo(iso: string | null) {
     return 'Yesterday ' + d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
 }
 
-const LOG_STYLE: Record<string, { bg: string; text: string }> = {
-    ERROR: { bg: '#fee2e2', text: '#b91c1c' },
-    WARN:  { bg: '#fef3c7', text: '#92400e' },
-    INFO:  { bg: '#eff6ff', text: '#1e40af' },
-};
-function logStyle(level: string) { return LOG_STYLE[level] ?? { bg: '#f1f5f9', text: '#475569' }; }
+function relativeAgo(iso: string | null) {
+    if (!iso) return '';
+    const diff = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
+    if (diff < 60)    return 'Just now';
+    if (diff < 3600)  return `${Math.floor(diff / 60)}min ago`;
+    if (diff < 86400) return `${Math.floor(diff / 3600)}hrs ago`;
+    return `${Math.floor(diff / 86400)}d ago`;
+}
 
 // ── Donut chart ──────────────────────────────────────────────────
 function polar(cx: number, cy: number, r: number, deg: number) {
@@ -176,13 +176,46 @@ function DonutChart({ categories }: { categories: HiveCategories }) {
     );
 }
 
-function infColor(s: string) { return donutColor(s); }
+// ── Stat card with info tooltip + click-through ──────────────────
+function StatCard({
+    href, label, description, icon, value, valueColor, footer, footerColor,
+}: {
+    href: string;
+    label: string;
+    description: string;
+    icon: React.ReactNode;
+    value: React.ReactNode;
+    valueColor?: string;
+    footer: React.ReactNode;
+    footerColor?: string;
+}) {
+    return (
+        <div
+            onClick={() => router.visit(href)}
+            className="relative bg-white rounded-xl border border-gray-200 p-4 shadow-sm flex flex-col gap-1 cursor-pointer hover:shadow-md hover:border-gray-300 transition-all"
+        >
+            <div className="flex items-center justify-between">
+                <p className="text-xs text-gray-500">{label}</p>
+                {icon}
+            </div>
+            <p className="text-3xl font-bold mt-1" style={{ color: valueColor ?? '#0d1b2a' }}>{value}</p>
+            <p className="text-xs font-medium mt-1" style={{ color: footerColor }}>{footer}</p>
+
+            <div className="group absolute bottom-3 right-3 inline-flex" onClick={(e) => e.stopPropagation()}>
+                <Info className="w-3.5 h-3.5 text-gray-300 hover:text-gray-500 transition-colors" />
+                <div className="invisible group-hover:visible absolute right-0 bottom-full mb-2 z-20 w-52 rounded-lg bg-gray-900 text-white text-[11px] leading-snug p-2.5 shadow-lg">
+                    {description}
+                </div>
+            </div>
+        </div>
+    );
+}
 
 // ── Main component ───────────────────────────────────────────────
 export default function Dashboard({
     stats, greeting_name,
-    hives_list, hive_categories, inference_distribution,
-    recent_alerts, recordings_weekly, recordings_monthly, recording_states, system_logs,
+    hives_list, hive_categories,
+    recent_alerts, recordings_weekly, recordings_monthly, recording_states,
 }: DashboardProps) {
     const alertDiff  = stats.active_alerts - stats.alerts_yesterday;
     const recDiff    = stats.recordings_today - stats.recordings_yesterday;
@@ -207,67 +240,59 @@ export default function Dashboard({
                         </h1>
                         <p className="text-sm text-gray-500 mt-0.5">
                             {getDayLabel()}
-                            {stats.need_attention > 0 && (
-                                <> · <span className="text-red-500 font-medium">
-                                    {stats.need_attention} hive{stats.need_attention !== 1 ? 's' : ''} need attention today
-                                </span></>
-                            )}
                         </p>
                     </div>
 
                     {/* ── Summary stat cards ── */}
                     <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                        <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm flex flex-col gap-1">
-                            <div className="flex items-center justify-between">
-                                <p className="text-xs text-gray-500">Total hives</p>
-                                <Clock className="w-4 h-4 text-gray-400" />
-                            </div>
-                            <p className="text-3xl font-bold mt-1" style={{ color: '#0d1b2a' }}>{stats.total_hives}</p>
-                            <p className={`text-xs font-medium mt-1 ${stats.hives_this_month > 0 ? 'text-emerald-500' : 'text-gray-400'}`}>
-                                {stats.hives_this_month > 0 ? `↑ +${stats.hives_this_month} this month` : '— no change'}
-                            </p>
-                        </div>
-                        <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm flex flex-col gap-1">
-                            <div className="flex items-center justify-between">
-                                <p className="text-xs text-gray-500">Beekeepers</p>
-                                <Users className="w-4 h-4 text-gray-400" />
-                            </div>
-                            <p className="text-3xl font-bold mt-1" style={{ color: '#0d1b2a' }}>{stats.total_beekeepers}</p>
-                            <p className="text-xs text-gray-400 mt-1">— no change</p>
-                        </div>
-                        <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm flex flex-col gap-1">
-                            <div className="flex items-center justify-between">
-                                <p className="text-xs text-gray-500">Active alerts</p>
-                                <AlertTriangle className="w-4 h-4 text-gray-400" />
-                            </div>
-                            <p className="text-3xl font-bold mt-1" style={{ color: stats.active_alerts > 0 ? '#ef4444' : '#0d1b2a' }}>
-                                {stats.active_alerts}
-                            </p>
-                            <p className={`text-xs font-medium mt-1 ${alertDiff > 0 ? 'text-red-500' : alertDiff < 0 ? 'text-emerald-500' : 'text-gray-400'}`}>
-                                {alertDiff === 0 ? '— no change' : alertDiff > 0 ? `↑ +${alertDiff} since yesterday` : `↓ ${alertDiff} since yesterday`}
-                            </p>
-                        </div>
-                        <div className="bg-white rounded-xl border border-gray-200 p-4 shadow-sm flex flex-col gap-1">
-                            <div className="flex items-center justify-between">
-                                <p className="text-xs text-gray-500">Recordings today</p>
-                                <Mic className="w-4 h-4 text-gray-400" />
-                            </div>
-                            <p className="text-3xl font-bold mt-1" style={{ color: '#0d1b2a' }}>{stats.recordings_today}</p>
-                            <p className={`text-xs font-medium mt-1 ${recDiff > 0 ? 'text-emerald-500' : recDiff < 0 ? 'text-red-500' : 'text-gray-400'}`}>
-                                {recDiff === 0 ? '— no change' : recDiff > 0 ? `↑ +${recDiff} vs yesterday` : `↓ ${recDiff} vs yesterday`}
-                            </p>
-                        </div>
+                        <StatCard
+                            href="/beehives"
+                            label="Total hives"
+                            description="Total number of hives registered in the system. Click to view the full hive inventory."
+                            icon={<Clock className="w-4 h-4 text-gray-400" />}
+                            value={stats.total_hives}
+                            footer={stats.hives_this_month > 0 ? `↑ +${stats.hives_this_month} this month` : '— no change'}
+                            footerColor={stats.hives_this_month > 0 ? '#10b981' : '#9ca3af'}
+                        />
+                        <StatCard
+                            href="/beekeepers"
+                            label="Beekeepers"
+                            description="Total number of registered beekeepers managing hives. Click to view all beekeepers."
+                            icon={<Users className="w-4 h-4 text-gray-400" />}
+                            value={stats.total_beekeepers}
+                            footer={stats.beekeepers_this_month > 0 ? `↑ +${stats.beekeepers_this_month} this month` : '— no change'}
+                            footerColor={stats.beekeepers_this_month > 0 ? '#10b981' : '#9ca3af'}
+                        />
+                        <StatCard
+                            href="/alerts"
+                            label="Active alerts"
+                            description="Alerts that are not yet resolved or dismissed. Click to view and manage all alerts."
+                            icon={<AlertTriangle className="w-4 h-4 text-gray-400" />}
+                            value={stats.active_alerts}
+                            valueColor={stats.active_alerts > 0 ? '#ef4444' : '#0d1b2a'}
+                            footer={alertDiff === 0 ? '— no change' : alertDiff > 0 ? `↑ +${alertDiff} since yesterday` : `↓ ${alertDiff} since yesterday`}
+                            footerColor={alertDiff > 0 ? '#ef4444' : alertDiff < 0 ? '#10b981' : '#9ca3af'}
+                        />
+                        <StatCard
+                            href="/audio-recordings"
+                            label="Recordings today"
+                            description="Number of audio recordings received from hives today. Click to view all recordings."
+                            icon={<Mic className="w-4 h-4 text-gray-400" />}
+                            value={stats.recordings_today}
+                            footer={recDiff === 0 ? '— no change' : recDiff > 0 ? `↑ +${recDiff} vs yesterday` : `↓ ${recDiff} vs yesterday`}
+                            footerColor={recDiff > 0 ? '#10b981' : recDiff < 0 ? '#ef4444' : '#9ca3af'}
+                        />
                     </div>
 
                     {/* ── Hive status + charts ── */}
                     <div className="grid grid-cols-1 lg:grid-cols-5 gap-4">
 
                         {/* Hive list */}
-                        <div className="lg:col-span-2 bg-white rounded-xl border border-gray-200 shadow-sm flex flex-col overflow-hidden">
+                        <div className="lg:col-span-3 bg-white rounded-xl border border-gray-200 shadow-sm flex flex-col overflow-hidden">
                             <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
                                 <div className="flex items-center gap-2">
                                     <Hexagon className="w-4 h-4 text-gray-400" />
-                                    <span className="font-semibold text-sm" style={{ color: '#0d1b2a' }}>Hive status</span>
+                                    <span className="font-semibold text-sm" style={{ color: '#0d1b2a' }}>Latest Hive Status Updated</span>
                                 </div>
                                 <button onClick={() => router.visit('/beehives')}
                                     className="flex items-center gap-1 text-xs font-medium text-gray-500 border border-gray-200 rounded-lg px-3 py-1.5 hover:bg-gray-50 transition-colors">
@@ -302,6 +327,9 @@ export default function Dashboard({
                                                         {hive.confidence}%
                                                     </span>
                                                 )}
+                                                <span className="shrink-0 text-[11px] text-gray-400 w-16 text-right">
+                                                    {relativeAgo(hive.updated_at)}
+                                                </span>
                                             </div>
                                         );
                                     })}
@@ -310,13 +338,13 @@ export default function Dashboard({
                         </div>
 
                         {/* Donut */}
-                        <div className="lg:col-span-3 bg-white rounded-xl border border-gray-200 shadow-sm p-5">
+                        <div className="lg:col-span-2 bg-white rounded-xl border border-gray-200 shadow-sm p-5 flex flex-col">
                             <div className="flex items-center gap-2 mb-4">
                                 <Hexagon className="w-4 h-4 text-gray-400" />
-                                <span className="font-semibold text-sm" style={{ color: '#0d1b2a' }}>Hive states</span>
+                                <span className="font-semibold text-sm" style={{ color: '#0d1b2a' }}>Current Hive Status Distribution</span>
                             </div>
-                            <div className="flex items-center gap-6">
-                                <div className="w-40 h-40 shrink-0"><DonutChart categories={hive_categories} /></div>
+                            <div className="flex-1 flex items-center justify-center gap-8">
+                                <div className="w-56 h-56 shrink-0"><DonutChart categories={hive_categories} /></div>
                                 <div className="flex flex-col gap-3">
                                     {Object.entries(hive_categories)
                                         .sort(([, a], [, b]) => b - a)
@@ -388,8 +416,8 @@ export default function Dashboard({
                                         <Video className="w-4 h-4 text-blue-500" />
                                     </div>
                                     <div>
-                                        <p className="font-bold text-base" style={{ color: '#0d1b2a' }}>Recordings Volume</p>
-                                        <p className="text-xs text-gray-400 mt-0.5">Track the number of recordings received over time.</p>
+                                        <p className="font-bold text-base" style={{ color: '#0d1b2a' }}>Audio Beehive Recordings </p>
+                                        <p className="text-xs text-gray-400 mt-0.5">Track the number of recordings received from data sources.</p>
                                     </div>
                                 </div>
                                 <div className="flex items-center gap-1 bg-gray-100 rounded-lg p-1 shrink-0">
@@ -452,38 +480,6 @@ export default function Dashboard({
                                 ))}
                             </div>
                         </div>
-                    </div>
-
-                    {/* ── System logs ── */}
-                    <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-                        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
-                            <div className="flex items-center gap-2">
-                                <Terminal className="w-4 h-4 text-gray-400" />
-                                <span className="font-semibold text-sm" style={{ color: '#0d1b2a' }}>System logs</span>
-                            </div>
-                            <button className="flex items-center gap-1 text-xs font-medium text-gray-500 border border-gray-200 rounded-lg px-3 py-1.5 hover:bg-gray-50 transition-colors">
-                                View all <ExternalLink className="w-3 h-3" />
-                            </button>
-                        </div>
-                        {system_logs.length === 0 ? (
-                            <div className="flex items-center justify-center py-10 text-sm text-gray-400">No system logs yet</div>
-                        ) : (
-                            <div className="divide-y divide-gray-100">
-                                {system_logs.map((log, i) => {
-                                    const style = logStyle(log.level);
-                                    return (
-                                        <div key={i} className="flex items-center gap-4 px-5 py-3 hover:bg-gray-50 transition-colors">
-                                            <span className="shrink-0 text-[10px] font-bold px-2 py-0.5 rounded w-14 text-center"
-                                                style={{ backgroundColor: style.bg, color: style.text }}>
-                                                {log.level}
-                                            </span>
-                                            <p className="flex-1 text-xs text-gray-700 truncate">{log.message}</p>
-                                            <span className="shrink-0 text-[11px] text-gray-400 tabular-nums">{log.created_at ?? ''}</span>
-                                        </div>
-                                    );
-                                })}
-                            </div>
-                        )}
                     </div>
 
                 </div>
