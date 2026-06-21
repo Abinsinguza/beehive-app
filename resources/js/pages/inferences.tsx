@@ -23,16 +23,6 @@ type Inference = {
     beehive: Beehive | null;
 };
 
-type Paginator = {
-    data: Inference[];
-    current_page: number;
-    last_page: number;
-    per_page: number;
-    total: number;
-    next_page_url: string | null;
-    prev_page_url: string | null;
-};
-
 type Stats = {
     total: number;
     avg_confidence: number | null;
@@ -53,7 +43,7 @@ type ConfidenceStats = {
 type ConfidenceRange = '1h' | '24h' | '7d';
 
 type Props = {
-    inferences: Paginator;
+    inferences: Inference[];
     beehives: Beehive[];
     stats: Stats;
     filters: { state: string; search: string };
@@ -354,18 +344,19 @@ export default function Inferences({
             header: '#',
             enableSorting: false,
             enableColumnFilter: false,
+            size: 40,
+            minSize: 40,
+            maxSize: 50,
+            muiTableHeadCellProps: { sx: { paddingLeft: '8px', paddingRight: '4px' } },
+            muiTableBodyCellProps: { sx: { paddingLeft: '8px', paddingRight: '4px' } },
             Cell: ({ row }) => row.index + 1,
         },
         {
-            accessorKey: 'inference_id',
-            header: 'Inference ID',
+            accessorKey: 'analyzed_at',
+            header: 'Analyzed At',
             enableSorting: true,
-            enableColumnFilter: true,
-            Cell: ({ row }) => (
-                <span className="font-mono text-gray-500" title={row.original.inference_id}>
-                    {shortId(row.original.inference_id)}
-                </span>
-            ),
+            enableColumnFilter: false,
+            Cell: ({ row }) => fmtDate(row.original.analyzed_at),
         },
         {
             id: 'hive',
@@ -443,11 +434,15 @@ export default function Inferences({
             ),
         },
         {
-            accessorKey: 'analyzed_at',
-            header: 'Analyzed At',
+            accessorKey: 'inference_id',
+            header: 'Inference ID',
             enableSorting: true,
-            enableColumnFilter: false,
-            Cell: ({ row }) => fmtDate(row.original.analyzed_at),
+            enableColumnFilter: true,
+            Cell: ({ row }) => (
+                <span className="font-mono text-gray-500" title={row.original.inference_id}>
+                    {shortId(row.original.inference_id)}
+                </span>
+            ),
         },
         {
             accessorKey: 'created_at',
@@ -474,7 +469,7 @@ export default function Inferences({
         }, { preserveScroll: true, preserveState: true });
     }
 
-    const rows = inferences?.data ?? [];
+    const rows = inferences ?? [];
 
     const handleExportCSV = () => {
         const header = [
@@ -884,7 +879,7 @@ export default function Inferences({
                         </button>
                     )}
                     <span className="text-xs text-gray-400 ml-auto">
-                        {inferences?.total ?? 0} record{(inferences?.total ?? 0) !== 1 ? 's' : ''}
+                        {rows.length} record{rows.length !== 1 ? 's' : ''}
                     </span>
                 </div>
 
@@ -894,6 +889,7 @@ export default function Inferences({
                         columns={columns}
                         data={rows}
                         getRowId={(row) => row.inference_id}
+                        initialColumnVisibility={{ inference_id: false }}
                     />
                 </div>
 

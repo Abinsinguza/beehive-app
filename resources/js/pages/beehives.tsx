@@ -17,14 +17,27 @@ type Beehive = {
 };
 
 const statusConfig: Record<string, { label: string; bg: string; color: string }> = {
-    active:      { label: 'STABLE',       bg: '#0d1b2a', color: '#ffffff' },
-    inactive:    { label: 'MAINTENANCE',  bg: '#0d1b2a', color: '#ffffff' },
-    migrated:    { label: 'TEMP WARNING', bg: '#fff7ed', color: '#f5a623' },
-    lost:        { label: 'SWARM LIKELY', bg: '#fff7ed', color: '#f5a623' },
-    unknown:     { label: 'UNKNOWN',      bg: '#f1f5f9', color: '#64748b' },
+    active:           { label: 'STABLE',       bg: '#0d1b2a', color: '#ffffff' },
+    inactive:         { label: 'MAINTENANCE',  bg: '#0d1b2a', color: '#ffffff' },
+    migrated:         { label: 'TEMP WARNING', bg: '#fff7ed', color: '#f5a623' },
+    lost:             { label: 'SWARM LIKELY', bg: '#fff7ed', color: '#f5a623' },
+    unknown:          { label: 'UNKNOWN',      bg: '#f1f5f9', color: '#64748b' },
+    // ML-detected hive states — same colors as the ML Results table (inferences.tsx)
+    normal:           { label: 'NORMAL',         bg: '#dcfce7', color: '#16a34a' },
+    pre_swarm:        { label: 'PRE-SWARM',       bg: '#fef3c7', color: '#d97706' },
+    swarm:            { label: 'SWARM',           bg: '#fee2e2', color: '#dc2626' },
+    abscondence:      { label: 'ABSCONDENCE',     bg: '#fce7f3', color: '#9d174d' },
+    external_noise:   { label: 'EXTERNAL NOISE',  bg: '#ffedd5', color: '#ea580c' },
+    pest_disturbance: { label: 'PEST DISTURBANCE', bg: '#ffedd5', color: '#ea580c' },
+    uncertain:        { label: 'UNCERTAIN',       bg: '#f1f5f9', color: '#64748b' },
 };
 
 const defaultStatusStyle = { label: 'UNKNOWN', bg: '#f1f5f9', color: '#64748b' };
+
+function fmtDate(v: string | null) {
+    if (!v) return '—';
+    return new Date(v).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+}
 
 
 
@@ -90,10 +103,23 @@ export default function Beehives({ beehives = [], owners = [], search: initialSe
 
     const columns = useMemo<MRT_ColumnDef<Beehive>[]>(() => [
         {
+            id: 'index',
+            header: '#',
+            enableSorting: false,
+            enableColumnFilter: false,
+            size: 40,
+            minSize: 40,
+            maxSize: 50,
+            muiTableHeadCellProps: { sx: { paddingLeft: '8px', paddingRight: '4px' } },
+            muiTableBodyCellProps: { sx: { paddingLeft: '8px', paddingRight: '4px' } },
+            Cell: ({ row }) => row.index + 1,
+        },
+        {
             accessorKey: 'hive_name',
             header: 'Hive Name',
             enableSorting: true,
             enableColumnFilter: true,
+            size: 200,
             Cell: ({ row }) => {
                 return (
                     <div>
@@ -108,6 +134,7 @@ export default function Beehives({ beehives = [], owners = [], search: initialSe
             header: 'Location',
             enableSorting: true,
             enableColumnFilter: true,
+            size: 140,
             Cell: ({ cell }) => {
                 return <p className="text-sm text-gray-600">{cell.getValue<string>()}</p>;
             },
@@ -119,10 +146,11 @@ export default function Beehives({ beehives = [], owners = [], search: initialSe
             enableColumnFilter: true,
             filterVariant: 'select',
             filterSelectOptions: ['active', 'inactive', 'migrated', 'lost', 'unknown'],
+            size: 140,
             Cell: ({ row }) => {
                 const sc = statusConfig[row.original.current_state] ?? defaultStatusStyle;
                 return (
-                    <span className="text-[10px] font-bold px-2.5 py-1 rounded uppercase tracking-widest"
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-widest whitespace-nowrap"
                         style={{ backgroundColor: sc.bg, color: sc.color }}>
                         {row.original.current_state}
                     </span>
@@ -134,6 +162,7 @@ export default function Beehives({ beehives = [], owners = [], search: initialSe
             header: 'Owner',
             enableSorting: true,
             enableColumnFilter: true,
+            size: 160,
             Cell: ({ row }) => {
                 return <p className="text-sm text-gray-600">{row.original.owner?.name ?? '—'}</p>;
             },
@@ -143,8 +172,9 @@ export default function Beehives({ beehives = [], owners = [], search: initialSe
             header: 'Installation Date',
             enableSorting: true,
             enableColumnFilter: false,
+            size: 130,
             Cell: ({ cell }) => {
-                return <p className="text-xs text-gray-400">{cell.getValue<string>()}</p>;
+                return <p className="text-xs text-gray-400">{fmtDate(cell.getValue<string>())}</p>;
             },
         },
     ], []);

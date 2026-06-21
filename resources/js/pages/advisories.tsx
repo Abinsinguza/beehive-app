@@ -121,6 +121,7 @@ export default function Advisories({
         {
             accessorKey: 'prediction_code',
             header: 'Code',
+            size: 70,
             Cell: ({ cell }) => (
                 <span className="font-mono text-xs font-semibold" style={{ color: '#0d1b2a' }}>
                     #{cell.getValue<number>()}
@@ -130,6 +131,7 @@ export default function Advisories({
         {
             accessorKey: 'hive_state',
             header: 'Hive State',
+            size: 130,
             Cell: ({ cell }) => (
                 <span className="text-sm font-medium" style={{ color: '#0d1b2a' }}>
                     {cell.getValue<string>()}
@@ -139,6 +141,7 @@ export default function Advisories({
         {
             accessorKey: 'advisory_type',
             header: 'Type',
+            size: 100,
         },
         {
             accessorKey: 'severity',
@@ -151,6 +154,7 @@ export default function Advisories({
                 { text: 'High', value: 'high' },
                 { text: 'Critical', value: 'critical' },
             ],
+            size: 100,
             Cell: ({ cell }) => {
                 const sc = severityConfig[cell.getValue<string>()] ?? severityConfig.medium;
                 return (
@@ -164,16 +168,19 @@ export default function Advisories({
         {
             accessorKey: 'min_confidence_threshold',
             header: 'Min Confidence',
+            size: 120,
             Cell: ({ cell }) => fmtPct(cell.getValue<number | null>()),
         },
         {
             accessorKey: 'description',
             header: 'Description',
+            size: 250,
             Cell: ({ cell }) => cell.getValue<string | null>() ?? '—',
         },
         {
             accessorKey: 'created_at',
             header: 'Created',
+            size: 110,
             Cell: ({ cell }) => fmtDate(cell.getValue<string | null>()),
         },
         {
@@ -181,6 +188,7 @@ export default function Advisories({
             header: 'Actions',
             enableSorting: false,
             enableColumnFilter: false,
+            size: 90,
             Cell: ({ row }) => (
                 <div className="flex items-center gap-1">
                     <button onClick={() => setEditTemplate(row.original)}
@@ -202,6 +210,7 @@ export default function Advisories({
             id: 'hive_state',
             accessorKey: 'template.hive_state',
             header: 'Hive State',
+            size: 130,
             Cell: ({ row }) => (
                 <span className="text-sm font-medium" style={{ color: '#0d1b2a' }}>
                     {row.original.template?.hive_state ?? `#${row.original.template_id}`}
@@ -211,6 +220,7 @@ export default function Advisories({
         {
             accessorKey: 'action_title',
             header: 'Action Title',
+            size: 200,
             Cell: ({ cell }) => (
                 <span className="text-sm font-medium" style={{ color: '#0d1b2a' }}>
                     {cell.getValue<string>()}
@@ -220,6 +230,7 @@ export default function Advisories({
         {
             accessorKey: 'action_description',
             header: 'Description',
+            size: 250,
         },
         {
             accessorKey: 'priority_level',
@@ -230,6 +241,7 @@ export default function Advisories({
                 { text: 'Medium', value: 'medium' },
                 { text: 'High', value: 'high' },
             ],
+            size: 100,
             Cell: ({ cell }) => {
                 const pc = priorityConfig[cell.getValue<string>()] ?? priorityConfig.medium;
                 return (
@@ -244,6 +256,7 @@ export default function Advisories({
             id: 'confidence_range',
             header: 'Confidence Range',
             accessorKey: 'confidence_threshold_min', // For sorting purposes
+            size: 140,
             Cell: ({ row }) => (
                 `${fmtPct(row.original.confidence_threshold_min)} – ${fmtPct(row.original.confidence_threshold_max)}`
             ),
@@ -251,6 +264,7 @@ export default function Advisories({
         {
             accessorKey: 'action_order',
             header: 'Order',
+            size: 70,
         },
         {
             accessorKey: 'is_active',
@@ -260,6 +274,7 @@ export default function Advisories({
                 { text: 'Active', value: true },
                 { text: 'Inactive', value: false },
             ],
+            size: 90,
             Cell: ({ cell }) => (
                 <span className="text-[10px] font-bold px-2.5 py-1 rounded uppercase tracking-widest"
                     style={cell.getValue<boolean>()
@@ -272,6 +287,7 @@ export default function Advisories({
         {
             accessorKey: 'created_at',
             header: 'Created',
+            size: 110,
             Cell: ({ cell }) => fmtDate(cell.getValue<string | null>()),
         },
         {
@@ -279,6 +295,7 @@ export default function Advisories({
             header: 'Actions',
             enableSorting: false,
             enableColumnFilter: false,
+            size: 90,
             Cell: ({ row }) => (
                 <div className="flex items-center gap-1">
                     <button onClick={() => setEditItem(row.original)}
@@ -300,6 +317,7 @@ export default function Advisories({
             id: 'hive',
             header: 'Hive',
             accessorKey: 'hive.hive_name',
+            size: 160,
             Cell: ({ row }) => (
                 <span className="text-sm font-medium" style={{ color: '#0d1b2a' }}>
                     {row.original.hive?.hive_name ?? row.original.hive?.hive_location ?? '—'}
@@ -309,6 +327,7 @@ export default function Advisories({
         {
             accessorKey: 'action_title',
             header: 'Action Title',
+            size: 200,
             Cell: ({ cell }) => (
                 <span className="text-sm font-medium" style={{ color: '#0d1b2a' }}>
                     {cell.getValue<string>()}
@@ -318,6 +337,7 @@ export default function Advisories({
         {
             accessorKey: 'action_description',
             header: 'Description',
+            size: 250,
         },
         {
             accessorKey: 'priority_level',
@@ -328,6 +348,7 @@ export default function Advisories({
                 { text: 'Medium', value: 'medium' },
                 { text: 'High', value: 'high' },
             ],
+            size: 100,
             Cell: ({ cell }) => {
                 const pc = priorityConfig[cell.getValue<string>()] ?? priorityConfig.medium;
                 return (
@@ -341,6 +362,7 @@ export default function Advisories({
         {
             accessorKey: 'confidence_score',
             header: 'Confidence',
+            size: 110,
             Cell: ({ cell }) => fmtPct(cell.getValue<number | null>()),
         },
         {
@@ -353,6 +375,7 @@ export default function Advisories({
                 { text: 'Completed', value: 'completed' },
                 { text: 'Resolved', value: 'resolved' },
             ],
+            size: 120,
             Cell: ({ cell }) => {
                 const sc = statusConfig[cell.getValue<string>()] ?? statusConfig.pending;
                 return (
@@ -366,11 +389,13 @@ export default function Advisories({
         {
             accessorKey: 'completed_at',
             header: 'Completed',
+            size: 110,
             Cell: ({ cell }) => fmtDate(cell.getValue<string | null>()),
         },
         {
             accessorKey: 'created_at',
             header: 'Created',
+            size: 110,
             Cell: ({ cell }) => fmtDate(cell.getValue<string | null>()),
         },
     ], []);

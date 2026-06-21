@@ -312,10 +312,23 @@ export default function Beekeepers({
 
     const columns = useMemo<MRT_ColumnDef<Beekeeper>[]>(() => [
         {
+            id: 'index',
+            header: '#',
+            enableSorting: false,
+            enableColumnFilter: false,
+            size: 40,
+            minSize: 40,
+            maxSize: 50,
+            muiTableHeadCellProps: { sx: { paddingLeft: '8px', paddingRight: '4px' } },
+            muiTableBodyCellProps: { sx: { paddingLeft: '8px', paddingRight: '4px' } },
+            Cell: ({ row }) => row.index + 1,
+        },
+        {
             accessorKey: 'full_name',
             header: 'User Identity',
             enableSorting: true,
             enableColumnFilter: true,
+            size: 220,
             Cell: ({ row }) => {
                 const bk = row.original;
                 return (
@@ -342,6 +355,7 @@ export default function Beekeepers({
             enableColumnFilter: true,
             filterVariant: 'select',
             filterSelectOptions: ['active', 'pending', 'revoked', 'suspended'],
+            size: 110,
             Cell: ({ row }) => {
                 const status = getStatus(row.original);
                 const sc = statusConfig[status] ?? statusConfig.active;
@@ -358,6 +372,7 @@ export default function Beekeepers({
             header: 'Hives',
             enableSorting: true,
             enableColumnFilter: false,
+            size: 70,
             Cell: ({ cell }) => {
                 const count = cell.getValue<number>() ?? 0;
                 return (
@@ -375,6 +390,7 @@ export default function Beekeepers({
             header: 'Last Login',
             enableSorting: false,
             enableColumnFilter: false,
+            size: 100,
             Cell: () => <span className="text-xs italic text-gray-400">Never</span>,
         },
         {
@@ -382,6 +398,7 @@ export default function Beekeepers({
             header: 'Address',
             enableSorting: true,
             enableColumnFilter: true,
+            size: 170,
             Cell: ({ cell }) => {
                 const address = cell.getValue<string>();
                 return address ? <span className="text-xs text-gray-400">{address}</span> : <span className="text-xs text-gray-400">—</span>;
@@ -390,6 +407,7 @@ export default function Beekeepers({
         {
             accessorKey: 'created_at',
             header: 'Sign Up Date',
+            size: 120,
             enableSorting: true,
             enableColumnFilter: false,
             Cell: ({ cell }) => {

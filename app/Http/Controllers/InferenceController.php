@@ -25,8 +25,7 @@ class InferenceController extends Controller
                   ->orWhere('inference_id', 'ilike', "%{$search}%");
             }))
             ->latest('analyzed_at')
-            ->paginate(10)
-            ->withQueryString();
+            ->get();
 
         $stats = [
             'total'   => Inference::count(),
