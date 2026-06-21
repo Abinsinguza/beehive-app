@@ -1,4 +1,4 @@
-﻿﻿import { Head, router, useForm } from '@inertiajs/react';
+import { Head, router, useForm } from '@inertiajs/react';
 import { Download, Edit2, Eye, UserPlus, X } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
 import { type MRT_ColumnDef } from 'material-react-table';
@@ -47,20 +47,36 @@ function getStatus(bk: Beekeeper): string {
 // ── Add Beekeeper form ─────────────────────────────────────────────────────
 function AddBeekeeperModal({ onClose }: { onClose: () => void }) {
     const { data, setData, post, processing, reset, errors } = useForm({
-        full_name: '', email: '', phone: '', password: '', address: '',
+        full_name: '', email: '', phone: '', password: '', address: '', server_url: '', api_key: '',
     });
+    const [generating, setGenerating] = useState(false);
 
     const submit = (e: React.FormEvent) => {
         e.preventDefault();
         post('/beekeepers', { onSuccess: () => { reset(); onClose(); } });
     };
 
+    const generateApiKey = () => {
+        if (!data.full_name.trim()) return;
+        setGenerating(true);
+        router.post('/api-keys/generate', { client_name: data.full_name }, {
+            preserveState: true,
+            preserveScroll: true,
+            onSuccess: (page) => {
+                const key = (page.props.flash as { generated_api_key?: string } | undefined)?.generated_api_key;
+                if (key) setData('api_key', key);
+            },
+            onFinish: () => setGenerating(false),
+        });
+    };
+
     const fields: { label: string; key: keyof typeof data; type: string; placeholder: string; required: boolean; hint?: string }[] = [
-        { label: 'Full Name',     key: 'full_name',     type: 'text',     placeholder: 'e.g. Jane Namutebi',   required: true  },
-        { label: 'Email Address', key: 'email',    type: 'email',    placeholder: 'jane@example.com',      required: true  },
-        { label: 'Phone Number',  key: 'phone',    type: 'text',     placeholder: '+256 700 000 000',      required: true  },
-        { label: 'Password',      key: 'password', type: 'password', placeholder: 'Min. 4 characters',    required: true  },
-        { label: 'Address',       key: 'address',  type: 'text',     placeholder: 'e.g. Kampala, Uganda', required: false, hint: 'Optional' },
+        { label: 'Full Name',     key: 'full_name',  type: 'text',     placeholder: 'e.g. Jane Namutebi',   required: true  },
+        { label: 'Email Address', key: 'email',      type: 'email',    placeholder: 'jane@example.com',      required: true  },
+        { label: 'Phone Number',  key: 'phone',      type: 'text',     placeholder: '+256 700 000 000',      required: true  },
+        { label: 'Password',      key: 'password',   type: 'password', placeholder: 'Min. 4 characters',    required: true  },
+        { label: 'Address',       key: 'address',    type: 'text',     placeholder: 'e.g. Kampala, Uganda', required: false, hint: 'Optional' },
+        { label: 'Server URL',    key: 'server_url', type: 'text',     placeholder: 'http://192.168.1.10:8085', required: true },
     ];
 
     return (
@@ -108,6 +124,44 @@ function AddBeekeeperModal({ onClose }: { onClose: () => void }) {
                     </div>
                 ))}
 
+                {/* API Key — generated, not typed */}
+                <div className="flex flex-col gap-1.5">
+                    <label className="text-sm font-semibold text-gray-700 flex items-center gap-1.5">
+                        API Key
+                        <span className="text-red-500 font-bold">*</span>
+                    </label>
+                    <div className="flex gap-2">
+                        <input
+                            type="text"
+                            value={data.api_key}
+                            readOnly
+                            placeholder="Click Generate to mint a key"
+                            required
+                            className={[
+                                'flex-1 rounded-lg px-3.5 py-2.5 text-sm text-gray-800 placeholder-gray-400 bg-gray-50',
+                                'border outline-none',
+                                errors.api_key ? 'border-red-400' : 'border-gray-300',
+                            ].join(' ')}
+                        />
+                        <button
+                            type="button"
+                            onClick={generateApiKey}
+                            disabled={generating || !data.full_name.trim()}
+                            className="px-4 py-2.5 rounded-lg text-sm font-semibold border border-gray-300 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        >
+                            {generating ? 'Generating…' : 'Generate'}
+                        </button>
+                    </div>
+                    {!data.full_name.trim() && (
+                        <p className="text-xs text-gray-400">Enter the full name first — it's used to label the key.</p>
+                    )}
+                    {errors.api_key && (
+                        <p className="text-xs text-red-500 flex items-center gap-1">
+                            <span>⚠</span> {errors.api_key}
+                        </p>
+                    )}
+                </div>
+
                 <ModalActions onCancel={onClose} processing={processing} label="Add Beekeeper" />
             </form>
         </ModalShell>
@@ -117,11 +171,11 @@ function AddBeekeeperModal({ onClose }: { onClose: () => void }) {
 // ── Edit Beekeeper form ───────────────────────────────────────────────────
 function EditBeekeeperModal({ beekeeper, onClose }: { beekeeper: Beekeeper; onClose: () => void }) {
     const { data, setData, patch, processing, errors } = useForm({
-        full_name:     beekeeper.full_name,
-        phone:    beekeeper.phone,
-        email:    beekeeper.email    ?? '',
-        address:  beekeeper.address  ?? '',
-        password: '',
+        full_name: beekeeper.full_name,
+        phone:     beekeeper.phone,
+        email:     beekeeper.email   ?? '',
+        address:   beekeeper.address ?? '',
+        password:  '',
     });
 
     const submit = (e: React.FormEvent) => {
@@ -133,11 +187,11 @@ function EditBeekeeperModal({ beekeeper, onClose }: { beekeeper: Beekeeper; onCl
         <ModalShell title="Edit Beekeeper" onClose={onClose}>
             <form onSubmit={submit} className="p-6 flex flex-col gap-4">
                 {[
-                    { label: 'Full Name',     key: 'full_name',     type: 'text',     placeholder: 'e.g. John Doe',              required: true  },
-                    { label: 'Phone',         key: 'phone',    type: 'text',     placeholder: '+1 555 000 000',            required: true  },
-                    { label: 'Email',         key: 'email',    type: 'email',    placeholder: 'john@example.com',           required: false },
-                    { label: 'Address',       key: 'address',  type: 'text',     placeholder: '123 Honey Lane',             required: false },
-                    { label: 'New Password',  key: 'password', type: 'password', placeholder: 'Leave blank to keep current', required: false },
+                    { label: 'Full Name',     key: 'full_name', type: 'text',     placeholder: 'e.g. John Doe',              required: true  },
+                    { label: 'Phone',         key: 'phone',     type: 'text',     placeholder: '+1 555 000 000',             required: true  },
+                    { label: 'Email',         key: 'email',     type: 'email',    placeholder: 'john@example.com',           required: false },
+                    { label: 'Address',       key: 'address',   type: 'text',     placeholder: '123 Honey Lane',             required: false },
+                    { label: 'New Password',  key: 'password',  type: 'password', placeholder: 'Leave blank to keep current', required: false },
                 ].map((f) => (
                     <div key={f.key}>
                         <label className="text-xs font-semibold uppercase tracking-widest text-gray-400 block mb-1.5">{f.label}</label>
@@ -160,116 +214,11 @@ function EditBeekeeperModal({ beekeeper, onClose }: { beekeeper: Beekeeper; onCl
     );
 }
 
-// ── View Beekeeper modal ──────────────────────────────────────────────────
-function ViewBeekeeperModal({ beekeeper, onClose }: { beekeeper: Beekeeper; onClose: () => void }) {
-    const role   = getRole(beekeeper);
-    const status = getStatus(beekeeper);
-    const sc     = statusConfig[status] ?? statusConfig.active;
-    const rc     = roleColors[role]     ?? roleColors.Beekeeper;
-
-    return (
-        <ModalShell title="Beekeeper Details" onClose={onClose}>
-            <div className="p-6 flex flex-col gap-5">
-                {/* Avatar + name + id */}
-                <div className="flex items-center gap-4">
-                    <div
-                        className="w-14 h-14 rounded-full flex items-center justify-center text-base font-bold text-white shrink-0"
-                        style={{ backgroundColor: '#0d1b2a' }}
-                    >
-                        {getInitials(beekeeper.full_name)}
-                    </div>
-                    <div>
-                        <p className="font-bold text-base" style={{ color: '#0d1b2a' }}>{beekeeper.full_name}</p>
-                        <p className="text-xs text-gray-400 mt-0.5">{beekeeper.user_id}</p>
-                    </div>
-                </div>
-
-                {/* Detail rows */}
-                <div className="flex flex-col gap-3 divide-y divide-gray-50">
-                    {/* Full Name */}
-                    <div className="flex flex-col gap-0.5 pb-2">
-                        <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Full Name</span>
-                        <span className="text-sm text-gray-700">{beekeeper.full_name}</span>
-                    </div>
-                    {/* Email */}
-                    <div className="flex flex-col gap-0.5 py-2">
-                        <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Email</span>
-                        <span className="text-sm text-gray-700">{beekeeper.email ?? '—'}</span>
-                    </div>
-                    {/* Phone */}
-                    <div className="flex flex-col gap-0.5 py-2">
-                        <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Phone</span>
-                        <span className="text-sm text-gray-700">{beekeeper.phone}</span>
-                    </div>
-                    {/* Address */}
-                    <div className="flex flex-col gap-0.5 py-2">
-                        <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Address</span>
-                        <span className="text-sm text-gray-700">{beekeeper.address ?? '—'}</span>
-                    </div>
-                    {/* Role */}
-                    <div className="flex flex-col gap-0.5 py-2">
-                        <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Role</span>
-                        <span className="inline-flex">
-                            <span
-                                className="text-[11px] font-bold px-2.5 py-1 rounded border uppercase tracking-widest"
-                                style={{ backgroundColor: rc.bg, color: rc.color, borderColor: rc.bg === '#f1f5f9' ? '#e5e7eb' : rc.bg }}
-                            >
-                                {role}
-                            </span>
-                        </span>
-                    </div>
-                    {/* Status */}
-                    <div className="flex flex-col gap-0.5 py-2">
-                        <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Status</span>
-                        <div className="flex items-center gap-1.5">
-                            <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: sc.dot }} />
-                            <span className="text-xs font-medium" style={{ color: sc.labelColor }}>{sc.label}</span>
-                        </div>
-                    </div>
-                    {/* Hives */}
-                    <div className="flex flex-col gap-0.5 py-2">
-                        <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Hives</span>
-                        <span
-                            className="inline-flex items-center justify-center w-8 h-6 rounded text-xs font-bold"
-                            style={{ backgroundColor: '#fef3c7', color: '#92400e' }}
-                        >
-                            {beekeeper.beehives_count ?? 0}
-                        </span>
-                    </div>
-                    {/* Sign Up Date */}
-                    <div className="flex flex-col gap-0.5 py-2">
-                        <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Sign Up Date</span>
-                        <span className="text-sm text-gray-700">
-                            {beekeeper.created_at ? new Date(beekeeper.created_at).toLocaleDateString() : ''}
-                        </span>
-                    </div>
-                    {/* Last Login */}
-                    <div className="flex flex-col gap-0.5 pt-2">
-                        <span className="text-[10px] font-bold uppercase tracking-widest text-gray-400">Last Login</span>
-                        <span className="text-sm text-gray-400">—</span>
-                    </div>
-                </div>
-
-                <div className="flex justify-end pt-1">
-                    <button
-                        onClick={onClose}
-                        className="px-4 py-2 rounded-lg border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-50"
-                    >
-                        Close
-                    </button>
-                </div>
-            </div>
-        </ModalShell>
-    );
-}
-
 // ── Shared modal shell ───────────────────────────────────────────────────
 function ModalShell({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
     useEffect(() => {
-        if (typeof window !== 'undefined') {
-            document.body.classList.add('overflow-hidden');
-            return () => document.body.classList.remove('overflow-hidden');
-        }
+        document.body.classList.add('overflow-hidden');
+        return () => document.body.classList.remove('overflow-hidden');
     }, []);
 
     return (
@@ -310,24 +259,13 @@ function ModalActions({ onCancel, processing, label }: { onCancel: () => void; p
 // ── Main page ─────────────────────────────────────────────────────────────
 export default function Beekeepers({
     beekeepers = [],
-    search: initialSearch = '',
 }: {
     beekeepers?: Beekeeper[];
-    search?: string;
 }) {
-    // Debug: Check beekeepers reference stability
-    if (typeof window !== 'undefined') {
-        console.log('beekeepers reference same:', beekeepers === (window as any).__lastBeekeepers);
-        (window as any).__lastBeekeepers = beekeepers;
-    }
-    
     const [showAddModal, setShowAddModal] = useState(false);
-    const [viewTarget, setViewTarget]     = useState<Beekeeper | null>(null);
     const [editTarget, setEditTarget]     = useState<Beekeeper | null>(null);
     const [revokeTarget, setRevokeTarget]     = useState<Beekeeper | null>(null);
     const [restoreTarget, setRestoreTarget]   = useState<Beekeeper | null>(null);
-    
-    // No extra MRT state needed - let MRT handle it internally
 
     // Revoke logic
     const { patch: revokePatch, processing: revoking } = useForm({});
@@ -490,7 +428,6 @@ export default function Beekeepers({
                         <p className="text-[11px] font-semibold uppercase tracking-widest text-gray-400">Total Beekeepers</p>
                         <div className="flex items-end gap-2 mt-2">
                             <p className="text-4xl font-bold" style={{ color: '#0d1b2a' }}>{beekeepers.length}</p>
-                            <span className="text-xs font-semibold text-emerald-500 mb-1">↗ +3</span>
                         </div>
                         <div className="mt-3 h-1 w-16 rounded-full" style={{ backgroundColor: '#f5a623' }} />
                     </div>
@@ -538,8 +475,8 @@ export default function Beekeepers({
                             <MenuItem
                                 key="view"
                                 onClick={() => {
-                                    setViewTarget(row.original);
                                     closeMenu();
+                                    router.visit(`/beekeepers/${row.original.user_id}`);
                                 }}
                             >
                                 <Eye className="mr-2" />
@@ -584,7 +521,6 @@ export default function Beekeepers({
 
             {/* Modals */}
             {showAddModal && <AddBeekeeperModal onClose={() => setShowAddModal(false)} />}
-            {viewTarget   && <ViewBeekeeperModal beekeeper={viewTarget}  onClose={() => setViewTarget(null)}   />}
             {editTarget   && <EditBeekeeperModal beekeeper={editTarget}  onClose={() => setEditTarget(null)}   />}
 
             {/* Revoke confirmation modal */}

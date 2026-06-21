@@ -1,5 +1,5 @@
 import { Head, useForm } from '@inertiajs/react';
-import { CheckSquare, ClipboardList, MessageSquareWarning, Plus, X } from 'lucide-react';
+import { CheckSquare, ClipboardList, Edit2, MessageSquareWarning, Plus, Trash2, X } from 'lucide-react';
 import React, { useState, useMemo } from 'react';
 import { type MRT_ColumnDef } from 'material-react-table';
 import { DataTable } from '@/components/data-table';
@@ -86,8 +86,35 @@ export default function Advisories({
 }) {
     const [tab, setTab] = useState<'templates' | 'advisories' | 'actions'>('templates');
     const [showModal, setShowModal] = useState(false);
+    const [editTemplate, setEditTemplate] = useState<Template | null>(null);
+    const [deleteTemplate, setDeleteTemplate] = useState<Template | null>(null);
+    const [showAddItem, setShowAddItem] = useState(false);
+    const [editItem, setEditItem] = useState<Advisory | null>(null);
+    const [deleteItem, setDeleteItem] = useState<Advisory | null>(null);
 
+    const { data, setData, post, reset, processing, errors } = useForm({
+        prediction_code: '',
+        hive_state: '',
+        advisory_type: '',
+        severity: '',
+        min_confidence_threshold: '',
+        description: '',
+    });
 
+    const submit = (e: React.FormEvent) => {
+        e.preventDefault();
+        post('/advisories', { onSuccess: () => { reset(); setShowModal(false); } });
+    };
+
+    const { delete: destroy, processing: deleting } = useForm({});
+    const confirmDeleteTemplate = () => {
+        if (!deleteTemplate) return;
+        destroy(`/advisories/${deleteTemplate.template_id}`, { onSuccess: () => setDeleteTemplate(null) });
+    };
+    const confirmDeleteItem = () => {
+        if (!deleteItem) return;
+        destroy(`/advisory-items/${deleteItem.advisory_id}`, { onSuccess: () => setDeleteItem(null) });
+    };
 
     // --- Templates MRT columns ---
     const templateColumns = useMemo<MRT_ColumnDef<Template>[]>(() => [
@@ -148,6 +175,24 @@ export default function Advisories({
             accessorKey: 'created_at',
             header: 'Created',
             Cell: ({ cell }) => fmtDate(cell.getValue<string | null>()),
+        },
+        {
+            id: 'actions',
+            header: 'Actions',
+            enableSorting: false,
+            enableColumnFilter: false,
+            Cell: ({ row }) => (
+                <div className="flex items-center gap-1">
+                    <button onClick={() => setEditTemplate(row.original)}
+                        className="p-1.5 rounded hover:bg-blue-50 text-gray-400 hover:text-blue-500 transition-colors" title="Edit template">
+                        <Edit2 className="w-3.5 h-3.5" />
+                    </button>
+                    <button onClick={() => setDeleteTemplate(row.original)}
+                        className="p-1.5 rounded hover:bg-red-50 text-gray-400 hover:text-red-500 transition-colors" title="Delete template">
+                        <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                </div>
+            ),
         },
     ], []);
 
@@ -228,6 +273,24 @@ export default function Advisories({
             accessorKey: 'created_at',
             header: 'Created',
             Cell: ({ cell }) => fmtDate(cell.getValue<string | null>()),
+        },
+        {
+            id: 'actions',
+            header: 'Actions',
+            enableSorting: false,
+            enableColumnFilter: false,
+            Cell: ({ row }) => (
+                <div className="flex items-center gap-1">
+                    <button onClick={() => setEditItem(row.original)}
+                        className="p-1.5 rounded hover:bg-blue-50 text-gray-400 hover:text-blue-500 transition-colors" title="Edit advisory">
+                        <Edit2 className="w-3.5 h-3.5" />
+                    </button>
+                    <button onClick={() => setDeleteItem(row.original)}
+                        className="p-1.5 rounded hover:bg-red-50 text-gray-400 hover:text-red-500 transition-colors" title="Delete advisory">
+                        <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                </div>
+            ),
         },
     ], []);
 
@@ -312,139 +375,136 @@ export default function Advisories({
         },
     ], []);
 
-    const { data, setData, post, reset, processing, errors } = useForm({
-        prediction_code: '',
-        hive_state: '',
-        advisory_type: '',
-        severity: '',
-        min_confidence_threshold: '',
-        description: '',
-    });
-
-    const submit = (e: React.FormEvent) => {
-        e.preventDefault();
-        post('/advisories', { onSuccess: () => { reset(); setShowModal(false); } });
-    };
-
     return (
         <>
             <Head title="Advisories" />
             <div className="min-h-screen p-6 flex flex-col gap-5" style={{ backgroundColor: '#f8f9fa' }}>
 
-                    {/* Page heading */}
-                    <div className="flex items-start justify-between gap-4">
-                        <div>
-                            <h1 className="text-2xl font-bold" style={{ color: '#0d1b2a' }}>Advisories</h1>
-                            <p className="text-sm text-gray-500 mt-1">
-                                {templates.length} template{templates.length !== 1 ? 's' : ''} · {advisories.length} advisor{advisories.length !== 1 ? 'ies' : 'y'} · {actions.length} triggered action{actions.length !== 1 ? 's' : ''}
-                            </p>
-                        </div>
-                        {tab === 'templates' && (
-                            <button
-                                onClick={() => setShowModal(true)}
-                                className="shrink-0 flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold hover:opacity-90 transition-opacity"
-                                style={{ backgroundColor: '#f5a623', color: '#0d1b2a' }}
-                            >
-                                <Plus className="w-4 h-4" /> Add Template
-                            </button>
-                        )}
+                {/* Page heading */}
+                <div className="flex items-start justify-between gap-4">
+                    <div>
+                        <h1 className="text-2xl font-bold" style={{ color: '#0d1b2a' }}>Advisories</h1>
+                        <p className="text-sm text-gray-500 mt-1">
+                            {templates.length} template{templates.length !== 1 ? 's' : ''} · {advisories.length} advisor{advisories.length !== 1 ? 'ies' : 'y'} · {actions.length} triggered action{actions.length !== 1 ? 's' : ''}
+                        </p>
                     </div>
-
-                    {/* Tabs */}
-                    <div className="flex items-center gap-1 bg-white rounded-xl border border-gray-200 shadow-sm p-1 w-fit">
-                        <button
-                            onClick={() => setTab('templates')}
-                            className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-colors"
-                            style={tab === 'templates' ? { backgroundColor: '#0d1b2a', color: '#ffffff' } : { color: '#64748b' }}
-                        >
-                            <MessageSquareWarning className="w-4 h-4" />
-                            Templates
-                            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full"
-                                style={tab === 'templates' ? { backgroundColor: '#f5a623', color: '#0d1b2a' } : { backgroundColor: '#f1f5f9', color: '#64748b' }}>
-                                {templates.length}
-                            </span>
-                        </button>
-                        <button
-                            onClick={() => setTab('advisories')}
-                            className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-colors"
-                            style={tab === 'advisories' ? { backgroundColor: '#0d1b2a', color: '#ffffff' } : { color: '#64748b' }}
-                        >
-                            <ClipboardList className="w-4 h-4" />
-                            Advisories
-                            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full"
-                                style={tab === 'advisories' ? { backgroundColor: '#f5a623', color: '#0d1b2a' } : { backgroundColor: '#f1f5f9', color: '#64748b' }}>
-                                {advisories.length}
-                            </span>
-                        </button>
-                        <button
-                            onClick={() => setTab('actions')}
-                            className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-colors"
-                            style={tab === 'actions' ? { backgroundColor: '#0d1b2a', color: '#ffffff' } : { color: '#64748b' }}
-                        >
-                            <CheckSquare className="w-4 h-4" />
-                            Advisory Actions
-                            <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full"
-                                style={tab === 'actions' ? { backgroundColor: '#f5a623', color: '#0d1b2a' } : { backgroundColor: '#f1f5f9', color: '#64748b' }}>
-                                {actions.length}
-                            </span>
-                        </button>
-                    </div>
-
-                    {/* ── Templates tab ── */}
                     {tab === 'templates' && (
-                        templates.length === 0 ? (
-                            <EmptyState
-                                label="No advisory templates yet"
-                                hint="Add your first template to get started"
-                                onAdd={() => setShowModal(true)}
-                            />
-                        ) : (
-                            <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-                                <DataTable
-                                    columns={templateColumns}
-                                    data={templates}
-                                    getRowId={(row) => String(row.template_id)}
-                                />
-                            </div>
-                        )
+                        <button
+                            onClick={() => setShowModal(true)}
+                            className="shrink-0 flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold hover:opacity-90 transition-opacity"
+                            style={{ backgroundColor: '#f5a623', color: '#0d1b2a' }}
+                        >
+                            <Plus className="w-4 h-4" /> Add Template
+                        </button>
                     )}
-
-                    {/* ── Advisories tab ── */}
                     {tab === 'advisories' && (
-                        advisories.length === 0 ? (
-                            <EmptyState
-                                label="No advisory actions yet"
-                                hint="Advisory actions are created per template and appear here"
-                            />
-                        ) : (
-                            <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-                                <DataTable
-                                    columns={advisoryColumns}
-                                    data={advisories}
-                                    getRowId={(row) => row.advisory_id}
-                                />
-                            </div>
-                        )
-                    )}
-
-                    {/* ── Advisory Actions tab ── */}
-                    {tab === 'actions' && (
-                        actions.length === 0 ? (
-                            <EmptyState
-                                label="No advisory actions triggered yet"
-                                hint="Actions are created automatically when an inference triggers an advisory"
-                            />
-                        ) : (
-                            <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-                                <DataTable
-                                    columns={actionColumns}
-                                    data={actions}
-                                    getRowId={(row) => row.action_id}
-                                />
-                            </div>
-                        )
+                        <button
+                            onClick={() => setShowAddItem(true)}
+                            className="shrink-0 flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold hover:opacity-90 transition-opacity"
+                            style={{ backgroundColor: '#f5a623', color: '#0d1b2a' }}
+                        >
+                            <Plus className="w-4 h-4" /> Add Advisory
+                        </button>
                     )}
                 </div>
+
+                {/* Tabs */}
+                <div className="flex items-center gap-1 bg-white rounded-xl border border-gray-200 shadow-sm p-1 w-fit">
+                    <button
+                        onClick={() => setTab('templates')}
+                        className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-colors"
+                        style={tab === 'templates' ? { backgroundColor: '#0d1b2a', color: '#ffffff' } : { color: '#64748b' }}
+                    >
+                        <MessageSquareWarning className="w-4 h-4" />
+                        Templates
+                        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full"
+                            style={tab === 'templates' ? { backgroundColor: '#f5a623', color: '#0d1b2a' } : { backgroundColor: '#f1f5f9', color: '#64748b' }}>
+                            {templates.length}
+                        </span>
+                    </button>
+                    <button
+                        onClick={() => setTab('advisories')}
+                        className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-colors"
+                        style={tab === 'advisories' ? { backgroundColor: '#0d1b2a', color: '#ffffff' } : { color: '#64748b' }}
+                    >
+                        <ClipboardList className="w-4 h-4" />
+                        Advisories
+                        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full"
+                            style={tab === 'advisories' ? { backgroundColor: '#f5a623', color: '#0d1b2a' } : { backgroundColor: '#f1f5f9', color: '#64748b' }}>
+                            {advisories.length}
+                        </span>
+                    </button>
+                    <button
+                        onClick={() => setTab('actions')}
+                        className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-colors"
+                        style={tab === 'actions' ? { backgroundColor: '#0d1b2a', color: '#ffffff' } : { color: '#64748b' }}
+                    >
+                        <CheckSquare className="w-4 h-4" />
+                        Advisory Actions
+                        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full"
+                            style={tab === 'actions' ? { backgroundColor: '#f5a623', color: '#0d1b2a' } : { backgroundColor: '#f1f5f9', color: '#64748b' }}>
+                            {actions.length}
+                        </span>
+                    </button>
+                </div>
+
+                {/* ── Templates tab ── */}
+                {tab === 'templates' && (
+                    templates.length === 0 ? (
+                        <EmptyState
+                            label="No advisory templates yet"
+                            hint="Add your first template to get started"
+                            onAdd={() => setShowModal(true)}
+                        />
+                    ) : (
+                        <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+                            <DataTable
+                                columns={templateColumns}
+                                data={templates}
+                                getRowId={(row) => String(row.template_id)}
+                            />
+                        </div>
+                    )
+                )}
+
+                {/* ── Advisories tab ── */}
+                {tab === 'advisories' && (
+                    advisories.length === 0 ? (
+                        <EmptyState
+                            label="No advisories yet"
+                            hint="Add your first advisory action to get started"
+                            onAdd={() => setShowAddItem(true)}
+                            addLabel="Add Advisory"
+                        />
+                    ) : (
+                        <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+                            <DataTable
+                                columns={advisoryColumns}
+                                data={advisories}
+                                getRowId={(row) => row.advisory_id}
+                            />
+                        </div>
+                    )
+                )}
+
+                {/* ── Advisory Actions tab ── */}
+                {tab === 'actions' && (
+                    actions.length === 0 ? (
+                        <EmptyState
+                            label="No advisory actions triggered yet"
+                            hint="Actions are created automatically when an inference triggers an advisory"
+                        />
+                    ) : (
+                        <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+                            <DataTable
+                                columns={actionColumns}
+                                data={actions}
+                                getRowId={(row) => row.action_id}
+                            />
+                        </div>
+                    )
+                )}
+            </div>
 
             {/* Add Template Modal */}
             {showModal && (
@@ -519,11 +579,266 @@ export default function Advisories({
                     </div>
                 </div>
             )}
+
+            {/* Edit Template Modal */}
+            {editTemplate && (
+                <EditTemplateModal template={editTemplate} onClose={() => setEditTemplate(null)} />
+            )}
+
+            {/* Add Advisory Modal */}
+            {showAddItem && (
+                <AdvisoryItemModal templates={templates} onClose={() => setShowAddItem(false)} />
+            )}
+
+            {/* Edit Advisory Modal */}
+            {editItem && (
+                <AdvisoryItemModal templates={templates} item={editItem} onClose={() => setEditItem(null)} />
+            )}
+
+            {/* Delete Template confirmation */}
+            {deleteTemplate && (
+                <ConfirmDeleteModal
+                    title="Delete Advisory Template"
+                    message={`Delete the "${deleteTemplate.hive_state}" template? This cannot be undone.`}
+                    processing={deleting}
+                    onCancel={() => setDeleteTemplate(null)}
+                    onConfirm={confirmDeleteTemplate}
+                />
+            )}
+
+            {/* Delete Advisory confirmation */}
+            {deleteItem && (
+                <ConfirmDeleteModal
+                    title="Delete Advisory"
+                    message={`Delete "${deleteItem.action_title}"? This cannot be undone.`}
+                    processing={deleting}
+                    onCancel={() => setDeleteItem(null)}
+                    onConfirm={confirmDeleteItem}
+                />
+            )}
         </>
     );
 }
 
-function EmptyState({ label, hint, onAdd }: { label: string; hint: string; onAdd?: () => void }) {
+// ── Edit Template modal ──────────────────────────────────────────
+function EditTemplateModal({ template, onClose }: { template: Template; onClose: () => void }) {
+    const { data, setData, patch, processing, errors } = useForm({
+        prediction_code: String(template.prediction_code),
+        hive_state: template.hive_state,
+        advisory_type: template.advisory_type,
+        severity: template.severity,
+        min_confidence_threshold: template.min_confidence_threshold != null ? String(template.min_confidence_threshold) : '',
+        description: template.description ?? '',
+    });
+
+    const submit = (e: React.FormEvent) => {
+        e.preventDefault();
+        patch(`/advisories/${template.template_id}`, { onSuccess: () => onClose() });
+    };
+
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+            <div className="w-full max-w-md rounded-2xl bg-white shadow-2xl">
+                <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+                    <h2 className="text-base font-semibold" style={{ color: '#0d1b2a' }}>Edit Advisory Template</h2>
+                    <button onClick={onClose} className="p-1 rounded hover:bg-gray-100 text-gray-400">
+                        <X className="w-4 h-4" />
+                    </button>
+                </div>
+                <form onSubmit={submit} className="p-6 flex flex-col gap-4">
+                    <div>
+                        <label className="text-xs font-semibold uppercase tracking-widest text-gray-400 block mb-1.5">Prediction Code</label>
+                        <input type="number" step="any" value={data.prediction_code} onChange={(e) => setData('prediction_code', e.target.value)}
+                            className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm outline-none text-gray-700" required />
+                        {errors.prediction_code && <p className="text-xs text-red-500 mt-1">{errors.prediction_code}</p>}
+                    </div>
+                    <div>
+                        <label className="text-xs font-semibold uppercase tracking-widest text-gray-400 block mb-1.5">Hive State</label>
+                        <input type="text" value={data.hive_state} onChange={(e) => setData('hive_state', e.target.value)}
+                            className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm outline-none text-gray-700" required />
+                        {errors.hive_state && <p className="text-xs text-red-500 mt-1">{errors.hive_state}</p>}
+                    </div>
+                    <div>
+                        <label className="text-xs font-semibold uppercase tracking-widest text-gray-400 block mb-1.5">Advisory Type</label>
+                        <input type="text" value={data.advisory_type} onChange={(e) => setData('advisory_type', e.target.value)}
+                            className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm outline-none text-gray-700" required />
+                        {errors.advisory_type && <p className="text-xs text-red-500 mt-1">{errors.advisory_type}</p>}
+                    </div>
+                    <div>
+                        <label className="text-xs font-semibold uppercase tracking-widest text-gray-400 block mb-1.5">Severity</label>
+                        <select value={data.severity} onChange={(e) => setData('severity', e.target.value)}
+                            className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-700 outline-none bg-white" required>
+                            <option value="info">Info</option>
+                            <option value="low">Low</option>
+                            <option value="medium">Medium</option>
+                            <option value="high">High</option>
+                            <option value="critical">Critical</option>
+                        </select>
+                        {errors.severity && <p className="text-xs text-red-500 mt-1">{errors.severity}</p>}
+                    </div>
+                    <div>
+                        <label className="text-xs font-semibold uppercase tracking-widest text-gray-400 block mb-1.5">Min Confidence Threshold (0–1)</label>
+                        <input type="number" min="0" max="1" step="0.01" value={data.min_confidence_threshold} onChange={(e) => setData('min_confidence_threshold', e.target.value)}
+                            className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm outline-none text-gray-700" />
+                        {errors.min_confidence_threshold && <p className="text-xs text-red-500 mt-1">{errors.min_confidence_threshold}</p>}
+                    </div>
+                    <div>
+                        <label className="text-xs font-semibold uppercase tracking-widest text-gray-400 block mb-1.5">Description</label>
+                        <textarea value={data.description} onChange={(e) => setData('description', e.target.value)}
+                            rows={3}
+                            className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm outline-none text-gray-700 resize-none" />
+                        {errors.description && <p className="text-xs text-red-500 mt-1">{errors.description}</p>}
+                    </div>
+                    <div className="flex justify-end gap-3 pt-2">
+                        <button type="button" onClick={onClose}
+                            className="px-4 py-2 rounded-lg border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-50">Cancel</button>
+                        <button type="submit" disabled={processing}
+                            className="px-4 py-2 rounded-lg text-sm font-semibold hover:opacity-90 disabled:opacity-60"
+                            style={{ backgroundColor: '#f5a623', color: '#0d1b2a' }}>
+                            {processing ? 'Saving…' : 'Save Changes'}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    );
+}
+
+// ── Add/Edit Advisory item modal ─────────────────────────────────
+function AdvisoryItemModal({ templates, item, onClose }: { templates: Template[]; item?: Advisory; onClose: () => void }) {
+    const { data, setData, post, patch, processing, errors } = useForm({
+        template_id: item ? String(item.template_id) : '',
+        action_title: item?.action_title ?? '',
+        action_description: item?.action_description ?? '',
+        priority_level: item?.priority_level ?? 'medium',
+        confidence_threshold_min: item ? String(item.confidence_threshold_min) : '',
+        confidence_threshold_max: item ? String(item.confidence_threshold_max) : '',
+        action_order: item ? String(item.action_order) : '1',
+        is_active: item ? item.is_active : true,
+    });
+
+    const submit = (e: React.FormEvent) => {
+        e.preventDefault();
+        if (item) {
+            patch(`/advisory-items/${item.advisory_id}`, { onSuccess: () => onClose() });
+        } else {
+            post('/advisory-items', { onSuccess: () => onClose() });
+        }
+    };
+
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+            <div className="w-full max-w-md rounded-2xl bg-white shadow-2xl max-h-[90vh] flex flex-col">
+                <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 shrink-0">
+                    <h2 className="text-base font-semibold" style={{ color: '#0d1b2a' }}>{item ? 'Edit Advisory' : 'Add Advisory'}</h2>
+                    <button onClick={onClose} className="p-1 rounded hover:bg-gray-100 text-gray-400">
+                        <X className="w-4 h-4" />
+                    </button>
+                </div>
+                <form onSubmit={submit} className="p-6 flex flex-col gap-4 overflow-y-auto">
+                    <div>
+                        <label className="text-xs font-semibold uppercase tracking-widest text-gray-400 block mb-1.5">Hive State Template</label>
+                        <select value={data.template_id} onChange={(e) => setData('template_id', e.target.value)}
+                            className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-700 outline-none bg-white" required>
+                            <option value="">Select template…</option>
+                            {templates.map((t) => (
+                                <option key={t.template_id} value={t.template_id}>{t.hive_state}</option>
+                            ))}
+                        </select>
+                        {errors.template_id && <p className="text-xs text-red-500 mt-1">{errors.template_id}</p>}
+                    </div>
+                    <div>
+                        <label className="text-xs font-semibold uppercase tracking-widest text-gray-400 block mb-1.5">Action Title</label>
+                        <input type="text" value={data.action_title} onChange={(e) => setData('action_title', e.target.value)}
+                            placeholder="e.g. Inspect for Overcrowding"
+                            className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm outline-none text-gray-700 placeholder-gray-300" required />
+                        {errors.action_title && <p className="text-xs text-red-500 mt-1">{errors.action_title}</p>}
+                    </div>
+                    <div>
+                        <label className="text-xs font-semibold uppercase tracking-widest text-gray-400 block mb-1.5">Action Description</label>
+                        <textarea value={data.action_description} onChange={(e) => setData('action_description', e.target.value)}
+                            rows={3}
+                            className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm outline-none text-gray-700 resize-none" required />
+                        {errors.action_description && <p className="text-xs text-red-500 mt-1">{errors.action_description}</p>}
+                    </div>
+                    <div>
+                        <label className="text-xs font-semibold uppercase tracking-widest text-gray-400 block mb-1.5">Priority</label>
+                        <select value={data.priority_level} onChange={(e) => setData('priority_level', e.target.value)}
+                            className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-700 outline-none bg-white" required>
+                            <option value="low">Low</option>
+                            <option value="medium">Medium</option>
+                            <option value="high">High</option>
+                        </select>
+                        {errors.priority_level && <p className="text-xs text-red-500 mt-1">{errors.priority_level}</p>}
+                    </div>
+                    <div className="grid grid-cols-2 gap-3">
+                        <div>
+                            <label className="text-xs font-semibold uppercase tracking-widest text-gray-400 block mb-1.5">Min Confidence</label>
+                            <input type="number" min="0" max="1" step="0.01" value={data.confidence_threshold_min} onChange={(e) => setData('confidence_threshold_min', e.target.value)}
+                                placeholder="0.70"
+                                className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm outline-none text-gray-700 placeholder-gray-300" required />
+                            {errors.confidence_threshold_min && <p className="text-xs text-red-500 mt-1">{errors.confidence_threshold_min}</p>}
+                        </div>
+                        <div>
+                            <label className="text-xs font-semibold uppercase tracking-widest text-gray-400 block mb-1.5">Max Confidence</label>
+                            <input type="number" min="0" max="1" step="0.01" value={data.confidence_threshold_max} onChange={(e) => setData('confidence_threshold_max', e.target.value)}
+                                placeholder="1.00"
+                                className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm outline-none text-gray-700 placeholder-gray-300" required />
+                            {errors.confidence_threshold_max && <p className="text-xs text-red-500 mt-1">{errors.confidence_threshold_max}</p>}
+                        </div>
+                    </div>
+                    <div>
+                        <label className="text-xs font-semibold uppercase tracking-widest text-gray-400 block mb-1.5">Order</label>
+                        <input type="number" min="1" step="1" value={data.action_order} onChange={(e) => setData('action_order', e.target.value)}
+                            className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm outline-none text-gray-700" required />
+                        {errors.action_order && <p className="text-xs text-red-500 mt-1">{errors.action_order}</p>}
+                    </div>
+                    <label className="flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" checked={data.is_active} onChange={(e) => setData('is_active', e.target.checked)}
+                            className="rounded" />
+                        <span className="text-sm text-gray-600">Active</span>
+                    </label>
+                    <div className="flex justify-end gap-3 pt-2">
+                        <button type="button" onClick={onClose}
+                            className="px-4 py-2 rounded-lg border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-50">Cancel</button>
+                        <button type="submit" disabled={processing}
+                            className="px-4 py-2 rounded-lg text-sm font-semibold hover:opacity-90 disabled:opacity-60"
+                            style={{ backgroundColor: '#f5a623', color: '#0d1b2a' }}>
+                            {processing ? 'Saving…' : item ? 'Save Changes' : 'Add Advisory'}
+                        </button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    );
+}
+
+// ── Generic delete confirmation modal ────────────────────────────
+function ConfirmDeleteModal({ title, message, processing, onCancel, onConfirm }: {
+    title: string; message: string; processing: boolean; onCancel: () => void; onConfirm: () => void;
+}) {
+    return (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
+            <div className="w-full max-w-sm rounded-2xl bg-white shadow-2xl p-6 flex flex-col gap-4">
+                <h2 className="text-base font-semibold" style={{ color: '#0d1b2a' }}>{title}</h2>
+                <p className="text-sm text-gray-500">{message}</p>
+                <div className="flex justify-end gap-3">
+                    <button onClick={onCancel}
+                        className="px-4 py-2 rounded-lg border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-50">
+                        Cancel
+                    </button>
+                    <button onClick={onConfirm} disabled={processing}
+                        className="px-4 py-2 rounded-lg text-sm font-semibold text-white hover:opacity-90 disabled:opacity-60"
+                        style={{ backgroundColor: '#dc2626' }}>
+                        {processing ? 'Deleting…' : 'Delete'}
+                    </button>
+                </div>
+            </div>
+        </div>
+    );
+}
+
+function EmptyState({ label, hint, onAdd, addLabel = 'Add Template' }: { label: string; hint: string; onAdd?: () => void; addLabel?: string }) {
     return (
         <div className="flex flex-col items-center justify-center bg-white rounded-xl border border-gray-200 py-20 text-center shadow-sm">
             <div className="rounded-full p-4 mb-3" style={{ backgroundColor: '#fff7ed' }}>
@@ -535,7 +850,7 @@ function EmptyState({ label, hint, onAdd }: { label: string; hint: string; onAdd
                 <button onClick={onAdd}
                     className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold"
                     style={{ backgroundColor: '#f5a623', color: '#0d1b2a' }}>
-                    <Plus className="w-4 h-4" /> Add Template
+                    <Plus className="w-4 h-4" /> {addLabel}
                 </button>
             )}
         </div>
