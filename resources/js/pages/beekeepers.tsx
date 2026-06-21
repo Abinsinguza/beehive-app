@@ -56,10 +56,25 @@ function AddBeekeeperModal({ onClose }: { onClose: () => void }) {
     const { data, setData, post, processing, reset, errors } = useForm({
         name: '', email: '', phone: '', password: '', address: '', server_url: '', api_key: '',
     });
+    const [generating, setGenerating] = useState(false);
 
     const submit = (e: React.FormEvent) => {
         e.preventDefault();
         post('/beekeepers', { onSuccess: () => { reset(); onClose(); } });
+    };
+
+    const generateApiKey = () => {
+        if (!data.name.trim()) return;
+        setGenerating(true);
+        router.post('/api-keys/generate', { client_name: data.name }, {
+            preserveState: true,
+            preserveScroll: true,
+            onSuccess: (page) => {
+                const key = (page.props.flash as { generated_api_key?: string } | undefined)?.generated_api_key;
+                if (key) setData('api_key', key);
+            },
+            onFinish: () => setGenerating(false),
+        });
     };
 
     const fields: { label: string; key: keyof typeof data; type: string; placeholder: string; required: boolean; hint?: string }[] = [
@@ -69,7 +84,6 @@ function AddBeekeeperModal({ onClose }: { onClose: () => void }) {
         { label: 'Password',      key: 'password',   type: 'password', placeholder: 'Min. 4 characters',    required: true  },
         { label: 'Address',       key: 'address',    type: 'text',     placeholder: 'e.g. Kampala, Uganda', required: false, hint: 'Optional' },
         { label: 'Server URL',    key: 'server_url', type: 'text',     placeholder: 'http://192.168.1.10:8085', required: true },
-        { label: 'API Key',       key: 'api_key',    type: 'text',     placeholder: 'Audio server API key', required: true },
     ];
 
     return (
@@ -118,6 +132,44 @@ function AddBeekeeperModal({ onClose }: { onClose: () => void }) {
                         )}
                     </div>
                 ))}
+
+                {/* API Key — generated, not typed */}
+                <div className="flex flex-col gap-1.5">
+                    <label className="text-sm font-semibold text-gray-700 flex items-center gap-1.5">
+                        API Key
+                        <span className="text-red-500 font-bold">*</span>
+                    </label>
+                    <div className="flex gap-2">
+                        <input
+                            type="text"
+                            value={data.api_key}
+                            readOnly
+                            placeholder="Click Generate to mint a key"
+                            required
+                            className={[
+                                'flex-1 rounded-lg px-3.5 py-2.5 text-sm text-gray-800 placeholder-gray-400 bg-gray-50',
+                                'border outline-none',
+                                errors.api_key ? 'border-red-400' : 'border-gray-300',
+                            ].join(' ')}
+                        />
+                        <button
+                            type="button"
+                            onClick={generateApiKey}
+                            disabled={generating || !data.name.trim()}
+                            className="px-4 py-2.5 rounded-lg text-sm font-semibold border border-gray-300 hover:bg-gray-50 disabled:opacity-50 disabled:cursor-not-allowed transition-colors"
+                        >
+                            {generating ? 'Generating…' : 'Generate'}
+                        </button>
+                    </div>
+                    {!data.name.trim() && (
+                        <p className="text-xs text-gray-400">Enter the full name first — it's used to label the key.</p>
+                    )}
+                    {errors.api_key && (
+                        <p className="text-xs text-red-500 flex items-center gap-1">
+                            <span>⚠</span> {errors.api_key}
+                        </p>
+                    )}
+                </div>
 
                 <ModalActions onCancel={onClose} processing={processing} label="Add Beekeeper" />
             </form>

@@ -26,8 +26,15 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::resource('beekeepers', BeekeeperController::class);
     Route::patch('beekeepers/{beekeeper}/revoke',   [BeekeeperController::class, 'revoke'])->name('beekeepers.revoke');
     Route::patch('beekeepers/{beekeeper}/restore',  [BeekeeperController::class, 'restore'])->name('beekeepers.restore');
+    Route::post('beekeepers/{beekeeper}/hives',     [BeekeeperController::class, 'storeHive'])->name('beekeepers.hives.store');
+    Route::post('beekeepers/{beekeeper}/regenerate-api-key', [BeekeeperController::class, 'regenerateApiKey'])->name('beekeepers.regenerate-api-key');
+    Route::post('api-keys/generate', [BeekeeperController::class, 'generateApiKey'])->name('api-keys.generate');
     Route::resource('beehives', BeehiveController::class);
+    Route::post('beehives/{beehive}/recordings-folder', [BeehiveController::class, 'createRecordingsFolder'])->name('beehives.recordings-folder');
     Route::resource('advisories', AdvisoryController::class);
+    Route::post('advisory-items', [AdvisoryController::class, 'storeItem'])->name('advisory-items.store');
+    Route::patch('advisory-items/{advisoryItem}', [AdvisoryController::class, 'updateItem'])->name('advisory-items.update');
+    Route::delete('advisory-items/{advisoryItem}', [AdvisoryController::class, 'destroyItem'])->name('advisory-items.destroy');
     Route::resource('inferences', InferenceController::class)->only(['index', 'store']);
     Route::get('system-config',  [SystemConfigController::class, 'index'])->name('system-config');
     Route::post('system-config', [SystemConfigController::class, 'update'])->name('system-config.update');

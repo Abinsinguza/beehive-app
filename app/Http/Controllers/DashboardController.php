@@ -8,6 +8,7 @@ use App\Models\Beehive;
 use App\Models\Inference;
 use App\Models\User;
 use Carbon\Carbon;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\DB;
 
 class DashboardController extends Controller
@@ -160,7 +161,7 @@ class DashboardController extends Controller
                 'recordings_yesterday' => $recordingsYest,
                 'need_attention'       => $needAttention,
             ],
-            'greeting_name'          => ($authUser = auth()->user()) && $authUser->full_name
+            'greeting_name'          => ($authUser = Auth::user()) && $authUser->full_name
                                           ? explode(' ', $authUser->full_name)[0]
                                           : 'Admin',
             'hives_list'             => $hivesList,

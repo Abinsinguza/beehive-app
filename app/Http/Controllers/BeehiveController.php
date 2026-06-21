@@ -6,7 +6,9 @@ use App\Http\Requests\StoreBeehiveRequest;
 use App\Http\Requests\UpdateBeehiveRequest;
 use App\Models\Beehive;
 use App\Models\User;
+use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Http;
 
 class BeehiveController extends Controller
 {
@@ -162,5 +164,29 @@ class BeehiveController extends Controller
         $beehive->delete();
 
         return redirect()->back()->with('success', 'Hive deleted successfully');
+    }
+
+    public function createRecordingsFolder(Beehive $beehive)
+    {
+        $beehive->load('owner');
+        $apiKey = $beehive->owner?->api_key;
+
+        if (! $apiKey) {
+            return redirect()->back()->with('error', "This hive's owner has no API key configured.");
+        }
+
+        try {
+            $response = Http::withHeaders(['x-api-key' => $apiKey])
+                ->timeout(15)
+                ->post(rtrim(config('services.ml_auth.base_url'), '/') . "/recordings/hives/{$beehive->hive_name}");
+        } catch (ConnectionException $e) {
+            return redirect()->back()->with('error', 'The ML server did not respond in time. It may be down — please try again shortly.');
+        }
+
+        if (! $response->successful()) {
+            return redirect()->back()->with('error', $response->json('detail.0.msg') ?? 'Failed to create recordings folder.');
+        }
+
+        return redirect()->back()->with('success', "Recordings folder created for {$beehive->hive_name}.");
     }
 }

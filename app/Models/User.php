@@ -27,6 +27,7 @@ class User extends Authenticatable
         'device_token_updated_at',
         'server_url',
         'api_key',
+        'ml_access_token',
     ];
 
     protected $hidden = [
@@ -34,6 +35,7 @@ class User extends Authenticatable
         'two_factor_secret',
         'two_factor_recovery_codes',
         'remember_token',
+        'ml_access_token',
     ];
 
     protected $appends = ['name', 'status', 'id'];
