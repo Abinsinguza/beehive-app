@@ -1,7 +1,9 @@
 import { Head, router, useForm } from '@inertiajs/react';
 import AppLayout from '@/layouts/app-layout';
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { X } from 'lucide-react';
+import { type MRT_ColumnDef } from 'material-react-table';
+import { DataTable } from '@/components/data-table';
 
 type Beehive = {
     hive_id: string;
@@ -94,6 +96,116 @@ export default function Inferences({ inferences, beehives = [], stats, filters }
     const [search, setSearch]       = useState(filters?.search ?? '');
     const [stateFilter, setStateFilter] = useState(filters?.state ?? '');
     const [showModal, setShowModal] = useState(false);
+
+    const columns = useMemo<MRT_ColumnDef<Inference>[]>(() => [
+        {
+            id: 'index',
+            header: '#',
+            enableSorting: false,
+            enableColumnFilter: false,
+            Cell: ({ row }) => row.index + 1,
+        },
+        {
+            accessorKey: 'inference_id',
+            header: 'Inference ID',
+            enableSorting: true,
+            enableColumnFilter: true,
+            Cell: ({ row }) => (
+                <span className="font-mono text-gray-500" title={row.original.inference_id}>
+                    {shortId(row.original.inference_id)}
+                </span>
+            ),
+        },
+        {
+            id: 'hive',
+            header: 'Hive',
+            enableSorting: true,
+            enableColumnFilter: true,
+            Cell: ({ row }) => {
+                const r = row.original;
+                return r.beehive ? (
+                    <div>
+                        <p className="font-semibold whitespace-nowrap" style={{ color: '#0d1b2a' }}>
+                            {r.beehive.hive_name}
+                        </p>
+                        <p className="text-[10px] text-gray-400 font-normal">
+                            {r.beehive.hive_location}
+                        </p>
+                    </div>
+                ) : (
+                    <span className="font-mono text-gray-400" title={r.hive_id}>
+                        {shortId(r.hive_id)}
+                    </span>
+                );
+            },
+        },
+        {
+            accessorKey: 'audio_id',
+            header: 'Audio ID',
+            enableSorting: true,
+            enableColumnFilter: true,
+            Cell: ({ row }) => (
+                <span className="font-mono text-gray-400" title={row.original.audio_id ?? ''}>
+                    {row.original.audio_id ? shortId(row.original.audio_id) : '—'}
+                </span>
+            ),
+        },
+        {
+            accessorKey: 'hive_state',
+            header: 'Hive State',
+            enableSorting: true,
+            enableColumnFilter: true,
+            filterVariant: 'select',
+            filterSelectOptions: ['', 'normal', 'pre_swarm', 'swarm', 'abscondence', 'external_noise', 'pest_disturbance', 'uncertain'],
+            Cell: ({ row }) => {
+                const style = stateStyle(row.original.hive_state);
+                return (
+                    <span
+                        className="text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-widest whitespace-nowrap"
+                        style={{ backgroundColor: style.bg, color: style.text }}
+                    >
+                        {row.original.hive_state}
+                    </span>
+                );
+            },
+        },
+        {
+            accessorKey: 'confidence_score',
+            header: 'Confidence Score',
+            enableSorting: true,
+            enableColumnFilter: false,
+            Cell: ({ row }) => (
+                <span className="font-bold tabular-nums" style={{ color: scoreColor(row.original.confidence_score) }}>
+                    {fmtScore(row.original.confidence_score)}
+                </span>
+            ),
+        },
+        {
+            accessorKey: 'inference_latency_ms',
+            header: 'Latency (ms)',
+            enableSorting: true,
+            enableColumnFilter: false,
+            Cell: ({ row }) => (
+                <span className="tabular-nums text-gray-600">
+                    {row.original.inference_latency_ms != null ? `${row.original.inference_latency_ms.toFixed(2)}` : '—'}
+                </span>
+            ),
+        },
+        {
+            accessorKey: 'analyzed_at',
+            header: 'Analyzed At',
+            enableSorting: true,
+            enableColumnFilter: false,
+            Cell: ({ row }) => fmtDate(row.original.analyzed_at),
+        },
+        {
+            accessorKey: 'created_at',
+            header: 'Created At',
+            enableSorting: true,
+            enableColumnFilter: false,
+            Cell: ({ row }) => fmtDate(row.original.created_at),
+        },
+    ], []);
 
     const { data, setData, post, processing, errors, reset } = useForm({
         hive_id: '',
@@ -379,148 +491,11 @@ export default function Inferences({ inferences, beehives = [], stats, filters }
 
                 {/* ── Table ── */}
                 <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-x-auto">
-                    <table className="w-full text-xs min-w-225">
-                        <thead>
-                            <tr className="border-b border-gray-100 bg-gray-50">
-                                {[
-                                    '#',
-                                    'Inference ID',
-                                    'Hive',
-                                    'Audio ID',
-                                    'Hive State',
-                                    'Confidence Score',
-                                    'Latency (ms)',
-                                    'Analyzed At',
-                                    'Created At',
-                                ].map((h) => (
-                                    <th key={h} className="text-left px-4 py-3 text-[10px] font-bold uppercase tracking-widest text-gray-400 whitespace-nowrap">
-                                        {h}
-                                    </th>
-                                ))}
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {rows.length === 0 ? (
-                                <tr>
-                                    <td colSpan={9} className="px-4 py-12 text-center text-sm text-gray-400">
-                                        No inference records found.
-                                    </td>
-                                </tr>
-                            ) : (
-                                rows.map((r, idx) => {
-                                    const idx2 = from - 1 + idx;
-                                    const style = stateStyle(r.hive_state);
-                                    return (
-                                        <tr
-                                            key={r.inference_id}
-                                            className="border-b border-gray-50 hover:bg-gray-50 transition-colors"
-                                        >
-                                            {/* # */}
-                                            <td className="px-4 py-3 text-gray-400 tabular-nums">{idx2 + 1}</td>
-
-                                            {/* Inference ID */}
-                                            <td className="px-4 py-3 font-mono text-gray-500" title={r.inference_id}>
-                                                {shortId(r.inference_id)}
-                                            </td>
-
-                                            {/* Hive */}
-                                            <td className="px-4 py-3 font-semibold whitespace-nowrap" style={{ color: '#0d1b2a' }}>
-                                                {r.beehive ? (
-                                                    <div>
-                                                        <p>{r.beehive.hive_name}</p>
-                                                        <p className="text-[10px] text-gray-400 font-normal">{r.beehive.hive_location}</p>
-                                                    </div>
-                                                ) : (
-                                                    <span className="font-mono text-gray-400" title={r.hive_id}>{shortId(r.hive_id)}</span>
-                                                )}
-                                            </td>
-
-                                            {/* Audio ID */}
-                                            <td className="px-4 py-3 font-mono text-gray-400" title={r.audio_id ?? ''}>
-                                                {r.audio_id ? shortId(r.audio_id) : '—'}
-                                            </td>
-
-                                            {/* Hive State */}
-                                            <td className="px-4 py-3">
-                                                <span
-                                                    className="text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-widest whitespace-nowrap"
-                                                    style={{ backgroundColor: style.bg, color: style.text }}
-                                                >
-                                                    {r.hive_state}
-                                                </span>
-                                            </td>
-
-                                            {/* Confidence Score */}
-                                            <td className="px-4 py-3">
-                                                <span className="font-bold tabular-nums" style={{ color: scoreColor(r.confidence_score) }}>
-                                                    {fmtScore(r.confidence_score)}
-                                                </span>
-                                            </td>
-
-                                            {/* Latency */}
-                                            <td className="px-4 py-3 tabular-nums text-gray-600">
-                                                {r.inference_latency_ms != null ? `${r.inference_latency_ms.toFixed(2)}` : '—'}
-                                            </td>
-
-                                            {/* Analyzed At */}
-                                            <td className="px-4 py-3 text-gray-500 whitespace-nowrap">
-                                                {fmtDate(r.analyzed_at)}
-                                            </td>
-
-                                            {/* Created At */}
-                                            <td className="px-4 py-3 text-gray-500 whitespace-nowrap">
-                                                {fmtDate(r.created_at)}
-                                            </td>
-                                        </tr>
-                                    );
-                                })
-                            )}
-                        </tbody>
-                    </table>
-                    {/* ── Pagination ── */}
-                    {(inferences?.last_page ?? 1) > 1 && (
-                        <div className="flex items-center justify-between px-4 py-3 border-t border-gray-100">
-                            <p className="text-xs text-gray-500">
-                                Showing <span className="font-semibold text-gray-700">{from}</span> to{' '}
-                                <span className="font-semibold text-gray-700">{to}</span> of{' '}
-                                <span className="font-semibold text-gray-700">{inferences?.total?.toLocaleString()}</span> results
-                            </p>
-                            <div className="flex items-center gap-1">
-                                <button
-                                    onClick={() => goToPage(inferences?.prev_page_url ?? null)}
-                                    disabled={!inferences?.prev_page_url}
-                                    className="px-3 py-1.5 text-xs rounded-lg border border-gray-200 text-gray-600 disabled:opacity-40 hover:bg-gray-50 transition-colors"
-                                >
-                                    Previous
-                                </button>
-                                {pages.map((p, i) =>
-                                    p === '…' ? (
-                                        <span key={`e-${i}`} className="px-2 py-1.5 text-xs text-gray-400">…</span>
-                                    ) : (
-                                        <button
-                                            key={p}
-                                            onClick={() => goToPageNum(p as number)}
-                                            className="w-8 h-8 text-xs rounded-lg border transition-colors font-medium"
-                                            style={
-                                                p === inferences?.current_page
-                                                    ? { backgroundColor: '#0d1b2a', color: '#fff', borderColor: '#0d1b2a' }
-                                                    : { backgroundColor: '#fff', color: '#374151', borderColor: '#e5e7eb' }
-                                            }
-                                        >
-                                            {p}
-                                        </button>
-                                    )
-                                )}
-                                <button
-                                    onClick={() => goToPage(inferences?.next_page_url ?? null)}
-                                    disabled={!inferences?.next_page_url}
-                                    className="px-3 py-1.5 text-xs rounded-lg border border-gray-200 text-gray-600 disabled:opacity-40 hover:bg-gray-50 transition-colors"
-                                >
-                                    Next
-                                </button>
-                            </div>
-                        </div>
-                    )}
+                    <DataTable
+                        columns={columns}
+                        data={inferences?.data ?? []}
+                        getRowId={(row) => row.inference_id}
+                    />
                 </div>
 
             </div>

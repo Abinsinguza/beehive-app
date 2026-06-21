@@ -1,7 +1,9 @@
 import { Head, router } from '@inertiajs/react';
 import { AlertCircle, AlertTriangle, Download, Info, Search, SlidersHorizontal } from 'lucide-react';
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
+import { type MRT_ColumnDef } from 'material-react-table';
 import AppLayout from '@/layouts/app-layout';
+import { DataTable } from '@/components/data-table';
 
 interface Log {
     log_id: string;
@@ -73,6 +75,96 @@ export default function SystemLogs({ logs, stats, eventTypes, filters }: Props) 
     const [level, setLevel]           = useState(filters.level);
     const [eventType, setEventType]   = useState(filters.eventType);
     const [expanded, setExpanded]     = useState<string | null>(null);
+
+    const columns = useMemo<MRT_ColumnDef<Log>[]>(() => [
+        {
+            accessorKey: 'created_at',
+            header: 'Time',
+            enableSorting: true,
+            enableColumnFilter: false,
+            Cell: ({ row }) => {
+                const { date, time } = fmt(row.original.created_at);
+                return (
+                    <div>
+                        <span className="block font-mono text-gray-700">{time}</span>
+                        <span className="block text-gray-400">{date}</span>
+                    </div>
+                );
+            },
+        },
+        {
+            accessorKey: 'level',
+            header: 'Level',
+            enableSorting: true,
+            enableColumnFilter: true,
+            filterVariant: 'select',
+            filterSelectOptions: ['', 'error', 'warning', 'info'],
+            Cell: ({ row }) => {
+                const cfg = levelConfig[row.original.level] ?? levelConfig.info;
+                return (
+                    <span
+                        className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${cfg.badge}`}
+                        style={{ backgroundColor: `${cfg.dot}15` }}
+                    >
+                        <span
+                            className="w-1.5 h-1.5 rounded-full shrink-0"
+                            style={{ backgroundColor: cfg.dot }}
+                        />
+                        {cfg.label}
+                    </span>
+                );
+            },
+        },
+        {
+            accessorKey: 'event_type',
+            header: 'Event',
+            enableSorting: true,
+            enableColumnFilter: true,
+            filterVariant: 'select',
+            filterSelectOptions: ['', ...eventTypes],
+            Cell: ({ row }) => (
+                <span className="font-mono text-[11px] px-2 py-1 rounded border border-gray-200 bg-gray-50 text-gray-600 whitespace-nowrap">
+                    {row.original.event_type ?? '—'}
+                </span>
+            ),
+        },
+        {
+            accessorKey: 'message',
+            header: 'Message',
+            enableSorting: false,
+            enableColumnFilter: true,
+            Cell: ({ row }) => (
+                <span className="block truncate text-gray-700 max-w-sm">{row.original.message}</span>
+            ),
+        },
+        {
+            id: 'hive_user',
+            header: 'Hive / User',
+            enableSorting: false,
+            enableColumnFilter: false,
+            Cell: ({ row }) => {
+                const log = row.original;
+                return (
+                    <div>
+                        {log.hive_name && (
+                            <span
+                                className="block text-[11px] font-semibold px-2 py-0.5 rounded mb-0.5 w-fit"
+                                style={{ backgroundColor: '#fff7ed', color: '#f5a623' }}
+                            >
+                                {log.hive_name}
+                            </span>
+                        )}
+                        {log.user_name && (
+                            <span className="block text-gray-400">{log.user_name}</span>
+                        )}
+                        {!log.hive_name && !log.user_name && (
+                            <span className="text-gray-300">—</span>
+                        )}
+                    </div>
+                );
+            },
+        },
+    ], [eventTypes]);
 
     function applyFilters(overrides: Partial<{ level: string; eventType: string; search: string }> = {}) {
         router.get('/system-logs', {
@@ -258,151 +350,18 @@ export default function SystemLogs({ logs, stats, eventTypes, filters }: Props) 
                             <span className="text-xs text-gray-400 ml-1">{logs.total.toLocaleString()} total entries</span>
                         </div>
 
-                        <div className="overflow-x-auto">
-                            <table className="w-full text-xs">
-                                <thead>
-                                    <tr className="border-b border-gray-100 bg-gray-50">
-                                        <th className="text-left px-4 py-3 text-[10px] font-bold uppercase tracking-widest text-gray-400 whitespace-nowrap">Time</th>
-                                        <th className="text-left px-4 py-3 text-[10px] font-bold uppercase tracking-widest text-gray-400">Level</th>
-                                        <th className="text-left px-4 py-3 text-[10px] font-bold uppercase tracking-widest text-gray-400">Event</th>
-                                        <th className="text-left px-4 py-3 text-[10px] font-bold uppercase tracking-widest text-gray-400">Message</th>
-                                        <th className="text-left px-4 py-3 text-[10px] font-bold uppercase tracking-widest text-gray-400 whitespace-nowrap">Hive / User</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {logs.data.length === 0 ? (
-                                        <tr>
-                                            <td colSpan={5} className="text-center py-16 text-gray-400 text-sm">
-                                                No log entries found
-                                            </td>
-                                        </tr>
-                                    ) : logs.data.map(log => {
-                                        const cfg        = levelConfig[log.level] ?? levelConfig.info;
-                                        const isExpanded = expanded === log.log_id;
-                                        const { date, time } = fmt(log.created_at);
-                                        return (
-                                            <>
-                                                <tr
-                                                    key={log.log_id}
-                                                    className="border-b border-gray-50 hover:bg-gray-50 cursor-pointer transition-colors"
-                                                    onClick={() => setExpanded(isExpanded ? null : log.log_id)}
-                                                >
-                                                    {/* TIME */}
-                                                    <td className="px-4 py-3 whitespace-nowrap">
-                                                        <span className="block font-mono text-gray-700">{time}</span>
-                                                        <span className="block text-gray-400">{date}</span>
-                                                    </td>
-
-                                                    {/* LEVEL */}
-                                                    <td className="px-4 py-3">
-                                                        <span
-                                                            className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${cfg.badge}`}
-                                                            style={{ backgroundColor: `${cfg.dot}15` }}
-                                                        >
-                                                            <span
-                                                                className="w-1.5 h-1.5 rounded-full shrink-0"
-                                                                style={{ backgroundColor: cfg.dot }}
-                                                            />
-                                                            {cfg.label}
-                                                        </span>
-                                                    </td>
-
-                                                    {/* EVENT */}
-                                                    <td className="px-4 py-3">
-                                                        <span
-                                                            className="font-mono text-[11px] px-2 py-1 rounded border border-gray-200 bg-gray-50 text-gray-600 whitespace-nowrap"
-                                                        >
-                                                            {log.event_type ?? '—'}
-                                                        </span>
-                                                    </td>
-
-                                                    {/* MESSAGE */}
-                                                    <td className="px-4 py-3 max-w-sm">
-                                                        <span className="block truncate text-gray-700">{log.message}</span>
-                                                    </td>
-
-                                                    {/* HIVE / USER */}
-                                                    <td className="px-4 py-3 whitespace-nowrap">
-                                                        {log.hive_name && (
-                                                            <span
-                                                                className="block text-[11px] font-semibold px-2 py-0.5 rounded mb-0.5 w-fit"
-                                                                style={{ backgroundColor: '#fff7ed', color: '#f5a623' }}
-                                                            >
-                                                                {log.hive_name}
-                                                            </span>
-                                                        )}
-                                                        {log.user_name && (
-                                                            <span className="block text-gray-400">{log.user_name}</span>
-                                                        )}
-                                                        {!log.hive_name && !log.user_name && (
-                                                            <span className="text-gray-300">—</span>
-                                                        )}
-                                                    </td>
-                                                </tr>
-
-                                                {isExpanded && log.details && (
-                                                    <tr key={`${log.log_id}-detail`} className="bg-gray-50 border-b border-gray-100">
-                                                        <td colSpan={5} className="px-6 py-3">
-                                                            <pre className="text-xs font-mono text-gray-600 whitespace-pre-wrap break-all bg-white rounded-lg border border-gray-200 p-3">
-                                                                {JSON.stringify(log.details, null, 2)}
-                                                            </pre>
-                                                        </td>
-                                                    </tr>
-                                                )}
-                                            </>
-                                        );
-                                    })}
-                                </tbody>
-                            </table>
-                        </div>
-
-                        {/* Pagination */}
-                        {logs.last_page > 1 && (
-                            <div className="flex items-center justify-between px-5 py-4 border-t border-gray-100">
-                                <p className="text-xs text-gray-500">
-                                    Showing <span className="font-semibold text-gray-700">{from}</span> to{' '}
-                                    <span className="font-semibold text-gray-700">{to}</span> of{' '}
-                                    <span className="font-semibold text-gray-700">{logs.total.toLocaleString()}</span> results
-                                </p>
-
-                                <div className="flex items-center gap-1">
-                                    <button
-                                        onClick={() => goToPage(logs.prev_page_url)}
-                                        disabled={!logs.prev_page_url}
-                                        className="px-3 py-1.5 text-xs rounded-lg border border-gray-200 text-gray-600 disabled:opacity-40 hover:bg-gray-50 transition-colors"
-                                    >
-                                        Previous
-                                    </button>
-
-                                    {pages.map((p, i) =>
-                                        p === '…' ? (
-                                            <span key={`ellipsis-${i}`} className="px-2 py-1.5 text-xs text-gray-400">…</span>
-                                        ) : (
-                                            <button
-                                                key={p}
-                                                onClick={() => goToPageNum(p as number)}
-                                                className="w-8 h-8 text-xs rounded-lg border transition-colors font-medium"
-                                                style={
-                                                    p === logs.current_page
-                                                        ? { backgroundColor: '#0d1b2a', color: '#ffffff', borderColor: '#0d1b2a' }
-                                                        : { backgroundColor: '#ffffff', color: '#374151', borderColor: '#e5e7eb' }
-                                                }
-                                            >
-                                                {p}
-                                            </button>
-                                        )
-                                    )}
-
-                                    <button
-                                        onClick={() => goToPage(logs.next_page_url)}
-                                        disabled={!logs.next_page_url}
-                                        className="px-3 py-1.5 text-xs rounded-lg border border-gray-200 text-gray-600 disabled:opacity-40 hover:bg-gray-50 transition-colors"
-                                    >
-                                        Next
-                                    </button>
-                                </div>
+                        <DataTable
+                        columns={columns}
+                        data={logs.data}
+                        getRowId={(row) => row.log_id}
+                        renderDetailPanel={({ row }: { row: { original: Log } }) => row.original.details ? (
+                            <div className="p-4 bg-gray-50 border-b border-gray-100">
+                                <pre className="text-xs font-mono text-gray-600 whitespace-pre-wrap break-all bg-white rounded-lg border border-gray-200 p-3">
+                                    {JSON.stringify(row.original.details, null, 2)}
+                                </pre>
                             </div>
-                        )}
+                        ) : undefined}
+                    />
                     </div>
                 </div>
 
