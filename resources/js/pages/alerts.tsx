@@ -3,8 +3,8 @@ import { BellRing, CheckCircle, AlertCircle, Download, Inbox, Plus, X } from 'lu
 import React, { useEffect, useMemo, useState } from 'react';
 import AppLayout from '@/layouts/app-layout';
 import { Alert } from '@/components/ui/alert';
-import { MaterialReactTable, useMaterialReactTable, type MRT_ColumnDef } from 'material-react-table';
-import { createTheme, ThemeProvider } from '@mui/material/styles';
+import { type MRT_ColumnDef } from 'material-react-table';
+import { DataTable } from '@/components/data-table';
 
 type Beehive = {
     hive_id: string;
@@ -73,20 +73,7 @@ function hiveStateColor(state: string | null) {
     return state ? (hiveStateColors[state] ?? '#64748b') : '#94a3b8';
 }
 
-// MUI Theme for z-index fixes
-const theme = createTheme({
-    components: {
-        MuiPopover: {
-            defaultProps: { style: { zIndex: 99999 } },
-        },
-        MuiMenu: {
-            defaultProps: { style: { zIndex: 99999 } },
-        },
-        MuiPopper: {
-            defaultProps: { style: { zIndex: 99999 } },
-        },
-    },
-});
+
 
 // Create a type for our log objects since we're using them in MRT
 type Log = {
@@ -389,38 +376,8 @@ export default function AlertsPage({
         },
     ], []);
 
-    const tableData = useMemo(() => filteredLogs, [filteredLogs]);
-
-    // Set up Material React Table
-    const table = useMaterialReactTable({
-        columns,
-        data: tableData,
-        getRowId: (row) => row.alertObj.alert_id,
-        enableSorting: true,
-        enableColumnFilters: true,
-        enableColumnActions: true,
-        enableHiding: true,
-        enableRowActions: false,
-        enableRowSelection: false,
-        enableMultiRowSelection: false,
-        // Custom empty state
-        renderEmptyRowsFallback: () => (
-            <div className="px-4 py-16 text-center">
-                <div className="flex flex-col items-center gap-2">
-                    <Inbox className="w-8 h-8 text-gray-300" />
-                    <p className="text-sm font-semibold text-gray-500">No alerts found</p>
-                    <p className="text-xs text-gray-400">
-                        {alerts.length === 0
-                            ? 'No alerts have been recorded yet.'
-                            : 'No alerts match the current filters.'}
-                    </p>
-                </div>
-            </div>
-        ),
-    });
-
     return (
-        <ThemeProvider theme={theme}>
+        <>
             <Head title="Alerts & Logs" />
             <div className="min-h-screen" style={{ backgroundColor: '#f8f9fa' }}>
 
@@ -543,7 +500,24 @@ export default function AlertsPage({
                                 </div>
                             </div>
 
-                            <MaterialReactTable table={table} />
+                            <DataTable
+                                columns={columns}
+                                data={filteredLogs}
+                                getRowId={(row) => row.alertObj.alert_id}
+                                renderEmptyRowsFallback={() => (
+                                    <div className="px-4 py-16 text-center">
+                                        <div className="flex flex-col items-center gap-2">
+                                            <Inbox className="w-8 h-8 text-gray-300" />
+                                            <p className="text-sm font-semibold text-gray-500">No alerts found</p>
+                                            <p className="text-xs text-gray-400">
+                                                {alerts.length === 0
+                                                    ? 'No alerts have been recorded yet.'
+                                                    : 'No alerts match the current filters.'}
+                                            </p>
+                                        </div>
+                                    </div>
+                                )}
+                            />
                         </div>
 
                 </div>
@@ -610,7 +584,7 @@ export default function AlertsPage({
                     </div>
                 </div>
             )}
-        </ThemeProvider>
+        </>
     );
 }
 

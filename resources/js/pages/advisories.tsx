@@ -1,8 +1,8 @@
 import { Head, useForm } from '@inertiajs/react';
 import { CheckSquare, ClipboardList, MessageSquareWarning, Plus, X } from 'lucide-react';
 import React, { useState, useMemo } from 'react';
-import { createTheme, ThemeProvider } from '@mui/material/styles';
-import { MaterialReactTable, useMaterialReactTable, type MRT_ColumnDef } from 'material-react-table';
+import { type MRT_ColumnDef } from 'material-react-table';
+import { DataTable } from '@/components/data-table';
 import AppLayout from '@/layouts/app-layout';
 
 type Template = {
@@ -87,14 +87,7 @@ export default function Advisories({
     const [tab, setTab] = useState<'templates' | 'advisories' | 'actions'>('templates');
     const [showModal, setShowModal] = useState(false);
 
-    // MUI Theme for high z-index on MRT popups
-    const theme = useMemo(() => createTheme({
-        components: {
-            MuiPopover: { defaultProps: { style: { zIndex: 99999 } } },
-            MuiMenu: { defaultProps: { style: { zIndex: 99999 } } },
-            MuiPopper: { defaultProps: { style: { zIndex: 99999 } } },
-        },
-    }), []);
+
 
     // --- Templates MRT columns ---
     const templateColumns = useMemo<MRT_ColumnDef<Template>[]>(() => [
@@ -319,51 +312,6 @@ export default function Advisories({
         },
     ], []);
 
-    // Memoize table data for stable references
-    const templateTableData = useMemo(() => templates, [templates]);
-    const advisoryTableData = useMemo(() => advisories, [advisories]);
-    const actionTableData = useMemo(() => actions, [actions]);
-
-    // Set up the three MRT tables
-    const templateTable = useMaterialReactTable({
-        columns: templateColumns,
-        data: templateTableData,
-        getRowId: (row) => String(row.template_id),
-        enableSorting: true,
-        enableColumnFilters: true,
-        enableColumnActions: true,
-        enableHiding: true,
-        enableRowActions: false,
-        enableRowSelection: false,
-        enableMultiRowSelection: false,
-    });
-
-    const advisoryTable = useMaterialReactTable({
-        columns: advisoryColumns,
-        data: advisoryTableData,
-        getRowId: (row) => row.advisory_id, // advisory_id is already a string
-        enableSorting: true,
-        enableColumnFilters: true,
-        enableColumnActions: true,
-        enableHiding: true,
-        enableRowActions: false,
-        enableRowSelection: false,
-        enableMultiRowSelection: false,
-    });
-
-    const actionTable = useMaterialReactTable({
-        columns: actionColumns,
-        data: actionTableData,
-        getRowId: (row) => row.action_id, // action_id is already a string
-        enableSorting: true,
-        enableColumnFilters: true,
-        enableColumnActions: true,
-        enableHiding: true,
-        enableRowActions: false,
-        enableRowSelection: false,
-        enableMultiRowSelection: false,
-    });
-
     const { data, setData, post, reset, processing, errors } = useForm({
         prediction_code: '',
         hive_state: '',
@@ -381,8 +329,7 @@ export default function Advisories({
     return (
         <>
             <Head title="Advisories" />
-            <ThemeProvider theme={theme}>
-                <div className="min-h-screen p-6 flex flex-col gap-5" style={{ backgroundColor: '#f8f9fa' }}>
+            <div className="min-h-screen p-6 flex flex-col gap-5" style={{ backgroundColor: '#f8f9fa' }}>
 
                     {/* Page heading */}
                     <div className="flex items-start justify-between gap-4">
@@ -453,7 +400,11 @@ export default function Advisories({
                             />
                         ) : (
                             <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-                                <MaterialReactTable table={templateTable} />
+                                <DataTable
+                                    columns={templateColumns}
+                                    data={templates}
+                                    getRowId={(row) => String(row.template_id)}
+                                />
                             </div>
                         )
                     )}
@@ -467,7 +418,11 @@ export default function Advisories({
                             />
                         ) : (
                             <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-                                <MaterialReactTable table={advisoryTable} />
+                                <DataTable
+                                    columns={advisoryColumns}
+                                    data={advisories}
+                                    getRowId={(row) => row.advisory_id}
+                                />
                             </div>
                         )
                     )}
@@ -481,12 +436,15 @@ export default function Advisories({
                             />
                         ) : (
                             <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-                                <MaterialReactTable table={actionTable} />
+                                <DataTable
+                                    columns={actionColumns}
+                                    data={actions}
+                                    getRowId={(row) => row.action_id}
+                                />
                             </div>
                         )
                     )}
                 </div>
-            </ThemeProvider>
 
             {/* Add Template Modal */}
             {showModal && (

@@ -12,9 +12,9 @@ import {
 } from 'lucide-react';
 import React, { useEffect, useMemo, useRef, useState } from 'react';
 import AppLayout from '@/layouts/app-layout';
-import { MaterialReactTable, useMaterialReactTable, type MRT_ColumnDef, type MRT_PaginationState } from 'material-react-table';
+import { type MRT_ColumnDef, type MRT_PaginationState } from 'material-react-table';
 import { MenuItem } from '@mui/material';
-import { createTheme, ThemeProvider } from '@mui/material/styles';
+import { DataTable } from '@/components/data-table';
 
 type HiveRef   = { hive_id: string; hive_name: string; hive_location: string };
 type Recording = {
@@ -105,20 +105,7 @@ function truncatePath(url: string, max = 28) {
     return full.length > max ? full.substring(0, max) + '…' : full;
 }
 
-// MUI Theme for z-index fixes
-const theme = createTheme({
-    components: {
-        MuiPopover: {
-            defaultProps: { style: { zIndex: 99999 } },
-        },
-        MuiMenu: {
-            defaultProps: { style: { zIndex: 99999 } },
-        },
-        MuiPopper: {
-            defaultProps: { style: { zIndex: 99999 } },
-        },
-    },
-});
+
 
 // ── Add recording modal ──────────────────────────────────────────
 function AddRecordingModal({ hives, onClose }: { hives: HiveRef[]; onClose: () => void }) {
@@ -465,43 +452,14 @@ export default function AudioRecordings({ recordings, stats, formats, hives, fil
         },
     ], [formats]);
 
-    const tableData = useMemo(() => recordings.data, [recordings.data]);
-
     // Add MRT state for pagination
     const [pagination, setPagination] = useState<MRT_PaginationState>({
         pageIndex: recordings.current_page - 1, // MRT is 0-based, our server is 1-based
         pageSize: recordings.per_page,
     });
 
-    // Set up Material React Table
-    const table = useMaterialReactTable({
-        columns,
-        data: tableData,
-        getRowId: (row) => row.audio_id,
-        enableSorting: true,
-        enableColumnFilters: true,
-        enableColumnActions: true,
-        enableHiding: true,
-        enableRowActions: false,
-        enableRowSelection: false,
-        enableMultiRowSelection: false,
-        manualPagination: true, // since server does pagination
-        rowCount: recordings.total,
-        state: {
-            pagination: pagination,
-        },
-        onPaginationChange: (updater) => {
-            const newPagination = typeof updater === 'function' ? updater(pagination) : updater;
-            setPagination(newPagination);
-            // Update the page in the router (convert to 1-based index)
-            router.get('/audio-recordings', {
-                search, status, format, hive, page: String(newPagination.pageIndex + 1),
-            }, { preserveState: true });
-        },
-    });
-
     return (
-        <ThemeProvider theme={theme}>
+        <>
             <Head title="Audio Recordings" />
             {showAdd && <AddRecordingModal hives={hives} onClose={() => setShowAdd(false)} />}
 
@@ -609,12 +567,27 @@ export default function AudioRecordings({ recordings, stats, formats, hives, fil
 
                     {/* ── Material React Table ── */}
                     <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-                        <MaterialReactTable table={table} />
+                        <DataTable
+                                columns={columns}
+                                data={recordings.data}
+                                getRowId={(row) => row.audio_id}
+                                manualPagination={true}
+                                rowCount={recordings.total}
+                                state={{ pagination }}
+                                onPaginationChange={(updater: MRT_PaginationState | ((prev: MRT_PaginationState) => MRT_PaginationState)) => {
+                                    const newPagination = typeof updater === 'function' ? updater(pagination) : updater;
+                                    setPagination(newPagination);
+                                    // Update the page in the router (convert to 1-based index)
+                                    router.get('/audio-recordings', {
+                                        search, status, format, hive, page: String(newPagination.pageIndex + 1),
+                                    }, { preserveState: true });
+                                }}
+                            />
                     </div>
 
                 </div>
             </div>
-        </ThemeProvider>
+        </>
     );
 }
 

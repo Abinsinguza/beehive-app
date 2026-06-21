@@ -1,9 +1,9 @@
-﻿import { Head, router, useForm } from '@inertiajs/react';
+﻿﻿import { Head, router, useForm } from '@inertiajs/react';
 import { Download, Edit2, Eye, UserPlus, X } from 'lucide-react';
 import { useEffect, useMemo, useState } from 'react';
-import { MaterialReactTable, useMaterialReactTable, type MRT_ColumnDef } from 'material-react-table';
+import { type MRT_ColumnDef } from 'material-react-table';
 import { MenuItem } from '@mui/material';
-import { createTheme, ThemeProvider } from '@mui/material/styles';
+import { DataTable } from '@/components/data-table';
 
 type Beekeeper = {
     user_id: string;
@@ -43,20 +43,6 @@ function getStatus(bk: Beekeeper): string {
     if (bk.email) return 'active';
     return 'pending';
 }
-
-const theme = createTheme({
-    components: {
-        MuiPopover: {
-            defaultProps: { style: { zIndex: 99999 } },
-        },
-        MuiMenu: {
-            defaultProps: { style: { zIndex: 99999 } },
-        },
-        MuiPopper: {
-            defaultProps: { style: { zIndex: 99999 } },
-        },
-    },
-});
 
 // ── Add Beekeeper form ─────────────────────────────────────────────────────
 function AddBeekeeperModal({ onClose }: { onClose: () => void }) {
@@ -479,68 +465,8 @@ export default function Beekeepers({
         },
     ], []);
 
-    const tableData = useMemo(() => beekeepers, [beekeepers]);
-
-    const table = useMaterialReactTable({
-        columns,
-        data: tableData,
-        getRowId: (row) => row.user_id,
-        enableSorting: true,
-        enableColumnFilters: true,
-        enableColumnActions: true,
-        enableHiding: true,
-        enableRowActions: true,
-        enableRowSelection: false,
-        enableMultiRowSelection: false,
-        positionActionsColumn: 'last',
-        renderRowActionMenuItems: ({ closeMenu, row }) => [
-            <MenuItem
-                key="view"
-                onClick={() => {
-                    setViewTarget(row.original);
-                    closeMenu();
-                }}
-            >
-                <Eye className="mr-2" />
-                View
-            </MenuItem>,
-            <MenuItem
-                key="edit"
-                onClick={() => {
-                    setEditTarget(row.original);
-                    closeMenu();
-                }}
-            >
-                <Edit2 className="mr-2" />
-                Edit
-            </MenuItem>,
-            getStatus(row.original) === 'revoked' ? (
-                <MenuItem
-                    key="restore"
-                    onClick={() => {
-                        setRestoreTarget(row.original);
-                        closeMenu();
-                    }}
-                >
-                    Restore
-                </MenuItem>
-            ) : (
-                <MenuItem
-                    key="revoke"
-                    onClick={() => {
-                        setRevokeTarget(row.original);
-                        closeMenu();
-                    }}
-                    sx={{ color: '#f97316' }}
-                >
-                    Revoke
-                </MenuItem>
-            ),
-        ],
-    });
-
     return (
-        <ThemeProvider theme={theme}>
+        <>
             <Head title="Beekeeper Management" />
             <div className="min-h-screen p-6 flex flex-col gap-6" style={{ backgroundColor: '#f8f9fa' }}>
                 {/* Page heading */}
@@ -603,9 +529,56 @@ export default function Beekeepers({
                             <Download className="w-3.5 h-3.5" /> Export CSV
                         </button>
                     </div>
-                    <div style={{ zIndex: 9999, position: 'relative' }}>
-                        <MaterialReactTable table={table} />
-                    </div>
+                    <DataTable
+                        columns={columns}
+                        data={beekeepers}
+                        getRowId={(row) => row.user_id}
+                        enableRowActions={true}
+                        renderRowActionMenuItems={({ closeMenu, row }) => [
+                            <MenuItem
+                                key="view"
+                                onClick={() => {
+                                    setViewTarget(row.original);
+                                    closeMenu();
+                                }}
+                            >
+                                <Eye className="mr-2" />
+                                View
+                            </MenuItem>,
+                            <MenuItem
+                                key="edit"
+                                onClick={() => {
+                                    setEditTarget(row.original);
+                                    closeMenu();
+                                }}
+                            >
+                                <Edit2 className="mr-2" />
+                                Edit
+                            </MenuItem>,
+                            getStatus(row.original) === 'revoked' ? (
+                                <MenuItem
+                                    key="restore"
+                                    onClick={() => {
+                                        setRestoreTarget(row.original);
+                                        closeMenu();
+                                    }}
+                                >
+                                    Restore
+                                </MenuItem>
+                            ) : (
+                                <MenuItem
+                                    key="revoke"
+                                    onClick={() => {
+                                        setRevokeTarget(row.original);
+                                        closeMenu();
+                                    }}
+                                    sx={{ color: '#f97316' }}
+                                >
+                                    Revoke
+                                </MenuItem>
+                            ),
+                        ]}
+                    />
                 </div>
             </div>
 
@@ -672,7 +645,7 @@ export default function Beekeepers({
                     </div>
                 </div>
             )}
-        </ThemeProvider>
+        </>
     );
 }
 

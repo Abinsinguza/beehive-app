@@ -1,7 +1,9 @@
 import { Head, router } from '@inertiajs/react';
 import { Activity, AlertTriangle, Calendar, ChevronLeft, ClipboardList, Droplets, Leaf, LayoutGrid, Link2, MapPin, Mic, Play, Plug, Thermometer } from 'lucide-react';
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import AppLayout from '@/layouts/app-layout';
+import { DataTable } from '@/components/data-table';
+import { type MRT_ColumnDef } from 'material-react-table';
 
 type Beehive = {
     id: string;
@@ -135,6 +137,85 @@ export default function BeehiveShow({
     const stateBadgeColor = stateColors[beehive.current_state] ?? '#94a3b8';
     const isRisk = ['swarm', 'pre_swarm', 'abscondment', 'missing_queen', 'pest_infested'].includes(beehive.current_state);
     const [tab, setTab] = useState<'overview' | 'data-source'>('overview');
+
+    const audioColumns = useMemo<MRT_ColumnDef<AudioSource>[]>(() => [
+        {
+            id: 'play',
+            header: '',
+            Cell: () => (
+                <button className="w-7 h-7 rounded-full flex items-center justify-center shrink-0 border border-gray-200 hover:bg-gray-100">
+                    <Play className="w-3 h-3 text-gray-500" />
+                </button>
+            ),
+        },
+        {
+            id: 'file',
+            header: 'File',
+            Cell: ({ row }) => {
+                const audio = row.original;
+                return (
+                    <div>
+                        <p className="font-medium text-gray-700 truncate max-w-[160px]">{filename(audio.source_url)}</p>
+                        <p className="text-gray-400">
+                            {audio.file_format.toUpperCase()}
+                            {audio.duration_seconds ? ` · ${audio.duration_seconds}s` : ''}
+                        </p>
+                    </div>
+                );
+            },
+        },
+        {
+            accessorKey: 'created_at',
+            header: 'Recorded',
+            Cell: ({ row }) => <span className="text-gray-500 whitespace-nowrap">{fmtTime(row.original.created_at)}</span>,
+        },
+        {
+            accessorKey: 'detected_state',
+            header: 'ML Detected',
+            Cell: ({ row }) => {
+                const stateColor = row.original.detected_state ? (stateColors[row.original.detected_state] ?? '#94a3b8') : null;
+                return row.original.detected_state ? (
+                    <span className="font-semibold" style={{ color: stateColor ?? undefined }}>
+                        {row.original.detected_state}
+                    </span>
+                ) : (
+                    <span className="text-gray-400 italic">Not analysed</span>
+                );
+            },
+        },
+        {
+            accessorKey: 'confidence_score',
+            header: 'Confidence',
+            Cell: ({ row }) => (
+                <span className="text-gray-500">
+                    {row.original.confidence_score != null ? `${(row.original.confidence_score * 100).toFixed(1)}%` : '—'}
+                </span>
+            ),
+        },
+        {
+            accessorKey: 'analyzed_at',
+            header: 'Analysed At',
+            Cell: ({ row }) => <span className="text-gray-500 whitespace-nowrap">{row.original.analyzed_at ? fmtTime(row.original.analyzed_at) : '—'}</span>,
+        },
+        {
+            accessorKey: 'inference_latency_ms',
+            header: 'Latency',
+            Cell: ({ row }) => <span className="text-gray-500">{row.original.inference_latency_ms != null ? `${row.original.inference_latency_ms}ms` : '—'}</span>,
+        },
+        {
+            accessorKey: 'status',
+            header: 'Status',
+            Cell: ({ row }) => (
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-widest whitespace-nowrap"
+                    style={{
+                        backgroundColor: row.original.status === 'processed' ? '#fef3c7' : '#f1f5f9',
+                        color: row.original.status === 'processed' ? '#92400e' : '#64748b',
+                    }}>
+                    {row.original.status}
+                </span>
+            ),
+        },
+    ], []);
 
     function fmtTimeFull(dateStr: string | null | undefined): string {
         if (!dateStr) return 'Never synced';
@@ -345,69 +426,12 @@ export default function BeehiveShow({
                         <p className="text-xs text-gray-400 italic px-5 py-6">No audio recordings for this hive yet.</p>
                     ) : (
                         <div className="overflow-x-auto">
-                            <table className="w-full text-xs">
-                                <thead>
-                                    <tr className="border-b border-gray-100 bg-gray-50">
-                                        <th className="text-left px-5 py-3 text-[10px] font-bold uppercase tracking-widest text-gray-400"></th>
-                                        <th className="text-left px-5 py-3 text-[10px] font-bold uppercase tracking-widest text-gray-400">File</th>
-                                        <th className="text-left px-5 py-3 text-[10px] font-bold uppercase tracking-widest text-gray-400">Recorded</th>
-                                        <th className="text-left px-5 py-3 text-[10px] font-bold uppercase tracking-widest text-gray-400">ML Detected</th>
-                                        <th className="text-left px-5 py-3 text-[10px] font-bold uppercase tracking-widest text-gray-400">Confidence</th>
-                                        <th className="text-left px-5 py-3 text-[10px] font-bold uppercase tracking-widest text-gray-400">Analysed At</th>
-                                        <th className="text-left px-5 py-3 text-[10px] font-bold uppercase tracking-widest text-gray-400">Latency</th>
-                                        <th className="text-left px-5 py-3 text-[10px] font-bold uppercase tracking-widest text-gray-400">Status</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {audioSources.data.map((audio) => {
-                                        const stateColor = audio.detected_state ? (stateColors[audio.detected_state] ?? '#94a3b8') : null;
-                                        return (
-                                            <tr key={audio.audio_id} className="border-b border-gray-50 hover:bg-gray-50 transition-colors">
-                                                <td className="px-5 py-3">
-                                                    <button className="w-7 h-7 rounded-full flex items-center justify-center shrink-0 border border-gray-200 hover:bg-gray-100">
-                                                        <Play className="w-3 h-3 text-gray-500" />
-                                                    </button>
-                                                </td>
-                                                <td className="px-5 py-3">
-                                                    <p className="font-medium text-gray-700 truncate max-w-[160px]">{filename(audio.source_url)}</p>
-                                                    <p className="text-gray-400">
-                                                        {audio.file_format.toUpperCase()}
-                                                        {audio.duration_seconds ? ` · ${audio.duration_seconds}s` : ''}
-                                                    </p>
-                                                </td>
-                                                <td className="px-5 py-3 text-gray-500 whitespace-nowrap">{fmtTime(audio.created_at)}</td>
-                                                <td className="px-5 py-3">
-                                                    {audio.detected_state ? (
-                                                        <span className="font-semibold" style={{ color: stateColor ?? undefined }}>
-                                                            {audio.detected_state}
-                                                        </span>
-                                                    ) : (
-                                                        <span className="text-gray-400 italic">Not analysed</span>
-                                                    )}
-                                                </td>
-                                                <td className="px-5 py-3 text-gray-500">
-                                                    {audio.confidence_score != null ? `${(audio.confidence_score * 100).toFixed(1)}%` : '—'}
-                                                </td>
-                                                <td className="px-5 py-3 text-gray-500 whitespace-nowrap">
-                                                    {audio.analyzed_at ? fmtTime(audio.analyzed_at) : '—'}
-                                                </td>
-                                                <td className="px-5 py-3 text-gray-500">
-                                                    {audio.inference_latency_ms != null ? `${audio.inference_latency_ms}ms` : '—'}
-                                                </td>
-                                                <td className="px-5 py-3">
-                                                    <span className="text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-widest whitespace-nowrap"
-                                                        style={{
-                                                            backgroundColor: audio.status === 'processed' ? '#fef3c7' : '#f1f5f9',
-                                                            color: audio.status === 'processed' ? '#92400e' : '#64748b',
-                                                        }}>
-                                                        {audio.status}
-                                                    </span>
-                                                </td>
-                                            </tr>
-                                        );
-                                    })}
-                                </tbody>
-                            </table>
+                            <DataTable
+                                columns={audioColumns}
+                                data={audioSources.data}
+                                getRowId={(row) => row.audio_id}
+                                enableBottomToolbar={false}
+                            />
                         </div>
                     )}
 

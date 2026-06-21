@@ -1,9 +1,9 @@
 import { Head, router, useForm } from '@inertiajs/react';
 import { Eye, Pencil, Plus, Trash2, X } from 'lucide-react';
 import { useMemo, useState } from 'react';
-import { MaterialReactTable, useMaterialReactTable, type MRT_ColumnDef } from 'material-react-table';
+import { type MRT_ColumnDef } from 'material-react-table';
 import { MenuItem } from '@mui/material';
-import { createTheme, ThemeProvider } from '@mui/material/styles';
+import { DataTable } from '@/components/data-table';
 
 type Owner = { id: string; name: string };
 type Beehive = {
@@ -26,19 +26,7 @@ const statusConfig: Record<string, { label: string; bg: string; color: string }>
 
 const defaultStatusStyle = { label: 'UNKNOWN', bg: '#f1f5f9', color: '#64748b' };
 
-const theme = createTheme({
-    components: {
-        MuiPopover: {
-            defaultProps: { style: { zIndex: 99999 } },
-        },
-        MuiMenu: {
-            defaultProps: { style: { zIndex: 99999 } },
-        },
-        MuiPopper: {
-            defaultProps: { style: { zIndex: 99999 } },
-        },
-    },
-});
+
 
 export default function Beehives({ beehives = [], owners = [], search: initialSearch = '' }: { beehives?: Beehive[]; owners?: Owner[]; search?: string }) {
     const [showModal, setShowModal] = useState(false);
@@ -161,57 +149,8 @@ export default function Beehives({ beehives = [], owners = [], search: initialSe
         },
     ], []);
 
-    const tableData = useMemo(() => beehives, [beehives]);
-
-    const table = useMaterialReactTable({
-        columns,
-        data: tableData,
-        getRowId: (row) => row.id,
-        enableSorting: true,
-        enableColumnFilters: true,
-        enableColumnActions: true,
-        enableHiding: true,
-        enableRowActions: true,
-        enableRowSelection: false,
-        enableMultiRowSelection: false,
-        positionActionsColumn: 'last',
-        renderRowActionMenuItems: ({ closeMenu, row }) => [
-            <MenuItem
-                key="view"
-                onClick={() => {
-                    router.visit(`/beehives/${row.original.id}`);
-                    closeMenu();
-                }}
-            >
-                <Eye className="mr-2" />
-                View
-            </MenuItem>,
-            <MenuItem
-                key="edit"
-                onClick={() => {
-                    setEditTarget(row.original);
-                    closeMenu();
-                }}
-            >
-                <Pencil className="mr-2" />
-                Edit
-            </MenuItem>,
-            <MenuItem
-                key="delete"
-                onClick={() => {
-                    handleDelete(row.original);
-                    closeMenu();
-                }}
-                sx={{ color: '#ef4444' }}
-            >
-                <Trash2 className="mr-2" />
-                Delete
-            </MenuItem>,
-        ],
-    });
-
     return (
-        <ThemeProvider theme={theme}>
+        <>
             <Head title="Hive Inventory" />
             <div className="min-h-screen p-6 flex flex-col gap-5" style={{ backgroundColor: '#f8f9fa' }}>
 
@@ -266,7 +205,45 @@ export default function Beehives({ beehives = [], owners = [], search: initialSe
                         </div>
                     </div>
 
-                    <MaterialReactTable table={table} />
+                    <DataTable
+                        columns={columns}
+                        data={beehives}
+                        getRowId={(row) => row.id}
+                        enableRowActions={true}
+                        renderRowActionMenuItems={({ closeMenu, row }) => [
+                            <MenuItem
+                                key="view"
+                                onClick={() => {
+                                    router.visit(`/beehives/${row.original.id}`);
+                                    closeMenu();
+                                }}
+                            >
+                                <Eye className="mr-2" />
+                                View
+                            </MenuItem>,
+                            <MenuItem
+                                key="edit"
+                                onClick={() => {
+                                    setEditTarget(row.original);
+                                    closeMenu();
+                                }}
+                            >
+                                <Pencil className="mr-2" />
+                                Edit
+                            </MenuItem>,
+                            <MenuItem
+                                key="delete"
+                                onClick={() => {
+                                    handleDelete(row.original);
+                                    closeMenu();
+                                }}
+                                sx={{ color: '#ef4444' }}
+                            >
+                                <Trash2 className="mr-2" />
+                                Delete
+                            </MenuItem>,
+                        ]}
+                    />
                 </div>
 
             </div>
@@ -428,7 +405,7 @@ export default function Beehives({ beehives = [], owners = [], search: initialSe
 
             {/* Edit Hive Modal */}
             {editTarget && <EditHiveModal hive={editTarget} owners={owners} onClose={() => setEditTarget(null)} />}
-        </ThemeProvider>
+        </>
     );
 }
 
