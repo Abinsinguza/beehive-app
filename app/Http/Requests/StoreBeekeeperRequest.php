@@ -14,11 +14,11 @@ class StoreBeekeeperRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'name'     => ['required', 'string', 'max:100'],
-            'email'    => ['required', 'email', 'max:100', 'unique:users,email'],
-            'phone'    => ['required', 'string', 'max:20', 'unique:users,phone'],
-            'password' => ['required', 'string', 'min:4'],
-            'address'  => ['nullable', 'string'],
+            'full_name' => ['required', 'string', 'max:100'],
+            'email'     => ['required', 'email', 'max:100', 'unique:users,email'],
+            'phone'     => ['required', 'string', 'max:20', 'unique:users,phone'],
+            'password'  => ['required', 'string', 'min:4'],
+            'address'   => ['nullable', 'string'],
         ];
     }
 }

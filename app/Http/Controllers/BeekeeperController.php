@@ -35,7 +35,7 @@ class BeekeeperController extends Controller
     public function store(StoreBeekeeperRequest $request)
     {
         User::create([
-            'full_name'     => $request->validated('name'),
+            'full_name'     => $request->validated('full_name'),
             'email'         => $request->validated('email'),
             'phone'         => $request->validated('phone'),
             'password_hash' => bcrypt($request->validated('password')),
@@ -61,7 +61,7 @@ class BeekeeperController extends Controller
         $validated = $request->validated();
 
         $data = [
-            'full_name' => $validated['name'],
+            'full_name' => $validated['full_name'],
             'email'     => $validated['email'] ?? null,
             'phone'     => $validated['phone'],
             'address'   => $validated['address'] ?? null,
