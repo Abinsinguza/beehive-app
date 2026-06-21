@@ -430,35 +430,11 @@ export default function BeehiveShow({
                                 columns={audioColumns}
                                 data={audioSources.data}
                                 getRowId={(row) => row.audio_id}
-                                enableBottomToolbar={false}
                             />
                         </div>
                     )}
 
-                    {/* Pagination */}
-                    {audioSources.last_page > 1 && (
-                        <div className="flex items-center justify-between px-5 py-3 border-t border-gray-100">
-                            <p className="text-xs text-gray-400">
-                                Page {audioSources.current_page} of {audioSources.last_page}
-                            </p>
-                            <div className="flex items-center gap-2">
-                                <button
-                                    onClick={() => audioSources.prev_page_url && router.visit(audioSources.prev_page_url, { preserveScroll: true })}
-                                    disabled={!audioSources.prev_page_url}
-                                    className="px-3 py-1.5 text-xs rounded-lg border border-gray-200 text-gray-600 disabled:opacity-40 hover:bg-gray-50 transition-colors"
-                                >
-                                    Previous
-                                </button>
-                                <button
-                                    onClick={() => audioSources.next_page_url && router.visit(audioSources.next_page_url, { preserveScroll: true })}
-                                    disabled={!audioSources.next_page_url}
-                                    className="px-3 py-1.5 text-xs rounded-lg border border-gray-200 text-gray-600 disabled:opacity-40 hover:bg-gray-50 transition-colors"
-                                >
-                                    Next
-                                </button>
-                            </div>
-                        </div>
-                    )}
+
                 </div>
 
                 {/* ── Hive details card ───────────────────────────── */}
