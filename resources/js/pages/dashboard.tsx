@@ -67,6 +67,13 @@ function getDayLabel() {
     });
 }
 
+function getTimeGreeting() {
+    const hour = new Date().getHours();
+    if (hour < 12) return 'Good morning';
+    if (hour < 18) return 'Good afternoon';
+    return 'Good evening';
+}
+
 const STATE_META: Record<string, { label: string; bg: string; text: string }> = {
     normal:           { label: 'Normal',           bg: '#dcfce7', text: '#15803d' },
     pre_swarm:        { label: 'Pre-Swarm',         bg: '#fef3c7', text: '#b45309' },
@@ -236,7 +243,7 @@ export default function Dashboard({
                     {/* ── Greeting ── */}
                     <div>
                         <h1 className="text-2xl font-bold" style={{ color: '#0d1b2a' }}>
-                            Good morning, {greeting_name}
+                            {getTimeGreeting()}, {greeting_name}
                         </h1>
                         <p className="text-sm text-gray-500 mt-0.5">
                             {getDayLabel()}
