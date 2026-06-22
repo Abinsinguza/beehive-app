@@ -15,6 +15,7 @@ import AppLayout from '@/layouts/app-layout';
 import { type MRT_ColumnDef, type MRT_PaginationState } from 'material-react-table';
 import { MenuItem } from '@mui/material';
 import { DataTable } from '@/components/data-table';
+import { toast } from 'sonner';
 
 type HiveRef   = { hive_id: string; hive_name: string; hive_location: string };
 type Recording = {
@@ -247,11 +248,23 @@ export default function AudioRecordings({ recordings, stats, formats, hives, fil
     const [status, setStatus]       = useState(filters.status);
     const [format, setFormat]       = useState(filters.format);
     const [hive, setHive]           = useState(filters.hive);
+    const [isRefreshing, setIsRefreshing] = useState(false);
 
     // Debug: Check recordings data reference stability
     if (typeof window !== 'undefined') {
         console.log('recordings data reference same:', recordings.data === (window as any).__lastRecordingData);
         (window as any).__lastRecordingData = recordings.data;
+    }
+
+    function handleRefresh() {
+        setIsRefreshing(true);
+        router.reload({
+            only: ['recordings', 'stats', 'filters'],
+            onFinish: () => {
+                setIsRefreshing(false);
+                toast.success('Recordings refreshed');
+            },
+        });
     }
 
     // Only keep pagination state controlled (for server-side pagination)
@@ -477,9 +490,10 @@ export default function AudioRecordings({ recordings, stats, formats, hives, fil
                         </div>
                         <div className="flex items-center gap-2 shrink-0">
                             <button
-                                onClick={() => router.reload()}
-                                className="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-xl text-sm font-semibold text-gray-600 bg-white hover:bg-gray-50 transition-colors shadow-sm">
-                                <RefreshCw className="w-4 h-4" />
+                                onClick={handleRefresh}
+                                disabled={isRefreshing}
+                                className="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-xl text-sm font-semibold text-gray-600 bg-white hover:bg-gray-50 transition-colors shadow-sm disabled:opacity-60 disabled:cursor-not-allowed">
+                                <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
                                 Refresh
                             </button>
                             <button
@@ -512,57 +526,42 @@ export default function AudioRecordings({ recordings, stats, formats, hives, fil
                     </div>
 
                     {/* ── Filters ── */}
-                    <div className="flex flex-col gap-3">
-                        {/* Search */}
-                        <div className="relative">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                            <input
-                                type="text"
-                                placeholder="Search hive, file or format…"
-                                value={search}
-                                onChange={(e) => setSearch(e.target.value)}
-                                className="w-full bg-white border border-gray-200 rounded-xl pl-10 pr-4 py-2.5 text-sm shadow-sm focus:outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-100"
-                                />
-                        </div>
+                    <div className="flex flex-wrap gap-3 items-center">
+                        <select
+                            value={status}
+                            onChange={(e) => { setStatus(e.target.value); applyFilters({ status: e.target.value }); }}
+                            className="bg-white border border-gray-200 rounded-xl px-3 py-2 text-sm shadow-sm focus:outline-none focus:border-amber-400 text-gray-600">
+                            <option value="">All statuses</option>
+                            <option value="processed">Processed</option>
+                            <option value="pending">Pending</option>
+                            <option value="failed">Failed</option>
+                        </select>
 
-                        {/* Dropdowns row */}
-                        <div className="flex flex-wrap gap-3 items-center">
-                            <select
-                                value={status}
-                                onChange={(e) => { setStatus(e.target.value); applyFilters({ status: e.target.value }); }}
-                                className="bg-white border border-gray-200 rounded-xl px-3 py-2 text-sm shadow-sm focus:outline-none focus:border-amber-400 text-gray-600">
-                                <option value="">All statuses</option>
-                                <option value="processed">Processed</option>
-                                <option value="pending">Pending</option>
-                                <option value="failed">Failed</option>
-                            </select>
+                        <select
+                            value={format}
+                            onChange={(e) => { setFormat(e.target.value); applyFilters({ format: e.target.value }); }}
+                            className="bg-white border border-gray-200 rounded-xl px-3 py-2 text-sm shadow-sm focus:outline-none focus:border-amber-400 text-gray-600">
+                            <option value="">All formats</option>
+                            {formats.map((f) => <option key={f} value={f}>{f}</option>)}
+                        </select>
 
-                            <select
-                                value={format}
-                                onChange={(e) => { setFormat(e.target.value); applyFilters({ format: e.target.value }); }}
-                                className="bg-white border border-gray-200 rounded-xl px-3 py-2 text-sm shadow-sm focus:outline-none focus:border-amber-400 text-gray-600">
-                                <option value="">All formats</option>
-                                {formats.map((f) => <option key={f} value={f}>{f}</option>)}
-                            </select>
+                        <select
+                            value={hive}
+                            onChange={(e) => { setHive(e.target.value); applyFilters({ hive: e.target.value }); }}
+                            className="bg-white border border-gray-200 rounded-xl px-3 py-2 text-sm shadow-sm focus:outline-none focus:border-amber-400 text-gray-600">
+                            <option value="">All hives</option>
+                            {hives.map((h) => (
+                                <option key={h.hive_id} value={h.hive_id}>{h.hive_name}</option>
+                            ))}
+                        </select>
 
-                            <select
-                                value={hive}
-                                onChange={(e) => { setHive(e.target.value); applyFilters({ hive: e.target.value }); }}
-                                className="bg-white border border-gray-200 rounded-xl px-3 py-2 text-sm shadow-sm focus:outline-none focus:border-amber-400 text-gray-600">
-                                <option value="">All hives</option>
-                                {hives.map((h) => (
-                                    <option key={h.hive_id} value={h.hive_id}>{h.hive_name}</option>
-                                ))}
-                            </select>
-
-                            {hasFilters && (
-                                <button onClick={clearFilters}
-                                    className="flex items-center gap-1.5 px-3 py-2 bg-white border border-gray-200 rounded-xl text-sm font-medium text-gray-500 hover:bg-gray-50 shadow-sm transition-colors">
-                                    <X className="w-3.5 h-3.5" />
-                                    Clear
-                                </button>
-                            )}
-                        </div>
+                        {hasFilters && (
+                            <button onClick={clearFilters}
+                                className="flex items-center gap-1.5 px-3 py-2 bg-white border border-gray-200 rounded-xl text-sm font-medium text-gray-500 hover:bg-gray-50 shadow-sm transition-colors">
+                                <X className="w-3.5 h-3.5" />
+                                Clear
+                            </button>
+                        )}
                     </div>
 
                     {/* ── Material React Table ── */}

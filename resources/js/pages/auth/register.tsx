@@ -1,195 +1,202 @@
 import { Form, Head } from '@inertiajs/react';
 import InputError from '@/components/input-error';
 import TextLink from '@/components/text-link';
-import { Spinner } from '@/components/ui/spinner';
+import { useState } from 'react';
+import { Mail, Lock, User, Eye, EyeOff, Loader2 } from 'lucide-react';
 import { login } from '@/routes';
 import { store } from '@/routes/register';
+import { cn } from '@/lib/utils';
 
 export default function Register() {
+    const [showPassword, setShowPassword] = useState(false);
+    const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
     return (
         <>
             <Head title="Register" />
+            <style>{`
+                input:-webkit-autofill,
+                input:-webkit-autofill:hover,
+                input:-webkit-autofill:focus,
+                input:-webkit-autofill:active {
+                    -webkit-box-shadow: 0 0 0 30px white inset !important;
+                    -webkit-text-fill-color: #111827 !important;
+                }
+            `}</style>
 
-            <div className="min-h-screen w-full" style={{ backgroundColor: '#f0ede8' }}>
-                {/* Top nav bar */}
-                <div className="w-full px-6 py-4" style={{ backgroundColor: '#0d1b2a' }}>
-                    <span className="text-sm font-bold tracking-widest uppercase" style={{ color: '#f5a623' }}>
-                        BSADS
-                    </span>
-                </div>
-
-                {/* Centered card */}
-                <div className="flex items-center justify-center px-4 py-16">
-                    <div className="w-full max-w-lg rounded-xl overflow-hidden shadow-md">
-                        {/* Card dark header */}
-                        <div className="px-8 py-7" style={{ backgroundColor: '#0d1b2a' }}>
-                            <h1 className="text-2xl font-bold uppercase tracking-wide" style={{ color: '#f5a623' }}>
-                                Create Account
-                            </h1>
-                            <p className="mt-1 text-sm" style={{ color: '#cbd5e1' }}>
-                                Join the swarm monitoring network
-                            </p>
+            <div className="min-h-screen w-full bg-[#F8FAFC] flex items-center justify-center px-4 pb-20">
+                <div className="w-full max-w-[420px]">
+                    {/* Logo + Branding */}
+                    <div className="flex flex-col items-center gap-3 mb-8">
+                        <div className="w-14 h-14 rounded-2xl flex items-center justify-center" style={{ backgroundColor: '#0d1b2a' }}>
+                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" className="w-9 h-9" fill="#f5a623">
+                                <ellipse cx="32" cy="36" rx="14" ry="18" />
+                                <ellipse cx="32" cy="18" rx="8" ry="9" />
+                                <line x1="32" y1="27" x2="32" y2="18" stroke="#0d1b2a" strokeWidth="2" />
+                                <ellipse cx="20" cy="30" rx="10" ry="5" fill="#f5a623" fillOpacity="0.6" transform="rotate(-30 20 30)" />
+                                <ellipse cx="44" cy="30" rx="10" ry="5" fill="#f5a623" fillOpacity="0.6" transform="rotate(30 44 30)" />
+                                <line x1="24" y1="36" x2="40" y2="36" stroke="#0d1b2a" strokeWidth="2" />
+                                <line x1="22" y1="42" x2="42" y2="42" stroke="#0d1b2a" strokeWidth="2" />
+                                <line x1="26" y1="48" x2="38" y2="48" stroke="#0d1b2a" strokeWidth="2" />
+                            </svg>
                         </div>
+                        <div className="text-center">
+                            <h2 className="text-4xl font-bold text-gray-900 tracking-tight">Create Account</h2>
+                            <p className="text-base text-gray-500 mt-1.5">Join the swarm monitoring network</p>
+                        </div>
+                    </div>
 
-                        {/* Card white form area */}
-                        <div className="bg-white px-8 py-7">
-                            <Form
-                                {...store.form()}
-                                resetOnSuccess={['password', 'password_confirmation']}
-                                disableWhileProcessing
-                                className="flex flex-col gap-5"
-                            >
-                                {({ processing, errors }) => (
-                                    <>
-                                        {/* Full Name */}
-                                        <div className="flex flex-col gap-1">
-                                            <label
-                                                htmlFor="name"
-                                                className="text-xs font-semibold uppercase tracking-widest"
-                                                style={{ color: '#6b7280' }}
-                                            >
-                                                Full Name
-                                            </label>
-                                            <div className="flex items-center border rounded-lg overflow-hidden" style={{ borderColor: '#d1d5db' }}>
-                                                <span className="px-3 text-gray-400">
-                                                    <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                                                        <path strokeLinecap="round" strokeLinejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
-                                                    </svg>
-                                                </span>
-                                                <input
-                                                    id="name"
-                                                    type="text"
-                                                    name="name"
-                                                    required
-                                                    autoFocus
-                                                    tabIndex={1}
-                                                    autoComplete="name"
-                                                    placeholder="Enter your full name"
-                                                    className="flex-1 py-3 pr-3 text-sm outline-none bg-transparent"
-                                                    style={{ color: '#0d1b2a' }}
-                                                />
-                                            </div>
-                                            <InputError message={errors.name} />
+                    {/* Register Card */}
+                    <div 
+                        className="w-full bg-white rounded-[20px] border border-gray-100 p-8 transition-all duration-300 hover:shadow-[0_20px_60px_rgba(0,0,0,0.08)]"
+                        style={{ boxShadow: '0 12px 40px rgba(0,0,0,0.08)' }}
+                    >
+                        <Form
+                            {...store.form()}
+                            resetOnSuccess={['password', 'password_confirmation']}
+                            disableWhileProcessing
+                            className="flex flex-col gap-5"
+                        >
+                            {({ processing, errors }) => (
+                                <>
+                                    {/* Full Name */}
+                                    <div className="flex flex-col gap-2">
+                                        <label htmlFor="name" className="text-sm font-medium text-gray-700">
+                                            Full Name
+                                        </label>
+                                        <div className="relative">
+                                            <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                                            <input
+                                                id="name"
+                                                type="text"
+                                                name="name"
+                                                required
+                                                autoFocus
+                                                tabIndex={1}
+                                                autoComplete="name"
+                                                placeholder="Enter your full name"
+                                                className="w-full h-[52px] pl-12 pr-4 text-sm bg-white border border-[#E5E7EB] rounded-xl outline-none transition-all duration-200 text-gray-900 placeholder:text-gray-400 focus:border-[#F59E0B] focus:ring-4 focus:ring-[#F59E0B]/10 focus:scale-[1.01]"
+                                            />
                                         </div>
+                                        <InputError message={errors.name} />
+                                    </div>
 
-                                        {/* Email */}
-                                        <div className="flex flex-col gap-1">
-                                            <label
-                                                htmlFor="email"
-                                                className="text-xs font-semibold uppercase tracking-widest"
-                                                style={{ color: '#6b7280' }}
-                                            >
-                                                Email Address
-                                            </label>
-                                            <div className="flex items-center border rounded-lg overflow-hidden" style={{ borderColor: '#d1d5db' }}>
-                                                <span className="px-3 text-gray-400">
-                                                    <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                                                        <path strokeLinecap="round" strokeLinejoin="round" d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z" />
-                                                    </svg>
-                                                </span>
-                                                <input
-                                                    id="email"
-                                                    type="email"
-                                                    name="email"
-                                                    required
-                                                    tabIndex={2}
-                                                    autoComplete="email"
-                                                    placeholder="example@gmail.com"
-                                                    className="flex-1 py-3 pr-3 text-sm outline-none bg-transparent"
-                                                    style={{ color: '#0d1b2a' }}
-                                                />
-                                            </div>
-                                            <InputError message={errors.email} />
+                                    {/* Email */}
+                                    <div className="flex flex-col gap-2">
+                                        <label htmlFor="email" className="text-sm font-medium text-gray-700">
+                                            Email Address
+                                        </label>
+                                        <div className="relative">
+                                            <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                                            <input
+                                                id="email"
+                                                type="email"
+                                                name="email"
+                                                required
+                                                tabIndex={2}
+                                                autoComplete="email"
+                                                placeholder="you@example.com"
+                                                className="w-full h-[52px] pl-12 pr-4 text-sm bg-white border border-[#E5E7EB] rounded-xl outline-none transition-all duration-200 text-gray-900 placeholder:text-gray-400 focus:border-[#F59E0B] focus:ring-4 focus:ring-[#F59E0B]/10 focus:scale-[1.01]"
+                                            />
                                         </div>
+                                        <InputError message={errors.email} />
+                                    </div>
 
-                                        {/* Password */}
-                                        <div className="flex flex-col gap-1">
-                                            <label
-                                                htmlFor="password"
-                                                className="text-xs font-semibold uppercase tracking-widest"
-                                                style={{ color: '#6b7280' }}
+                                    {/* Password */}
+                                    <div className="flex flex-col gap-2">
+                                        <label htmlFor="password" className="text-sm font-medium text-gray-700">
+                                            Password
+                                        </label>
+                                        <div className="relative">
+                                            <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                                            <input
+                                                id="password"
+                                                type={showPassword ? 'text' : 'password'}
+                                                name="password"
+                                                required
+                                                tabIndex={3}
+                                                autoComplete="new-password"
+                                                placeholder="••••••••"
+                                                className="w-full h-[52px] pl-12 pr-12 text-sm bg-white border border-[#E5E7EB] rounded-xl outline-none transition-all duration-200 text-gray-900 placeholder:text-gray-400 focus:border-[#F59E0B] focus:ring-4 focus:ring-[#F59E0B]/10 focus:scale-[1.01]"
+                                            />
+                                            <button
+                                                type="button"
+                                                onClick={() => setShowPassword(!showPassword)}
+                                                tabIndex={3}
+                                                className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
                                             >
-                                                Password
-                                            </label>
-                                            <div className="flex items-center border rounded-lg overflow-hidden" style={{ borderColor: '#d1d5db' }}>
-                                                <span className="px-3 text-gray-400">
-                                                    <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                                                        <path strokeLinecap="round" strokeLinejoin="round" d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
-                                                    </svg>
-                                                </span>
-                                                <input
-                                                    id="password"
-                                                    type="password"
-                                                    name="password"
-                                                    required
-                                                    tabIndex={3}
-                                                    autoComplete="new-password"
-                                                    placeholder="••••••••"
-                                                    className="flex-1 py-3 pr-3 text-sm outline-none bg-transparent"
-                                                    style={{ color: '#0d1b2a' }}
-                                                />
-                                            </div>
-                                            <InputError message={errors.password} />
+                                                {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                                            </button>
                                         </div>
+                                        <InputError message={errors.password} />
+                                    </div>
 
-                                        {/* Confirm Password */}
-                                        <div className="flex flex-col gap-1">
-                                            <label
-                                                htmlFor="password_confirmation"
-                                                className="text-xs font-semibold uppercase tracking-widest"
-                                                style={{ color: '#6b7280' }}
+                                    {/* Confirm Password */}
+                                    <div className="flex flex-col gap-2">
+                                        <label htmlFor="password_confirmation" className="text-sm font-medium text-gray-700">
+                                            Confirm Password
+                                        </label>
+                                        <div className="relative">
+                                            <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+                                            <input
+                                                id="password_confirmation"
+                                                type={showConfirmPassword ? 'text' : 'password'}
+                                                name="password_confirmation"
+                                                required
+                                                tabIndex={4}
+                                                autoComplete="new-password"
+                                                placeholder="••••••••"
+                                                className="w-full h-[52px] pl-12 pr-12 text-sm bg-white border border-[#E5E7EB] rounded-xl outline-none transition-all duration-200 text-gray-900 placeholder:text-gray-400 focus:border-[#F59E0B] focus:ring-4 focus:ring-[#F59E0B]/10 focus:scale-[1.01]"
+                                            />
+                                            <button
+                                                type="button"
+                                                onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                                                tabIndex={4}
+                                                className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
                                             >
-                                                Confirm Password
-                                            </label>
-                                            <div className="flex items-center border rounded-lg overflow-hidden" style={{ borderColor: '#d1d5db' }}>
-                                                <span className="px-3 text-gray-400">
-                                                    <svg xmlns="http://www.w3.org/2000/svg" className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-                                                        <path strokeLinecap="round" strokeLinejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
-                                                    </svg>
-                                                </span>
-                                                <input
-                                                    id="password_confirmation"
-                                                    type="password"
-                                                    name="password_confirmation"
-                                                    required
-                                                    tabIndex={4}
-                                                    autoComplete="new-password"
-                                                    placeholder="••••••••"
-                                                    className="flex-1 py-3 pr-3 text-sm outline-none bg-transparent"
-                                                    style={{ color: '#0d1b2a' }}
-                                                />
-                                            </div>
-                                            <InputError message={errors.password_confirmation} />
+                                                {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
+                                            </button>
                                         </div>
+                                        <InputError message={errors.password_confirmation} />
+                                    </div>
 
-                                        {/* Submit */}
-                                        <button
-                                            type="submit"
-                                            tabIndex={5}
-                                            disabled={processing}
-                                            data-test="register-user-button"
-                                            className="w-full py-3 rounded-lg text-sm font-bold uppercase tracking-widest mt-1 transition-opacity disabled:opacity-70"
-                                            style={{ backgroundColor: '#f5a623', color: '#0d1b2a' }}
+                                    {/* Submit Button */}
+                                    <button
+                                        type="submit"
+                                        tabIndex={5}
+                                        disabled={processing}
+                                        data-test="register-user-button"
+                                        className={cn(
+                                            "w-full h-[54px] flex items-center justify-center gap-2 rounded-xl text-sm font-semibold text-white transition-all duration-200 shadow-sm disabled:cursor-not-allowed",
+                                            processing
+                                                ? "bg-[#F59E0B]/80"
+                                                : "bg-[#F59E0B] hover:bg-[#D97706] hover:shadow-md hover:-translate-y-0.5 active:translate-y-0 active:shadow-sm"
+                                        )}
+                                    >
+                                        {processing ? (
+                                            <>
+                                                <Loader2 className="w-5 h-5 animate-spin" />
+                                                Creating Account...
+                                            </>
+                                        ) : (
+                                            "Create Account"
+                                        )}
+                                    </button>
+
+                                    {/* Divider + login link */}
+                                    <div className="text-center text-sm text-gray-500 mt-4">
+                                        Already have an account?{' '}
+                                        <TextLink
+                                            href={login()}
+                                            tabIndex={6}
+                                            className="font-semibold text-[#F59E0B] hover:text-[#D97706] transition-colors hover:underline underline-offset-4"
                                         >
-                                            {processing ? <Spinner /> : 'Register'}
-                                        </button>
-
-                                        {/* Divider + login link */}
-                                        <div className="border-t pt-4 text-center text-sm" style={{ borderColor: '#e5e7eb', color: '#6b7280' }}>
-                                            Already have an account?{' '}
-                                            <TextLink
-                                                href={login()}
-                                                tabIndex={6}
-                                                className="font-bold underline"
-                                                style={{ color: '#f5a623' }}
-                                            >
-                                                Login
-                                            </TextLink>
-                                        </div>
-                                    </>
-                                )}
-                            </Form>
-                        </div>
+                                            Sign In
+                                        </TextLink>
+                                    </div>
+                                </>
+                            )}
+                        </Form>
                     </div>
                 </div>
             </div>
