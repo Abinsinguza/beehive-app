@@ -109,7 +109,7 @@ export default function SystemConfig({ settings }: { settings: Settings }) {
         <>
             <Head title="System Settings" />
 
-            <form onSubmit={submit} className="min-h-screen p-6 flex flex-col gap-5" style={{ backgroundColor: '#f8f9fa' }}>
+            <form onSubmit={submit} className="p-6 flex flex-col gap-5" style={{ backgroundColor: '#f8f9fa' }}>
 
                 {/* Flash banner */}
                 {showFlash && (

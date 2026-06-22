@@ -379,7 +379,7 @@ export default function AlertsPage({
     return (
         <>
             <Head title="Alerts & Logs" />
-            <div className="min-h-screen" style={{ backgroundColor: '#f8f9fa' }}>
+            <div style={{ backgroundColor: '#f8f9fa' }}>
 
                 {/* Sub-header */}
                 <div className="flex items-center gap-3 px-6 py-3 bg-white border-b border-gray-200">

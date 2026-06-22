@@ -140,10 +140,20 @@
     html,
     body {
         height: 100%;
+        overflow-x: hidden;
     }
 
     body {
         @apply bg-background text-foreground;
+    }
+
+    /* Hide scrollbars but keep scroll functionality */
+    *::-webkit-scrollbar {
+        display: none;
+    }
+    * {
+        -ms-overflow-style: none; /* IE and Edge */
+        scrollbar-width: none; /* Firefox */
     }
 
     /* Sidebar glass effect */

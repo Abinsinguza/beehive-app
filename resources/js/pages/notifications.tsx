@@ -126,7 +126,7 @@ export default function Notifications() {
     return (
         <>
             <Head title="Notifications" />
-            <div className="min-h-screen" style={{ backgroundColor: '#f8f9fa' }}>
+            <div style={{ backgroundColor: '#f8f9fa' }}>
                 <div className="p-6 flex flex-col gap-5">
 
                     {/* Page heading */}
