@@ -424,7 +424,7 @@ export default function Beekeepers({
     return (
         <>
             <Head title="Beekeeper Management" />
-            <div className="min-h-screen p-6 flex flex-col gap-6" style={{ backgroundColor: '#f8f9fa' }}>
+            <div className="p-6 flex flex-col gap-6" style={{ backgroundColor: '#f8f9fa' }}>
                 {/* Page heading */}
                 <div className="flex items-start justify-between gap-4">
                     <div>

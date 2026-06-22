@@ -230,7 +230,7 @@ export default function Dashboard({
     return (
         <>
             <Head title="Dashboard" />
-            <div className="flex flex-col min-h-screen" style={{ backgroundColor: '#f8f9fa' }}>
+            <div className="flex flex-col" style={{ backgroundColor: '#f8f9fa' }}>
                 <div className="flex-1 p-6 flex flex-col gap-6">
 
                     {/* ── Greeting ── */}

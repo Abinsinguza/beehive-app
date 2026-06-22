@@ -143,7 +143,7 @@ export default function BeekeeperShow({ beekeeper }: { beekeeper: Beekeeper }) {
     return (
         <>
             <Head title={`${beekeeper.name} — Beekeeper Profile`} />
-            <div className="min-h-screen p-6 flex flex-col gap-5" style={{ backgroundColor: '#f8f9fa' }}>
+            <div className="p-6 flex flex-col gap-5" style={{ backgroundColor: '#f8f9fa' }}>
 
                 {/* Flash messages */}
                 {!flashDismissed && flash?.success && (

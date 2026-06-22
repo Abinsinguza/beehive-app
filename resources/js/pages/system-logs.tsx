@@ -215,7 +215,7 @@ export default function SystemLogs({ logs, stats, eventTypes, filters }: Props) 
     return (
         <>
             <Head title="System Logs" />
-            <div className="min-h-screen flex flex-col" style={{ backgroundColor: '#f8f9fa' }}>
+            <div className="flex flex-col" style={{ backgroundColor: '#f8f9fa' }}>
 
                 {/* Sub-header — subtitle only (breadcrumb is in the top AppHeader) */}
                 <div className="px-6 py-3 bg-white border-b border-gray-200 flex items-center justify-between">

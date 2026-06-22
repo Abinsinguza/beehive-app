@@ -225,7 +225,7 @@ export default function BeehiveShow({
     return (
         <>
             <Head title={`${beehive.hive_name ?? 'Hive'} — Profile`} />
-            <div className="min-h-screen p-6 flex flex-col gap-5" style={{ backgroundColor: '#f8f9fa' }}>
+            <div className="p-6 flex flex-col gap-5" style={{ backgroundColor: '#f8f9fa' }}>
 
                 {/* Back */}
                 <button
