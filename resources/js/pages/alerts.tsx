@@ -494,10 +494,6 @@ export default function AlertsPage({
                     <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
                             <div className="flex items-center gap-3 px-5 py-4 border-b border-gray-100">
                                 <span className="font-semibold text-sm" style={{ color: '#0d1b2a' }}>All Alert Logs</span>
-                                <div className="ml-auto flex items-center gap-2">
-                                    <span className="text-[10px] font-bold px-2 py-1 rounded border border-gray-300 text-gray-500 uppercase tracking-widest">Normal</span>
-                                    <span className="text-[10px] font-bold px-2 py-1 rounded text-white uppercase tracking-widest" style={{ backgroundColor: '#f5a623' }}>Alert</span>
-                                </div>
                             </div>
 
                             <DataTable

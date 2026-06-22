@@ -1,5 +1,5 @@
 import { Head, router } from '@inertiajs/react';
-import { AlertCircle, AlertTriangle, Download, Info, Search, SlidersHorizontal } from 'lucide-react';
+import { AlertCircle, AlertTriangle, Download, Info } from 'lucide-react';
 import React, { useState, useMemo } from 'react';
 import { type MRT_ColumnDef } from 'material-react-table';
 import AppLayout from '@/layouts/app-layout';
@@ -31,7 +31,7 @@ interface Props {
     logs: Paginator;
     stats: { total: number; errors: number; warnings: number; info: number };
     eventTypes: string[];
-    filters: { level: string; eventType: string; search: string };
+    filters: { level: string; eventType: string };
 }
 
 const levelConfig: Record<string, { badge: string; dot: string; icon: React.ReactNode; label: string }> = {
@@ -71,7 +71,6 @@ function getPageNumbers(current: number, last: number): (number | '…')[] {
 }
 
 export default function SystemLogs({ logs, stats, eventTypes, filters }: Props) {
-    const [search, setSearch]         = useState(filters.search);
     const [level, setLevel]           = useState(filters.level);
     const [eventType, setEventType]   = useState(filters.eventType);
     const [expanded, setExpanded]     = useState<string | null>(null);
@@ -166,9 +165,8 @@ export default function SystemLogs({ logs, stats, eventTypes, filters }: Props) 
         },
     ], [eventTypes]);
 
-    function applyFilters(overrides: Partial<{ level: string; eventType: string; search: string }> = {}) {
+    function applyFilters(overrides: Partial<{ level: string; eventType: string }> = {}) {
         router.get('/system-logs', {
-            search:     overrides.search     ?? search,
             level:      overrides.level      ?? level,
             event_type: overrides.eventType  ?? eventType,
         }, { preserveScroll: true, preserveState: true });
@@ -180,7 +178,6 @@ export default function SystemLogs({ logs, stats, eventTypes, filters }: Props) 
 
     function goToPageNum(page: number) {
         router.get('/system-logs', {
-            search,
             level,
             event_type: eventType,
             page,
@@ -290,19 +287,6 @@ export default function SystemLogs({ logs, stats, eventTypes, filters }: Props) 
 
                     {/* Filter bar */}
                     <div className="bg-white rounded-xl border border-gray-200 shadow-sm px-4 py-3 flex flex-wrap items-center gap-3">
-
-                        <div className="relative flex-1 min-w-[220px]">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                            <input
-                                className="w-full pl-9 pr-3 py-2 text-sm rounded-lg border border-gray-200 outline-none bg-gray-50 focus:bg-white focus:border-gray-400 transition-colors"
-                                placeholder="Filter messages, PIDs, or hex codes..."
-                                value={search}
-                                onChange={e => setSearch(e.target.value)}
-                                onKeyDown={e => e.key === 'Enter' && applyFilters()}
-                                style={{ color: '#0d1b2a' }}
-                            />
-                        </div>
-
                         <select
                             className="text-sm rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 outline-none focus:border-gray-400 transition-colors"
                             value={level}
@@ -325,12 +309,7 @@ export default function SystemLogs({ logs, stats, eventTypes, filters }: Props) 
                             {eventTypes.map(et => <option key={et} value={et}>{et}</option>)}
                         </select>
 
-                        <button
-                            className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium border border-gray-200 text-gray-600 hover:bg-gray-50 transition-colors"
-                        >
-                            <SlidersHorizontal className="w-4 h-4" />
-                            Advanced
-                        </button>
+                        <div className="flex-1" />
 
                         <button
                             onClick={exportCsv}

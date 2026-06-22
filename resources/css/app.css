@@ -161,4 +161,12 @@
         backdrop-filter: blur(12px);
         -webkit-backdrop-filter: blur(12px);
     }
+
+    /* Modal transitions */
+    .modal-overlay {
+        transition: opacity 0.2s ease-in-out;
+    }
+    .modal-content {
+        transition: transform 0.2s ease-in-out, opacity 0.2s ease-in-out;
+    }
 }

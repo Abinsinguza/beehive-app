@@ -533,40 +533,40 @@ export default function Advisories({
 
             {/* Add Template Modal */}
             {showModal && (
-                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-                    <div className="w-full max-w-md rounded-2xl bg-white shadow-2xl">
-                        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+                <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 modal-overlay">
+                    <div className="w-full max-w-md rounded-2xl bg-white shadow-2xl modal-content overflow-hidden">
+                        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 shrink-0">
                             <h2 className="text-base font-semibold" style={{ color: '#0d1b2a' }}>Add Advisory Template</h2>
-                            <button onClick={() => setShowModal(false)} className="p-1 rounded hover:bg-gray-100 text-gray-400">
+                            <button onClick={() => setShowModal(false)} className="p-1 rounded hover:bg-gray-100 text-gray-400 transition-colors">
                                 <X className="w-4 h-4" />
                             </button>
                         </div>
-                        <form onSubmit={submit} className="p-6 flex flex-col gap-4">
+                        <form onSubmit={submit} className="p-6 flex flex-col gap-4 overflow-y-auto max-h-[80vh]">
                             <div>
                                 <label className="text-xs font-semibold uppercase tracking-widest text-gray-400 block mb-1.5">Prediction Code</label>
                                 <input type="number" step="any" value={data.prediction_code} onChange={(e) => setData('prediction_code', e.target.value)}
                                     placeholder="e.g. 2"
-                                    className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm outline-none text-gray-700 placeholder-gray-300" required />
+                                    className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm outline-none text-gray-700 placeholder-gray-300 transition-all focus:border-[#f5a623] focus:ring-2 focus:ring-[#f5a623]/20" required />
                                 {errors.prediction_code && <p className="text-xs text-red-500 mt-1">{errors.prediction_code}</p>}
                             </div>
                             <div>
                                 <label className="text-xs font-semibold uppercase tracking-widest text-gray-400 block mb-1.5">Hive State</label>
                                 <input type="text" value={data.hive_state} onChange={(e) => setData('hive_state', e.target.value)}
                                     placeholder="e.g. swarm"
-                                    className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm outline-none text-gray-700 placeholder-gray-300" required />
+                                    className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm outline-none text-gray-700 placeholder-gray-300 transition-all focus:border-[#f5a623] focus:ring-2 focus:ring-[#f5a623]/20" required />
                                 {errors.hive_state && <p className="text-xs text-red-500 mt-1">{errors.hive_state}</p>}
                             </div>
                             <div>
                                 <label className="text-xs font-semibold uppercase tracking-widest text-gray-400 block mb-1.5">Advisory Type</label>
                                 <input type="text" value={data.advisory_type} onChange={(e) => setData('advisory_type', e.target.value)}
                                     placeholder="e.g. Reactive"
-                                    className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm outline-none text-gray-700 placeholder-gray-300" required />
+                                    className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm outline-none text-gray-700 placeholder-gray-300 transition-all focus:border-[#f5a623] focus:ring-2 focus:ring-[#f5a623]/20" required />
                                 {errors.advisory_type && <p className="text-xs text-red-500 mt-1">{errors.advisory_type}</p>}
                             </div>
                             <div>
                                 <label className="text-xs font-semibold uppercase tracking-widest text-gray-400 block mb-1.5">Severity</label>
                                 <select value={data.severity} onChange={(e) => setData('severity', e.target.value)}
-                                    className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-700 outline-none bg-white" required>
+                                    className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-700 outline-none bg-white transition-all focus:border-[#f5a623] focus:ring-2 focus:ring-[#f5a623]/20" required>
                                     <option value="">Select severity</option>
                                     <option value="info">Info</option>
                                     <option value="low">Low</option>
@@ -580,7 +580,7 @@ export default function Advisories({
                                 <label className="text-xs font-semibold uppercase tracking-widest text-gray-400 block mb-1.5">Min Confidence Threshold (0–1)</label>
                                 <input type="number" min="0" max="1" step="0.01" value={data.min_confidence_threshold} onChange={(e) => setData('min_confidence_threshold', e.target.value)}
                                     placeholder="e.g. 0.70"
-                                    className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm outline-none text-gray-700 placeholder-gray-300" />
+                                    className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm outline-none text-gray-700 placeholder-gray-300 transition-all focus:border-[#f5a623] focus:ring-2 focus:ring-[#f5a623]/20" />
                                 {errors.min_confidence_threshold && <p className="text-xs text-red-500 mt-1">{errors.min_confidence_threshold}</p>}
                             </div>
                             <div>
@@ -588,14 +588,14 @@ export default function Advisories({
                                 <textarea value={data.description} onChange={(e) => setData('description', e.target.value)}
                                     placeholder="Describe this advisory condition..."
                                     rows={3}
-                                    className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm outline-none text-gray-700 placeholder-gray-300 resize-none" />
+                                    className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm outline-none text-gray-700 placeholder-gray-300 transition-all focus:border-[#f5a623] focus:ring-2 focus:ring-[#f5a623]/20 resize-none" />
                                 {errors.description && <p className="text-xs text-red-500 mt-1">{errors.description}</p>}
                             </div>
                             <div className="flex justify-end gap-3 pt-2">
                                 <button type="button" onClick={() => setShowModal(false)}
-                                    className="px-4 py-2 rounded-lg border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-50">Cancel</button>
+                                    className="px-4 py-2 rounded-lg border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors">Cancel</button>
                                 <button type="submit" disabled={processing}
-                                    className="px-4 py-2 rounded-lg text-sm font-semibold hover:opacity-90 disabled:opacity-60"
+                                    className="px-4 py-2 rounded-lg text-sm font-semibold hover:opacity-90 disabled:opacity-60 transition-opacity"
                                     style={{ backgroundColor: '#f5a623', color: '#0d1b2a' }}>
                                     {processing ? 'Saving…' : 'Save Template'}
                                 </button>
@@ -662,37 +662,37 @@ function EditTemplateModal({ template, onClose }: { template: Template; onClose:
     };
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-            <div className="w-full max-w-md rounded-2xl bg-white shadow-2xl">
-                <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 modal-overlay">
+            <div className="w-full max-w-md rounded-2xl bg-white shadow-2xl modal-content overflow-hidden">
+                <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 shrink-0">
                     <h2 className="text-base font-semibold" style={{ color: '#0d1b2a' }}>Edit Advisory Template</h2>
-                    <button onClick={onClose} className="p-1 rounded hover:bg-gray-100 text-gray-400">
+                    <button onClick={onClose} className="p-1 rounded hover:bg-gray-100 text-gray-400 transition-colors">
                         <X className="w-4 h-4" />
                     </button>
                 </div>
-                <form onSubmit={submit} className="p-6 flex flex-col gap-4">
+                <form onSubmit={submit} className="p-6 flex flex-col gap-4 overflow-y-auto max-h-[80vh]">
                     <div>
                         <label className="text-xs font-semibold uppercase tracking-widest text-gray-400 block mb-1.5">Prediction Code</label>
                         <input type="number" step="any" value={data.prediction_code} onChange={(e) => setData('prediction_code', e.target.value)}
-                            className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm outline-none text-gray-700" required />
+                            className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm outline-none text-gray-700 transition-all focus:border-[#f5a623] focus:ring-2 focus:ring-[#f5a623]/20" required />
                         {errors.prediction_code && <p className="text-xs text-red-500 mt-1">{errors.prediction_code}</p>}
                     </div>
                     <div>
                         <label className="text-xs font-semibold uppercase tracking-widest text-gray-400 block mb-1.5">Hive State</label>
                         <input type="text" value={data.hive_state} onChange={(e) => setData('hive_state', e.target.value)}
-                            className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm outline-none text-gray-700" required />
+                            className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm outline-none text-gray-700 transition-all focus:border-[#f5a623] focus:ring-2 focus:ring-[#f5a623]/20" required />
                         {errors.hive_state && <p className="text-xs text-red-500 mt-1">{errors.hive_state}</p>}
                     </div>
                     <div>
                         <label className="text-xs font-semibold uppercase tracking-widest text-gray-400 block mb-1.5">Advisory Type</label>
                         <input type="text" value={data.advisory_type} onChange={(e) => setData('advisory_type', e.target.value)}
-                            className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm outline-none text-gray-700" required />
+                            className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm outline-none text-gray-700 transition-all focus:border-[#f5a623] focus:ring-2 focus:ring-[#f5a623]/20" required />
                         {errors.advisory_type && <p className="text-xs text-red-500 mt-1">{errors.advisory_type}</p>}
                     </div>
                     <div>
                         <label className="text-xs font-semibold uppercase tracking-widest text-gray-400 block mb-1.5">Severity</label>
                         <select value={data.severity} onChange={(e) => setData('severity', e.target.value)}
-                            className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-700 outline-none bg-white" required>
+                            className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-700 outline-none bg-white transition-all focus:border-[#f5a623] focus:ring-2 focus:ring-[#f5a623]/20" required>
                             <option value="info">Info</option>
                             <option value="low">Low</option>
                             <option value="medium">Medium</option>
@@ -704,21 +704,21 @@ function EditTemplateModal({ template, onClose }: { template: Template; onClose:
                     <div>
                         <label className="text-xs font-semibold uppercase tracking-widest text-gray-400 block mb-1.5">Min Confidence Threshold (0–1)</label>
                         <input type="number" min="0" max="1" step="0.01" value={data.min_confidence_threshold} onChange={(e) => setData('min_confidence_threshold', e.target.value)}
-                            className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm outline-none text-gray-700" />
+                            className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm outline-none text-gray-700 transition-all focus:border-[#f5a623] focus:ring-2 focus:ring-[#f5a623]/20" />
                         {errors.min_confidence_threshold && <p className="text-xs text-red-500 mt-1">{errors.min_confidence_threshold}</p>}
                     </div>
                     <div>
                         <label className="text-xs font-semibold uppercase tracking-widest text-gray-400 block mb-1.5">Description</label>
                         <textarea value={data.description} onChange={(e) => setData('description', e.target.value)}
                             rows={3}
-                            className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm outline-none text-gray-700 resize-none" />
+                            className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm outline-none text-gray-700 resize-none transition-all focus:border-[#f5a623] focus:ring-2 focus:ring-[#f5a623]/20" />
                         {errors.description && <p className="text-xs text-red-500 mt-1">{errors.description}</p>}
                     </div>
                     <div className="flex justify-end gap-3 pt-2">
                         <button type="button" onClick={onClose}
-                            className="px-4 py-2 rounded-lg border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-50">Cancel</button>
+                            className="px-4 py-2 rounded-lg border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors">Cancel</button>
                         <button type="submit" disabled={processing}
-                            className="px-4 py-2 rounded-lg text-sm font-semibold hover:opacity-90 disabled:opacity-60"
+                            className="px-4 py-2 rounded-lg text-sm font-semibold hover:opacity-90 disabled:opacity-60 transition-opacity"
                             style={{ backgroundColor: '#f5a623', color: '#0d1b2a' }}>
                             {processing ? 'Saving…' : 'Save Changes'}
                         </button>
@@ -752,19 +752,19 @@ function AdvisoryItemModal({ templates, item, onClose }: { templates: Template[]
     };
 
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-            <div className="w-full max-w-md rounded-2xl bg-white shadow-2xl max-h-[90vh] flex flex-col">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 modal-overlay">
+            <div className="w-full max-w-md rounded-2xl bg-white shadow-2xl modal-content overflow-hidden">
                 <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 shrink-0">
                     <h2 className="text-base font-semibold" style={{ color: '#0d1b2a' }}>{item ? 'Edit Advisory' : 'Add Advisory'}</h2>
-                    <button onClick={onClose} className="p-1 rounded hover:bg-gray-100 text-gray-400">
+                    <button onClick={onClose} className="p-1 rounded hover:bg-gray-100 text-gray-400 transition-colors">
                         <X className="w-4 h-4" />
                     </button>
                 </div>
-                <form onSubmit={submit} className="p-6 flex flex-col gap-4 overflow-y-auto">
+                <form onSubmit={submit} className="p-6 flex flex-col gap-4 overflow-y-auto max-h-[80vh]">
                     <div>
                         <label className="text-xs font-semibold uppercase tracking-widest text-gray-400 block mb-1.5">Hive State Template</label>
                         <select value={data.template_id} onChange={(e) => setData('template_id', e.target.value)}
-                            className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-700 outline-none bg-white" required>
+                            className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-700 outline-none bg-white transition-all focus:border-[#f5a623] focus:ring-2 focus:ring-[#f5a623]/20" required>
                             <option value="">Select template…</option>
                             {templates.map((t) => (
                                 <option key={t.template_id} value={t.template_id}>{t.hive_state}</option>
@@ -776,20 +776,20 @@ function AdvisoryItemModal({ templates, item, onClose }: { templates: Template[]
                         <label className="text-xs font-semibold uppercase tracking-widest text-gray-400 block mb-1.5">Action Title</label>
                         <input type="text" value={data.action_title} onChange={(e) => setData('action_title', e.target.value)}
                             placeholder="e.g. Inspect for Overcrowding"
-                            className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm outline-none text-gray-700 placeholder-gray-300" required />
+                            className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm outline-none text-gray-700 placeholder-gray-300 transition-all focus:border-[#f5a623] focus:ring-2 focus:ring-[#f5a623]/20" required />
                         {errors.action_title && <p className="text-xs text-red-500 mt-1">{errors.action_title}</p>}
                     </div>
                     <div>
                         <label className="text-xs font-semibold uppercase tracking-widest text-gray-400 block mb-1.5">Action Description</label>
                         <textarea value={data.action_description} onChange={(e) => setData('action_description', e.target.value)}
                             rows={3}
-                            className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm outline-none text-gray-700 resize-none" required />
+                            className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm outline-none text-gray-700 resize-none transition-all focus:border-[#f5a623] focus:ring-2 focus:ring-[#f5a623]/20" required />
                         {errors.action_description && <p className="text-xs text-red-500 mt-1">{errors.action_description}</p>}
                     </div>
                     <div>
                         <label className="text-xs font-semibold uppercase tracking-widest text-gray-400 block mb-1.5">Priority</label>
                         <select value={data.priority_level} onChange={(e) => setData('priority_level', e.target.value)}
-                            className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-700 outline-none bg-white" required>
+                            className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-700 outline-none bg-white transition-all focus:border-[#f5a623] focus:ring-2 focus:ring-[#f5a623]/20" required>
                             <option value="low">Low</option>
                             <option value="medium">Medium</option>
                             <option value="high">High</option>
@@ -801,21 +801,21 @@ function AdvisoryItemModal({ templates, item, onClose }: { templates: Template[]
                             <label className="text-xs font-semibold uppercase tracking-widest text-gray-400 block mb-1.5">Min Confidence</label>
                             <input type="number" min="0" max="1" step="0.01" value={data.confidence_threshold_min} onChange={(e) => setData('confidence_threshold_min', e.target.value)}
                                 placeholder="0.70"
-                                className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm outline-none text-gray-700 placeholder-gray-300" required />
+                                className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm outline-none text-gray-700 placeholder-gray-300 transition-all focus:border-[#f5a623] focus:ring-2 focus:ring-[#f5a623]/20" required />
                             {errors.confidence_threshold_min && <p className="text-xs text-red-500 mt-1">{errors.confidence_threshold_min}</p>}
                         </div>
                         <div>
                             <label className="text-xs font-semibold uppercase tracking-widest text-gray-400 block mb-1.5">Max Confidence</label>
                             <input type="number" min="0" max="1" step="0.01" value={data.confidence_threshold_max} onChange={(e) => setData('confidence_threshold_max', e.target.value)}
                                 placeholder="1.00"
-                                className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm outline-none text-gray-700 placeholder-gray-300" required />
+                                className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm outline-none text-gray-700 placeholder-gray-300 transition-all focus:border-[#f5a623] focus:ring-2 focus:ring-[#f5a623]/20" required />
                             {errors.confidence_threshold_max && <p className="text-xs text-red-500 mt-1">{errors.confidence_threshold_max}</p>}
                         </div>
                     </div>
                     <div>
                         <label className="text-xs font-semibold uppercase tracking-widest text-gray-400 block mb-1.5">Order</label>
                         <input type="number" min="1" step="1" value={data.action_order} onChange={(e) => setData('action_order', e.target.value)}
-                            className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm outline-none text-gray-700" required />
+                            className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm outline-none text-gray-700 transition-all focus:border-[#f5a623] focus:ring-2 focus:ring-[#f5a623]/20" required />
                         {errors.action_order && <p className="text-xs text-red-500 mt-1">{errors.action_order}</p>}
                     </div>
                     <label className="flex items-center gap-2 cursor-pointer">
@@ -825,9 +825,9 @@ function AdvisoryItemModal({ templates, item, onClose }: { templates: Template[]
                     </label>
                     <div className="flex justify-end gap-3 pt-2">
                         <button type="button" onClick={onClose}
-                            className="px-4 py-2 rounded-lg border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-50">Cancel</button>
+                            className="px-4 py-2 rounded-lg border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors">Cancel</button>
                         <button type="submit" disabled={processing}
-                            className="px-4 py-2 rounded-lg text-sm font-semibold hover:opacity-90 disabled:opacity-60"
+                            className="px-4 py-2 rounded-lg text-sm font-semibold hover:opacity-90 disabled:opacity-60 transition-opacity"
                             style={{ backgroundColor: '#f5a623', color: '#0d1b2a' }}>
                             {processing ? 'Saving…' : item ? 'Save Changes' : 'Add Advisory'}
                         </button>
@@ -843,17 +843,17 @@ function ConfirmDeleteModal({ title, message, processing, onCancel, onConfirm }:
     title: string; message: string; processing: boolean; onCancel: () => void; onConfirm: () => void;
 }) {
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-            <div className="w-full max-w-sm rounded-2xl bg-white shadow-2xl p-6 flex flex-col gap-4">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 modal-overlay">
+            <div className="w-full max-w-sm rounded-2xl bg-white shadow-2xl p-6 flex flex-col gap-4 modal-content">
                 <h2 className="text-base font-semibold" style={{ color: '#0d1b2a' }}>{title}</h2>
                 <p className="text-sm text-gray-500">{message}</p>
                 <div className="flex justify-end gap-3">
                     <button onClick={onCancel}
-                        className="px-4 py-2 rounded-lg border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-50">
+                        className="px-4 py-2 rounded-lg border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors">
                         Cancel
                     </button>
                     <button onClick={onConfirm} disabled={processing}
-                        className="px-4 py-2 rounded-lg text-sm font-semibold text-white hover:opacity-90 disabled:opacity-60"
+                        className="px-4 py-2 rounded-lg text-sm font-semibold text-white hover:opacity-90 disabled:opacity-60 transition-opacity"
                         style={{ backgroundColor: '#dc2626' }}>
                         {processing ? 'Deleting…' : 'Delete'}
                     </button>
@@ -873,7 +873,7 @@ function EmptyState({ label, hint, onAdd, addLabel = 'Add Template' }: { label: 
             <p className="text-xs text-gray-400 mt-1 mb-4">{hint}</p>
             {onAdd && (
                 <button onClick={onAdd}
-                    className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold"
+                    className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold hover:opacity-90 transition-opacity"
                     style={{ backgroundColor: '#f5a623', color: '#0d1b2a' }}>
                     <Plus className="w-4 h-4" /> {addLabel}
                 </button>
