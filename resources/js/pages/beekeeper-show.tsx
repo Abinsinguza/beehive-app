@@ -2,6 +2,7 @@ import { Head, router, useForm, usePage } from '@inertiajs/react';
 import { AlertCircle, Calendar, CheckCircle, ChevronLeft, FolderPlus, Hexagon, KeyRound, Mail, MapPin, Phone, Plus, RefreshCw, X } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
 import AppLayout from '@/layouts/app-layout';
+import { toSentenceCase } from '@/lib/format-text';
 
 type Hive = {
     id: string;
@@ -286,9 +287,9 @@ export default function BeekeeperShow({ beekeeper }: { beekeeper: Beekeeper }) {
                                         </p>
                                         <p className="text-[11px] text-gray-400 truncate mt-0.5">{hive.hive_location}</p>
                                     </div>
-                                    <span className="shrink-0 text-[11px] font-semibold px-2 py-0.5 rounded-full capitalize"
+                                    <span className="shrink-0 text-[11px] font-semibold px-2 py-0.5 rounded-full"
                                         style={{ backgroundColor: '#f1f5f9', color: hiveStateColors[hive.current_state] ?? '#64748b' }}>
-                                        {hive.current_state}
+                                        {toSentenceCase(hive.current_state)}
                                     </span>
                                     <button
                                         onClick={(e) => { e.stopPropagation(); createFolder(hive.id); }}

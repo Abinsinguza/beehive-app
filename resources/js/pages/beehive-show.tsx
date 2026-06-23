@@ -4,6 +4,7 @@ import React, { useState, useMemo } from 'react';
 import AppLayout from '@/layouts/app-layout';
 import { DataTable } from '@/components/data-table';
 import { type MRT_ColumnDef } from 'material-react-table';
+import { toSentenceCase } from '@/lib/format-text';
 
 type Beehive = {
     id: string;
@@ -206,12 +207,12 @@ export default function BeehiveShow({
             accessorKey: 'status',
             header: 'Status',
             Cell: ({ row }) => (
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-widest whitespace-nowrap"
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded tracking-widest whitespace-nowrap"
                     style={{
                         backgroundColor: row.original.status === 'processed' ? '#fef3c7' : '#f1f5f9',
                         color: row.original.status === 'processed' ? '#92400e' : '#64748b',
                     }}>
-                    {row.original.status}
+                    {toSentenceCase(row.original.status)}
                 </span>
             ),
         },

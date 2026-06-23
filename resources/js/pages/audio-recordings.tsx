@@ -16,6 +16,8 @@ import { type MRT_ColumnDef, type MRT_PaginationState } from 'material-react-tab
 import { MenuItem } from '@mui/material';
 import { DataTable } from '@/components/data-table';
 import { toast } from 'sonner';
+import { formatDisplayText, cleanDataArray } from '@/lib/utils';
+import { toSentenceCase } from '@/lib/format-text';
 
 type HiveRef   = { hive_id: string; hive_name: string; hive_location: string };
 type Recording = {
@@ -250,6 +252,27 @@ export default function AudioRecordings({ recordings, stats, formats, hives, fil
     const [hive, setHive]           = useState(filters.hive);
     const [isRefreshing, setIsRefreshing] = useState(false);
 
+    // Clean the incoming data
+    const cleanedRecordings = useMemo(() => {
+        return cleanDataArray(recordings.data, [
+            'hive.hive_name',
+            'hive.hive_location',
+            'detected_state'
+        ]);
+    }, [recordings.data]);
+
+    const cleanedHives = useMemo(() => {
+        return cleanDataArray(hives, [
+            'hive_name',
+            'hive_location'
+        ]);
+    }, [hives]);
+
+    // Format detected_state for display
+    const formatDetectedState = (state: string | null) => {
+        return state ? formatDisplayText(state) : null;
+    };
+
     // Debug: Check recordings data reference stability
     if (typeof window !== 'undefined') {
         console.log('recordings data reference same:', recordings.data === (window as any).__lastRecordingData);
@@ -386,7 +409,7 @@ export default function AudioRecordings({ recordings, stats, formats, hives, fil
                 const val = cell.getValue<string | null>();
                 return val ? (
                     <span className="text-xs font-semibold" style={{ color: hiveStateColor(val) }}>
-                        {val}
+                        {toSentenceCase(val)}
                     </span>
                 ) : (
                     <span className="text-xs text-gray-400 italic">Not analysed</span>
@@ -474,7 +497,7 @@ export default function AudioRecordings({ recordings, stats, formats, hives, fil
     return (
         <>
             <Head title="Audio Recordings" />
-            {showAdd && <AddRecordingModal hives={hives} onClose={() => setShowAdd(false)} />}
+            {showAdd && <AddRecordingModal hives={cleanedHives} onClose={() => setShowAdd(false)} />}
 
             <div className="flex flex-col" style={{ backgroundColor: '#f8f9fa' }}>
                 <div className="flex-1 p-6 flex flex-col gap-5">
@@ -550,7 +573,7 @@ export default function AudioRecordings({ recordings, stats, formats, hives, fil
                             onChange={(e) => { setHive(e.target.value); applyFilters({ hive: e.target.value }); }}
                             className="bg-white border border-gray-200 rounded-xl px-3 py-2 text-sm shadow-sm focus:outline-none focus:border-amber-400 text-gray-600">
                             <option value="">All hives</option>
-                            {hives.map((h) => (
+                            {cleanedHives.map((h) => (
                                 <option key={h.hive_id} value={h.hive_id}>{h.hive_name}</option>
                             ))}
                         </select>
@@ -568,7 +591,7 @@ export default function AudioRecordings({ recordings, stats, formats, hives, fil
                     <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
                         <DataTable
                                 columns={columns}
-                                data={recordings.data}
+                                data={cleanedRecordings}
                                 getRowId={(row) => row.audio_id}
                                 manualPagination={true}
                                 rowCount={recordings.total}

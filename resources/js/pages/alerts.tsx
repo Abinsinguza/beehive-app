@@ -5,6 +5,8 @@ import AppLayout from '@/layouts/app-layout';
 import { Alert } from '@/components/ui/alert';
 import { type MRT_ColumnDef } from 'material-react-table';
 import { DataTable } from '@/components/data-table';
+import { formatDisplayText, cleanDataArray } from '@/lib/utils';
+import { toSentenceCase, toTitleCase } from '@/lib/format-text';
 
 type Beehive = {
     hive_id: string;
@@ -48,14 +50,14 @@ type Alert = {
 };
 
 const severityConfig: Record<string, { label: string; bg: string; color: string }> = {
-    critical: { label: 'CRITICAL', bg: '#0d1b2a', color: '#ffffff' },
-    high:     { label: 'HIGH',     bg: '#fff7ed', color: '#f5a623' },
-    medium:   { label: 'MEDIUM',   bg: '#fffbeb', color: '#d97706' },
-    low:      { label: 'LOW',      bg: '#eff6ff', color: '#1d4ed8' },
-    info:     { label: 'NORMAL',   bg: '#f1f5f9', color: '#64748b' },
+    critical: { label: 'Critical', bg: '#0d1b2a', color: '#ffffff' },
+    high:     { label: 'High',     bg: '#fff7ed', color: '#f5a623' },
+    medium:   { label: 'Medium',   bg: '#fffbeb', color: '#d97706' },
+    low:      { label: 'Low',      bg: '#eff6ff', color: '#1d4ed8' },
+    info:     { label: 'Info',     bg: '#f1f5f9', color: '#64748b' },
 };
 function severityCfg(level: string) {
-    return severityConfig[level?.toLowerCase()] ?? { label: level?.toUpperCase() ?? '—', bg: '#f1f5f9', color: '#64748b' };
+    return severityConfig[level?.toLowerCase()] ?? { label: level ?? '—', bg: '#f1f5f9', color: '#64748b' };
 }
 
 const hiveStateColors: Record<string, string> = {
@@ -109,6 +111,24 @@ export default function AlertsPage({
     const { props } = usePage<{ flash?: { success?: string; error?: string } }>();
     const flash = props.flash;
 
+    // Clean the incoming data
+    const cleanedAlerts = useMemo(() => {
+        return cleanDataArray(alerts, ['inference.hive_state', 'inference.beehive.hive_location', 'inference.beehive.owner.name', 'recommended_action']);
+    }, [alerts]);
+
+    const cleanedInferences = useMemo(() => {
+        return cleanDataArray(inferences, ['hive_state', 'beehive.hive_location', 'beehive.owner.name']);
+    }, [inferences]);
+
+    const cleanedHives = useMemo(() => {
+        const hiveList = beehives.length > 0 ? beehives : hives;
+        return cleanDataArray(hiveList, ['hive_name', 'hive_location', 'owner.name']);
+    }, [beehives, hives]);
+
+    const cleanedBeekeepers = useMemo(() => {
+        return cleanDataArray(beekeepers, ['name']);
+    }, [beekeepers]);
+
     const [showModal, setShowModal] = useState(false);
     const [notifying, setNotifying] = useState<string | null>(null);
     const [flashDismissed, setFlashDismissed] = useState(false);
@@ -121,11 +141,11 @@ export default function AlertsPage({
     // No extra MRT state needed - let MRT handle it internally
 
     // Use either beehives or hives prop
-    const hiveList = beehives.length > 0 ? beehives : hives;
+    const hiveList = cleanedHives;
     
     // Get unique beekeepers from beehives or use beekeepers prop
-    const beekeeperList = (beekeepers.length > 0 
-        ? beekeepers 
+    const beekeeperList = (cleanedBeekeepers.length > 0 
+        ? cleanedBeekeepers 
         : [...new Map(hiveList
             .filter(h => h.owner)
             .map(h => [h.owner!.id, h.owner])
@@ -150,16 +170,16 @@ export default function AlertsPage({
         router.patch(`/alerts/${alert.alert_id}/notify`, {}, { onFinish: () => setNotifying(null) });
     };
 
-    const pendingCount  = alerts.filter((a) => a.action_status === 'pending').length;
-    const sentCount     = alerts.filter((a) => a.action_status === 'sent').length;
+    const pendingCount  = cleanedAlerts.filter((a) => a.action_status === 'pending').length;
+    const sentCount     = cleanedAlerts.filter((a) => a.action_status === 'sent').length;
 
-    const severityLevels = [...new Set(alerts.map((a) => a.severity_level))];
+    const severityLevels = [...new Set(cleanedAlerts.map((a) => a.severity_level))];
     const typeCounts = severityLevels.map((level) => ({
         type:  level,
-        count: alerts.filter((a) => a.severity_level === level).length,
+        count: cleanedAlerts.filter((a) => a.severity_level === level).length,
     }));
 
-    const logs = alerts.map((a) => ({
+    const logs = cleanedAlerts.map((a) => ({
         ts:          new Date(a.alert_timestamp).toLocaleString(),
         hive:        a.inference?.beehive?.hive_location ?? 'SYSTEM',
         hiveId:      a.hive_id ?? a.inference?.hive_id ?? null,
@@ -300,7 +320,7 @@ export default function AlertsPage({
                     <div>
                         <p className="font-semibold text-xs" style={{ color: '#0d1b2a' }}>{row.original.hive}</p>
                         {row.original.beekeeper && (
-                            <p className="text-[10px] text-gray-400 mt-0.5">{row.original.beekeeper}</p>
+                            <p className="text-[10px] text-gray-400 mt-0.5">{toTitleCase(row.original.beekeeper)}</p>
                         )}
                     </div>
                 );
@@ -316,9 +336,9 @@ export default function AlertsPage({
             filterSelectOptions: ['swarm', 'pre_swarm', 'normal', 'abscondment', 'missing_queen', 'queenbee_present', 'pest_infested', 'external_noise', 'uncertain'],
             Cell: ({ row }) => {
                 return row.original.hiveStatus ? (
-                    <span className="text-[10px] font-bold px-2 py-1 rounded uppercase tracking-widest"
+                    <span className="text-[10px] font-bold px-2 py-1 rounded tracking-widest"
                         style={{ backgroundColor: `${hiveStateColor(row.original.hiveStatus)}15`, color: hiveStateColor(row.original.hiveStatus) }}>
-                        {row.original.hiveStatus}
+                        {toSentenceCase(row.original.hiveStatus)}
                     </span>
                 ) : (
                     <span className="text-[10px] text-gray-400">—</span>
@@ -335,7 +355,7 @@ export default function AlertsPage({
             Cell: ({ cell }) => {
                 const sc = severityCfg(cell.getValue<string>());
                 return (
-                    <span className="text-[10px] font-bold px-2 py-1 rounded uppercase tracking-widest"
+                    <span className="text-[10px] font-bold px-2 py-1 rounded tracking-widest"
                         style={{ backgroundColor: sc.bg, color: sc.color }}>
                         {sc.label}
                     </span>
@@ -360,12 +380,12 @@ export default function AlertsPage({
                 const isSent = row.original.status === 'sent';
                 const isPending = row.original.status === 'pending';
                 return isSent ? (
-                    <span className="text-[10px] font-bold px-2 py-1 rounded uppercase tracking-widest"
+                    <span className="text-[10px] font-bold px-2 py-1 rounded tracking-widest"
                         style={{ backgroundColor: '#ecfdf5', color: '#065f46' }}>
                         Sent
                     </span>
                 ) : isPending ? (
-                    <span className="text-[10px] font-bold px-2 py-1 rounded uppercase tracking-widest"
+                    <span className="text-[10px] font-bold px-2 py-1 rounded tracking-widest"
                         style={{ backgroundColor: '#fff7ed', color: '#c2410c' }}>
                         Pending
                     </span>
@@ -450,10 +470,10 @@ export default function AlertsPage({
                             className="border border-gray-300 rounded-lg p-2 text-sm bg-white" 
                         > 
                             <option value="all">All Beekeepers</option> 
-                            {beekeeperList?.map((beekeeper) => ( 
-                                <option key={beekeeper.id} value={beekeeper.id}> 
-                                    {beekeeper.name} 
-                                </option> 
+                            {beekeeperList?.map((beekeeper) => (
+                                <option key={beekeeper.id} value={beekeeper.id}>
+                                    {toTitleCase(beekeeper.name)}
+                                </option>
                             ))} 
                         </select>
                         <select value={severityFilter} onChange={(e) => setSeverityFilter(e.target.value)}
@@ -494,13 +514,9 @@ export default function AlertsPage({
                     <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
                             <div className="flex items-center gap-3 px-5 py-4 border-b border-gray-100">
                                 <span className="font-semibold text-sm" style={{ color: '#0d1b2a' }}>All Alert Logs</span>
-                                <div className="ml-auto flex items-center gap-2">
-                                    <span className="text-[10px] font-bold px-2 py-1 rounded border border-gray-300 text-gray-500 uppercase tracking-widest">Normal</span>
-                                    <span className="text-[10px] font-bold px-2 py-1 rounded text-white uppercase tracking-widest" style={{ backgroundColor: '#f5a623' }}>Alert</span>
-                                </div>
                             </div>
 
-                            <DataTable
+                                <DataTable
                                 columns={columns}
                                 data={filteredLogs}
                                 getRowId={(row) => row.alertObj.alert_id}
@@ -510,7 +526,7 @@ export default function AlertsPage({
                                             <Inbox className="w-8 h-8 text-gray-300" />
                                             <p className="text-sm font-semibold text-gray-500">No alerts found</p>
                                             <p className="text-xs text-gray-400">
-                                                {alerts.length === 0
+                                                {cleanedAlerts.length === 0
                                                     ? 'No alerts have been recorded yet.'
                                                     : 'No alerts match the current filters.'}
                                             </p>
@@ -537,13 +553,13 @@ export default function AlertsPage({
                             <div>
                                 <label className="text-xs font-semibold uppercase tracking-widest text-gray-400 block mb-1.5">Inference</label>
                                 <select value={data.inference_id} onChange={(e) => {
-                                        const selected = inferences.find((inf) => inf.inference_id === e.target.value);
+                                        const selected = cleanedInferences.find((inf) => inf.inference_id === e.target.value);
                                         setData('inference_id', e.target.value);
                                         setData('hive_id', selected?.hive_id ?? '');
                                     }}
                                     className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-700 outline-none bg-white" required>
                                     <option value="" disabled>Select an inference</option>
-                                    {inferences.map((inf) => (
+                                    {cleanedInferences.map((inf) => (
                                         <option key={inf.inference_id} value={inf.inference_id}>
                                             {inf.hive_state} @ {inf.beehive?.hive_location ?? inf.hive_id}
                                         </option>

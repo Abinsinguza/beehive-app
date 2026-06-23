@@ -21,7 +21,7 @@ export default function ForgotPassword({ status }: { status?: string }) {
             `}</style>
 
             <div className="min-h-screen w-full bg-[#F8FAFC] flex items-center justify-center px-4 pb-20">
-                <div className="w-full max-w-[420px]">
+                <div className="w-full max-w-md">
                     {/* Logo + Branding */}
                     <div className="flex flex-col items-center gap-3 mb-8">
                         <div className="w-14 h-14 rounded-2xl flex items-center justify-center" style={{ backgroundColor: '#0d1b2a' }}>

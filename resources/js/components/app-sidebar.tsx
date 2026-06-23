@@ -53,7 +53,7 @@ function SidebarNavItem({ item }: { item: NavItem }) {
 
 export function AppSidebar() {
     return (
-        <Sidebar collapsible="icon" variant="inset">
+        <Sidebar collapsible="icon" variant="sidebar">
             {/* Logo */}
             <SidebarHeader className="px-4 py-5" style={{ backgroundColor: '#0d1b2a' }}>
                 <SidebarMenu>

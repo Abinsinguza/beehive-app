@@ -10,8 +10,10 @@ import {
     Users,
     Video,
 } from 'lucide-react';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { dashboard } from '@/routes';
+import { formatDisplayText, cleanDataArray } from '@/lib/utils';
+import { toSentenceCase } from '@/lib/format-text';
 
 type Stats = {
     total_hives: number;
@@ -89,7 +91,7 @@ const STATE_META: Record<string, { label: string; bg: string; text: string }> = 
 
 function stateMeta(state: string) {
     return STATE_META[state] ?? {
-        label: state.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()),
+        label: toSentenceCase(state),
         bg: '#f1f5f9', text: '#64748b',
     };
 }
@@ -234,6 +236,19 @@ export default function Dashboard({
         1
     );
 
+    // Clean the incoming data!
+    const cleanedHives = useMemo(() => {
+        return cleanDataArray(hives_list, ['name', 'type', 'location']);
+    }, [hives_list]);
+
+    const cleanedAlerts = useMemo(() => {
+        return cleanDataArray(recent_alerts, ['hive_name', 'hive_location', 'recommended_action', 'action_status']);
+    }, [recent_alerts]);
+
+    const cleanedGreetingName = useMemo(() => {
+        return formatDisplayText(greeting_name);
+    }, [greeting_name]);
+
     return (
         <>
             <Head title="Dashboard" />
@@ -243,7 +258,7 @@ export default function Dashboard({
                     {/* ── Greeting ── */}
                     <div>
                         <h1 className="text-2xl font-bold" style={{ color: '#0d1b2a' }}>
-                            {getTimeGreeting()}, {greeting_name}
+                            {getTimeGreeting()}, {cleanedGreetingName}
                         </h1>
                         <p className="text-sm text-gray-500 mt-0.5">
                             {getDayLabel()}
@@ -306,11 +321,11 @@ export default function Dashboard({
                                     View all <ExternalLink className="w-3 h-3" />
                                 </button>
                             </div>
-                            {hives_list.length === 0 ? (
+                            {cleanedHives.length === 0 ? (
                                 <div className="flex-1 flex items-center justify-center py-12 text-sm text-gray-400">No hives registered yet</div>
                             ) : (
                                 <div className="divide-y divide-gray-100">
-                                    {hives_list.map((hive) => {
+                                    {cleanedHives.map((hive) => {
                                         const meta = stateMeta(hive.hive_state);
                                         return (
                                             <div key={hive.id}
@@ -321,7 +336,7 @@ export default function Dashboard({
                                                 </div>
                                                 <div className="flex-1 min-w-0">
                                                     <p className="text-xs font-semibold truncate leading-tight" style={{ color: '#0d1b2a' }}>
-                                                        {hive.name}{hive.type ? ` — ${hive.type}` : ''}
+                                                        {hive.name}{hive.type ? <> — {hive.type}</> : ''}
                                                     </p>
                                                     <p className="text-[11px] text-gray-400 truncate mt-0.5">{hive.location}</p>
                                                 </div>
@@ -385,14 +400,14 @@ export default function Dashboard({
                                     View all <ExternalLink className="w-3 h-3" />
                                 </button>
                             </div>
-                            {recent_alerts.length === 0 ? (
+                            {cleanedAlerts.length === 0 ? (
                                 <div className="flex-1 flex items-center justify-center py-10 text-sm text-gray-400">No alerts yet</div>
                             ) : (
                                 <div className="divide-y divide-gray-100">
-                                    {recent_alerts.map((a) => {
+                                    {cleanedAlerts.map((a) => {
                                         const badge = severityBadge(a.severity_level);
                                         const dot   = severityDot(a.severity_level);
-                                        const status = a.action_status?.replace(/_/g, ' ') ?? '';
+                                        const status = a.action_status;
                                         return (
                                             <div key={a.id} className="flex items-start gap-3 px-5 py-3">
                                                 <span className="w-2 h-2 rounded-full shrink-0 mt-1.5" style={{ backgroundColor: dot }} />
