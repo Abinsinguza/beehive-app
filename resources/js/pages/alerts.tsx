@@ -293,28 +293,21 @@ export default function AlertsPage({
     const columns = useMemo<MRT_ColumnDef<Log>[]>(() => [
         {
             accessorKey: 'ts',
-            header: 'Timestamp',
+            header: 'Time',
             enableSorting: true,
             enableColumnFilter: true,
-            Cell: ({ cell, row }) => {
-                return (
-                    <div>
-                        <p className="text-gray-400 whitespace-nowrap font-mono text-xs">{cell.getValue<string>()}</p>
-                        <p className="text-[9px] mt-0.5" style={{ color: row.original.viewedAt ? '#16a34a' : '#94a3b8' }}>
-                            {row.original.viewedAt
-                                ? `Viewed ${new Date(row.original.viewedAt).toLocaleString()}`
-                                : 'Not yet viewed'}
-                        </p>
-                    </div>
-                );
+            size: 140,
+            Cell: ({ cell }) => {
+                return <p className="text-gray-400 whitespace-nowrap font-mono text-xs">{cell.getValue<string>()}</p>;
             },
         },
         {
             id: 'hive',
-            header: 'Hive / Beekeeper',
+            header: 'Hive',
             accessorFn: (row) => row.hive,
             enableSorting: true,
             enableColumnFilter: true,
+            size: 120,
             Cell: ({ row }) => {
                 return (
                     <div>
@@ -327,31 +320,13 @@ export default function AlertsPage({
             },
         },
         {
-            id: 'hiveStatus',
-            header: 'Hive Status',
-            accessorFn: (row) => row.hiveStatus,
-            enableSorting: true,
-            enableColumnFilter: true,
-            filterVariant: 'select',
-            filterSelectOptions: ['swarm', 'pre_swarm', 'normal', 'abscondment', 'missing_queen', 'queenbee_present', 'pest_infested', 'external_noise', 'uncertain'],
-            Cell: ({ row }) => {
-                return row.original.hiveStatus ? (
-                    <span className="text-[10px] font-bold px-2 py-1 rounded tracking-widest"
-                        style={{ backgroundColor: `${hiveStateColor(row.original.hiveStatus)}15`, color: hiveStateColor(row.original.hiveStatus) }}>
-                        {toSentenceCase(row.original.hiveStatus)}
-                    </span>
-                ) : (
-                    <span className="text-[10px] text-gray-400">—</span>
-                );
-            },
-        },
-        {
             accessorKey: 'severity',
             header: 'Severity',
             enableSorting: true,
             enableColumnFilter: true,
             filterVariant: 'select',
             filterSelectOptions: ['critical', 'high', 'medium', 'low', 'info'],
+            size: 100,
             Cell: ({ cell }) => {
                 const sc = severityCfg(cell.getValue<string>());
                 return (
@@ -363,19 +338,13 @@ export default function AlertsPage({
             },
         },
         {
-            accessorKey: 'desc',
-            header: 'Event Description',
-            enableSorting: true,
-            enableColumnFilter: true,
-            Cell: ({ cell }) => <p className="text-gray-600 leading-snug max-w-xs text-xs">{cell.getValue<string>()}</p>,
-        },
-        {
             accessorKey: 'status',
             header: 'Status',
             enableSorting: true,
             enableColumnFilter: true,
             filterVariant: 'select',
             filterSelectOptions: ['pending', 'sent'],
+            size: 100,
             Cell: ({ row }) => {
                 const isSent = row.original.status === 'sent';
                 const isPending = row.original.status === 'pending';
@@ -395,6 +364,39 @@ export default function AlertsPage({
             },
         },
     ], []);
+
+    const renderDetailPanel = ({ row }: { row: any }) => {
+        const log = row.original as Log;
+        return (
+            <div className="px-4 py-3 bg-gray-50 border-t border-gray-100">
+                <div className="grid grid-cols-2 gap-4">
+                    <div className="col-span-2">
+                        <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-400 mb-1">Event Description</p>
+                        <p className="text-sm text-gray-700 leading-snug">{log.desc}</p>
+                    </div>
+                    <div>
+                        <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-400 mb-1">Hive Status</p>
+                        {log.hiveStatus ? (
+                            <span className="text-[10px] font-bold px-2 py-1 rounded tracking-widest"
+                                style={{ backgroundColor: `${hiveStateColor(log.hiveStatus)}15`, color: hiveStateColor(log.hiveStatus) }}>
+                                {toSentenceCase(log.hiveStatus)}
+                            </span>
+                        ) : (
+                            <span className="text-xs text-gray-400">—</span>
+                        )}
+                    </div>
+                    <div>
+                        <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-400 mb-1">Viewed</p>
+                        <p className="text-sm text-gray-400 italic">
+                            {log.viewedAt
+                                ? `Viewed ${new Date(log.viewedAt).toLocaleString()}`
+                                : 'Not yet viewed'}
+                        </p>
+                    </div>
+                </div>
+            </div>
+        );
+    };
 
     return (
         <>
@@ -520,6 +522,7 @@ export default function AlertsPage({
                                 columns={columns}
                                 data={filteredLogs}
                                 getRowId={(row) => row.alertObj.alert_id}
+                                renderDetailPanel={renderDetailPanel}
                                 renderEmptyRowsFallback={() => (
                                     <div className="px-4 py-16 text-center">
                                         <div className="flex flex-col items-center gap-2">

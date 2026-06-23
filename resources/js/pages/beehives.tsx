@@ -16,6 +16,8 @@ type Beehive = {
     installation_date: string;
     current_state: string;
     owner: { id: string; name: string } | null;
+    latitude?: string | null;
+    longitude?: string | null;
 };
 
 const statusConfig: Record<string, { label: string; bg: string; color: string }> = {
@@ -57,12 +59,6 @@ export default function Beehives({ beehives = [], owners = [], search: initialSe
         ]);
     }, [beehives]);
 
-    // Debug: Check beehives reference stability
-    if (typeof window !== 'undefined') {
-        console.log('beehives reference same:', beehives === (window as any).__lastBeehives);
-        (window as any).__lastBeehives = beehives;
-    }
-    
     // No extra MRT state needed - let MRT handle it internally
 
     const { data, setData, post, reset, processing, errors } = useForm({
@@ -132,14 +128,11 @@ export default function Beehives({ beehives = [], owners = [], search: initialSe
             header: 'Hive Name',
             enableSorting: true,
             enableColumnFilter: true,
-            size: 200,
+            size: 180,
             Cell: ({ row }) => {
                 const name = row.original.hive_name;
                 return (
-                    <div>
-                        <p className="font-semibold text-sm" style={{ color: '#0d1b2a' }}>{name || '—'}</p>
-                        <p className="text-xs text-gray-400">{row.original.hive_type}</p>
-                    </div>
+                    <p className="font-semibold text-sm" style={{ color: '#0d1b2a' }}>{name || '—'}</p>
                 );
             },
         },
@@ -155,12 +148,12 @@ export default function Beehives({ beehives = [], owners = [], search: initialSe
         },
         {
             accessorKey: 'current_state',
-            header: 'Current Status',
+            header: 'Status',
             enableSorting: true,
             enableColumnFilter: true,
             filterVariant: 'select',
             filterSelectOptions: ['active', 'inactive', 'migrated', 'lost', 'unknown', 'normal', 'pre_swarm', 'swarm', 'abscondence', 'external_noise', 'pest_disturbance', 'uncertain'],
-            size: 140,
+            size: 120,
             Cell: ({ row }) => {
                 const sc = statusConfig[row.original.current_state] ?? defaultStatusStyle;
                 return (
@@ -176,22 +169,38 @@ export default function Beehives({ beehives = [], owners = [], search: initialSe
             header: 'Owner',
             enableSorting: true,
             enableColumnFilter: true,
-            size: 160,
+            size: 140,
             Cell: ({ row }) => {
                 return <p className="text-sm text-gray-600">{toTitleCase(row.original.owner?.name ?? '—')}</p>;
             },
         },
-        {
-            accessorKey: 'installation_date',
-            header: 'Installation Date',
-            enableSorting: true,
-            enableColumnFilter: false,
-            size: 130,
-            Cell: ({ cell }) => {
-                return <p className="text-xs text-gray-400">{fmtDate(cell.getValue<string>())}</p>;
-            },
-        },
     ], []);
+
+    const renderDetailPanel = ({ row }: { row: any }) => {
+        const hive = row.original as Beehive;
+        return (
+            <div className="px-4 py-3 bg-gray-50 border-t border-gray-100">
+                <div className="grid grid-cols-2 gap-4">
+                    <div>
+                        <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-400 mb-1">Hive Type</p>
+                        <p className="text-sm text-gray-700">{hive.hive_type || '—'}</p>
+                    </div>
+                    <div>
+                        <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-400 mb-1">Installation Date</p>
+                        <p className="text-sm text-gray-700">{fmtDate(hive.installation_date)}</p>
+                    </div>
+                    <div>
+                        <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-400 mb-1">Latitude</p>
+                        <p className="text-sm text-gray-700">{hive.latitude || '—'}</p>
+                    </div>
+                    <div>
+                        <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-400 mb-1">Longitude</p>
+                        <p className="text-sm text-gray-700">{hive.longitude || '—'}</p>
+                    </div>
+                </div>
+            </div>
+        );
+    };
 
     return (
         <>
@@ -254,6 +263,7 @@ export default function Beehives({ beehives = [], owners = [], search: initialSe
                         data={cleanedBeehives}
                         getRowId={(row) => row.id}
                         enableRowActions={true}
+                        renderDetailPanel={renderDetailPanel}
                         renderRowActionMenuItems={({ closeMenu, row }) => [
                             <MenuItem
                                 key="view"
@@ -387,7 +397,7 @@ export default function Beehives({ beehives = [], owners = [], search: initialSe
                                 </label>
                                 <input
                                     type="date"
-                                    value={data.installation_date}
+                                    value={data.installation_date ? new Date(data.installation_date).toISOString().split('T')[0] : ''}
                                     onChange={(e) => setData('installation_date', e.target.value)}
                                     required
                                     className="w-full border border-gray-300 rounded-lg px-3.5 py-2.5 text-sm text-gray-800 outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-100"
@@ -455,11 +465,21 @@ export default function Beehives({ beehives = [], owners = [], search: initialSe
 
 // ── Edit Hive Modal ──────────────────────────────────────────────────────────
 function EditHiveModal({ hive, owners, onClose }: { hive: Beehive; owners: Owner[]; onClose: () => void }) {
+    // Format ISO timestamp to yyyy-MM-dd for date input
+    const formatDateForInput = (dateValue: string | null | undefined): string => {
+        if (!dateValue) return '';
+        try {
+            return new Date(dateValue).toISOString().split('T')[0];
+        } catch {
+            return '';
+        }
+    };
+
     const { data, setData, put, processing, errors } = useForm({
         owner_id:          hive.owner?.id ?? '',
         hive_location:     hive.hive_location,
         hive_type:         hive.hive_type,
-        installation_date: hive.installation_date,
+        installation_date: formatDateForInput(hive.installation_date),
         current_state:     hive.current_state,
     });
 
@@ -503,7 +523,7 @@ function EditHiveModal({ hive, owners, onClose }: { hive: Beehive; owners: Owner
                     </div>
                     <div>
                         <label className="text-xs font-semibold uppercase tracking-widest text-gray-400 block mb-1.5">Installation Date</label>
-                        <input type="date" value={data.installation_date} onChange={(e) => setData('installation_date', e.target.value)}
+                        <input type="date" value={data.installation_date ? new Date(data.installation_date).toISOString().split('T')[0] : ''} onChange={(e) => setData('installation_date', e.target.value)}
                             className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-700 outline-none" required />
                         {errors.installation_date && <p className="text-xs text-red-500 mt-1">{errors.installation_date}</p>}
                     </div>

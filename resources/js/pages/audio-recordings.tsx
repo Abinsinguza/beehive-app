@@ -273,12 +273,6 @@ export default function AudioRecordings({ recordings, stats, formats, hives, fil
         return state ? formatDisplayText(state) : null;
     };
 
-    // Debug: Check recordings data reference stability
-    if (typeof window !== 'undefined') {
-        console.log('recordings data reference same:', recordings.data === (window as any).__lastRecordingData);
-        (window as any).__lastRecordingData = recordings.data;
-    }
-
     function handleRefresh() {
         setIsRefreshing(true);
         router.reload({
@@ -358,9 +352,10 @@ export default function AudioRecordings({ recordings, stats, formats, hives, fil
         },
         {
             accessorKey: 'source_url',
-            header: 'Source file',
+            header: 'Source File',
             enableSorting: true,
             enableColumnFilter: true,
+            size: 140,
             Cell: ({ cell }) => (
                 <span className="text-xs text-gray-600 font-mono">
                     {truncatePath(cell.getValue<string>())}
@@ -374,6 +369,7 @@ export default function AudioRecordings({ recordings, stats, formats, hives, fil
             enableColumnFilter: true,
             filterVariant: 'select',
             filterSelectOptions: formats,
+            size: 90,
             Cell: ({ cell }) => formatBadge(cell.getValue<string>()),
         },
         {
@@ -381,77 +377,12 @@ export default function AudioRecordings({ recordings, stats, formats, hives, fil
             header: 'Duration',
             enableSorting: true,
             enableColumnFilter: false,
+            size: 90,
             Cell: ({ cell }) => (
                 <span className="text-xs text-gray-600 tabular-nums">
                     {formatDuration(cell.getValue<number | null>())}
                 </span>
             ),
-        },
-        {
-            accessorKey: 'created_at',
-            header: 'Recorded',
-            enableSorting: true,
-            enableColumnFilter: false,
-            Cell: ({ cell }) => (
-                <span className="text-xs text-gray-500 tabular-nums whitespace-nowrap">
-                    {formatDate(cell.getValue<string | null>())}
-                </span>
-            ),
-        },
-        {
-            accessorKey: 'detected_state',
-            header: 'ML Detected',
-            enableSorting: true,
-            enableColumnFilter: true,
-            filterVariant: 'select',
-            filterSelectOptions: ['swarm', 'pre_swarm', 'normal', 'abscondment', 'missing_queen', 'queenbee_present', 'pest_infested', 'external_noise', 'uncertain'],
-            Cell: ({ cell }) => {
-                const val = cell.getValue<string | null>();
-                return val ? (
-                    <span className="text-xs font-semibold" style={{ color: hiveStateColor(val) }}>
-                        {toSentenceCase(val)}
-                    </span>
-                ) : (
-                    <span className="text-xs text-gray-400 italic">Not analysed</span>
-                );
-            },
-        },
-        {
-            accessorKey: 'confidence_score',
-            header: 'Confidence',
-            enableSorting: true,
-            enableColumnFilter: false,
-            Cell: ({ cell }) => {
-                const val = cell.getValue<number | null>();
-                return val != null ? (
-                    <span className="text-xs text-gray-600 tabular-nums">
-                        {(val * 100).toFixed(1)}%
-                    </span>
-                ) : '—';
-            },
-        },
-        {
-            accessorKey: 'analyzed_at',
-            header: 'Analysed At',
-            enableSorting: true,
-            enableColumnFilter: false,
-            Cell: ({ cell }) => (
-                <span className="text-xs text-gray-500 whitespace-nowrap">
-                    {formatDate(cell.getValue<string | null>())}
-                </span>
-            ),
-        },
-        {
-            accessorKey: 'inference_latency_ms',
-            header: 'Latency',
-            enableSorting: true,
-            enableColumnFilter: false,
-            Cell: ({ cell }) => {
-                const val = cell.getValue<number | null>();
-                return val != null ? (
-                    <span className="text-xs text-gray-600 tabular-nums">{val}ms</span>
-                ) : '—';
-            },
         },
         {
             accessorKey: 'status',
@@ -460,6 +391,7 @@ export default function AudioRecordings({ recordings, stats, formats, hives, fil
             enableColumnFilter: true,
             filterVariant: 'select',
             filterSelectOptions: ['processed', 'pending', 'failed'],
+            size: 110,
             Cell: ({ row }) => {
                 const cfg = statusCfg(row.original.status);
                 return (
@@ -477,7 +409,7 @@ export default function AudioRecordings({ recordings, stats, formats, hives, fil
             enableSorting: false,
             enableColumnFilter: false,
             enableHiding: false,
-            size: 60,
+            size: 50,
             Cell: ({ row }) => (
                 <button
                     onClick={() => row.original.hive && router.visit(`/beehives/${row.original.hive_id}`)}
@@ -488,10 +420,57 @@ export default function AudioRecordings({ recordings, stats, formats, hives, fil
         },
     ], [formats]);
 
+    const renderDetailPanel = ({ row }: { row: any }) => {
+        const rec = row.original;
+        return (
+            <div className="px-4 py-3 bg-gray-50 border-t border-gray-100">
+                <div className="grid grid-cols-2 gap-4">
+                    <div>
+                        <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-400 mb-1">Recorded</p>
+                        <p className="text-sm text-gray-700 tabular-nums whitespace-nowrap">
+                            {formatDate(rec.created_at)}
+                        </p>
+                    </div>
+                    <div>
+                        <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-400 mb-1">ML Detected</p>
+                        {rec.detected_state ? (
+                            <span className="text-xs font-semibold" style={{ color: hiveStateColor(rec.detected_state) }}>
+                                {toSentenceCase(rec.detected_state)}
+                            </span>
+                        ) : (
+                            <span className="text-xs text-gray-400 italic">Not analysed</span>
+                        )}
+                    </div>
+                    <div>
+                        <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-400 mb-1">Confidence</p>
+                        <p className="text-sm text-gray-700 tabular-nums">
+                            {rec.confidence_score != null ? `${(rec.confidence_score * 100).toFixed(1)}%` : '—'}
+                        </p>
+                    </div>
+                    <div>
+                        <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-400 mb-1">Analysed At</p>
+                        <p className="text-sm text-gray-700 whitespace-nowrap">
+                            {formatDate(rec.analyzed_at)}
+                        </p>
+                    </div>
+                    <div>
+                        <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-400 mb-1">Latency</p>
+                        <p className="text-sm text-gray-700 tabular-nums">
+                            {rec.inference_latency_ms != null ? `${rec.inference_latency_ms}ms` : '—'}
+                        </p>
+                    </div>
+                </div>
+            </div>
+        );
+    };
+
     // Add MRT state for pagination
+    const validPageSizes = [10, 20, 50, 100];
+    const pageSize = validPageSizes.includes(recordings.per_page) ? recordings.per_page : 10;
+
     const [pagination, setPagination] = useState<MRT_PaginationState>({
         pageIndex: recordings.current_page - 1, // MRT is 0-based, our server is 1-based
-        pageSize: recordings.per_page,
+        pageSize: pageSize,
     });
 
     return (
@@ -593,6 +572,7 @@ export default function AudioRecordings({ recordings, stats, formats, hives, fil
                                 columns={columns}
                                 data={cleanedRecordings}
                                 getRowId={(row) => row.audio_id}
+                                renderDetailPanel={renderDetailPanel}
                                 manualPagination={true}
                                 rowCount={recordings.total}
                                 state={{ pagination }}

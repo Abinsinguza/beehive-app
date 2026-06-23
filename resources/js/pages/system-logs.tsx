@@ -82,6 +82,7 @@ export default function SystemLogs({ logs, stats, eventTypes, filters }: Props) 
             header: 'Time',
             enableSorting: true,
             enableColumnFilter: false,
+            size: 120,
             Cell: ({ row }) => {
                 const { date, time } = fmt(row.original.created_at);
                 return (
@@ -99,6 +100,7 @@ export default function SystemLogs({ logs, stats, eventTypes, filters }: Props) 
             enableColumnFilter: true,
             filterVariant: 'select',
             filterSelectOptions: ['', 'error', 'warning', 'info'],
+            size: 100,
             Cell: ({ row }) => {
                 const cfg = levelConfig[row.original.level] ?? levelConfig.info;
                 return (
@@ -122,49 +124,45 @@ export default function SystemLogs({ logs, stats, eventTypes, filters }: Props) 
             enableColumnFilter: true,
             filterVariant: 'select',
             filterSelectOptions: ['', ...eventTypes],
+            size: 140,
             Cell: ({ row }) => (
                 <span className="font-mono text-[11px] px-2 py-1 rounded border border-gray-200 bg-gray-50 text-gray-600 whitespace-nowrap">
                     {toSentenceCase(row.original.event_type) ?? '—'}
                 </span>
             ),
         },
-        {
-            accessorKey: 'message',
-            header: 'Message',
-            enableSorting: false,
-            enableColumnFilter: true,
-            Cell: ({ row }) => (
-                <span className="block truncate text-gray-700 max-w-sm">{toSentenceCase(row.original.message)}</span>
-            ),
-        },
-        {
-            id: 'hive_user',
-            header: 'Hive / User',
-            enableSorting: false,
-            enableColumnFilter: false,
-            Cell: ({ row }) => {
-                const log = row.original;
-                return (
+    ], [eventTypes]);
+
+    const renderDetailPanel = ({ row }: { row: any }) => {
+        const log = row.original as Log;
+        return (
+            <div className="px-4 py-3 bg-gray-50 border-t border-gray-100">
+                <div className="grid grid-cols-2 gap-4">
+                    <div className="col-span-2">
+                        <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-400 mb-1">Message</p>
+                        <p className="text-sm text-gray-700 leading-snug">{toSentenceCase(log.message)}</p>
+                    </div>
                     <div>
-                        {log.hive_name && (
+                        <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-400 mb-1">Hive</p>
+                        {log.hive_name ? (
                             <span
-                                className="block text-[11px] font-semibold px-2 py-0.5 rounded mb-0.5 w-fit"
+                                className="inline-block text-[11px] font-semibold px-2 py-0.5 rounded"
                                 style={{ backgroundColor: '#fff7ed', color: '#f5a623' }}
                             >
                                 {log.hive_name}
                             </span>
-                        )}
-                        {log.user_name && (
-                            <span className="block text-gray-400">{toTitleCase(log.user_name)}</span>
-                        )}
-                        {!log.hive_name && !log.user_name && (
-                            <span className="text-gray-300">—</span>
+                        ) : (
+                            <span className="text-sm text-gray-400">—</span>
                         )}
                     </div>
-                );
-            },
-        },
-    ], [eventTypes]);
+                    <div>
+                        <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-400 mb-1">User</p>
+                        <p className="text-sm text-gray-700">{log.user_name ? toTitleCase(log.user_name) : '—'}</p>
+                    </div>
+                </div>
+            </div>
+        );
+    };
 
     function applyFilters(overrides: Partial<{ level: string; eventType: string }> = {}) {
         router.get('/system-logs', {
@@ -334,13 +332,7 @@ export default function SystemLogs({ logs, stats, eventTypes, filters }: Props) 
                         columns={columns}
                         data={logs.data}
                         getRowId={(row) => row.log_id}
-                        renderDetailPanel={({ row }: { row: { original: Log } }) => row.original.details ? (
-                            <div className="p-4 bg-gray-50 border-b border-gray-100">
-                                <pre className="text-xs font-mono text-gray-600 whitespace-pre-wrap break-all bg-white rounded-lg border border-gray-200 p-3">
-                                    {JSON.stringify(row.original.details, null, 2)}
-                                </pre>
-                            </div>
-                        ) : undefined}
+                        renderDetailPanel={renderDetailPanel}
                     />
                     </div>
                 </div>

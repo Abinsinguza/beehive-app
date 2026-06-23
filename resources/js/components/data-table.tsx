@@ -44,6 +44,7 @@ export function DataTable<T extends Record<string, any>>({
     getRowId,
     enableRowActions = false,
     renderRowActionMenuItems,
+    renderDetailPanel,
     initialColumnVisibility,
     ...rest
 }: {
@@ -52,6 +53,7 @@ export function DataTable<T extends Record<string, any>>({
     getRowId: (row: T) => string;
     enableRowActions?: boolean;
     renderRowActionMenuItems?: (props: any) => ReactNode[];
+    renderDetailPanel?: (props: { row: any }) => ReactNode;
     initialColumnVisibility?: MRT_VisibilityState;
     [key: string]: any;
 }) {
@@ -63,6 +65,7 @@ export function DataTable<T extends Record<string, any>>({
                 getRowId={getRowId}
                 enableRowActions={enableRowActions}
                 renderRowActionMenuItems={renderRowActionMenuItems}
+                renderDetailPanel={renderDetailPanel}
                 initialColumnVisibility={initialColumnVisibility}
                 {...rest}
             />
@@ -76,6 +79,7 @@ function DataTableInner<T extends Record<string, any>>({
     getRowId,
     enableRowActions,
     renderRowActionMenuItems,
+    renderDetailPanel,
     initialColumnVisibility,
     ...rest
 }: {
@@ -84,6 +88,7 @@ function DataTableInner<T extends Record<string, any>>({
     getRowId: (row: T) => string;
     enableRowActions?: boolean;
     renderRowActionMenuItems?: (props: any) => ReactNode[];
+    renderDetailPanel?: (props: { row: any }) => ReactNode;
     initialColumnVisibility?: MRT_VisibilityState;
     [key: string]: any;
 }) {
@@ -114,6 +119,8 @@ function DataTableInner<T extends Record<string, any>>({
         enableMultiRowSelection: false,
         enableRowActions,
         renderRowActionMenuItems,
+        renderDetailPanel,
+        enableExpanding: !!renderDetailPanel,
         enableRowOrdering: false,
         enablePagination: true,
         paginationDisplayMode: 'pages',
@@ -132,6 +139,10 @@ function DataTableInner<T extends Record<string, any>>({
             },
         }),
         ...(enableRowActions ? { positionActionsColumn: 'last' as const } : {}),
+        initialState: {
+            density: 'compact',
+            ...(rest.initialState || {}),
+        },
         state: {
             sorting,
             columnFilters,
