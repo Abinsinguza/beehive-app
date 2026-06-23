@@ -6,6 +6,7 @@ import { Alert } from '@/components/ui/alert';
 import { type MRT_ColumnDef } from 'material-react-table';
 import { DataTable } from '@/components/data-table';
 import { formatDisplayText, cleanDataArray } from '@/lib/utils';
+import { toSentenceCase, toTitleCase } from '@/lib/format-text';
 
 type Beehive = {
     hive_id: string;
@@ -319,7 +320,7 @@ export default function AlertsPage({
                     <div>
                         <p className="font-semibold text-xs" style={{ color: '#0d1b2a' }}>{row.original.hive}</p>
                         {row.original.beekeeper && (
-                            <p className="text-[10px] text-gray-400 mt-0.5">{row.original.beekeeper}</p>
+                            <p className="text-[10px] text-gray-400 mt-0.5">{toTitleCase(row.original.beekeeper)}</p>
                         )}
                     </div>
                 );
@@ -335,9 +336,9 @@ export default function AlertsPage({
             filterSelectOptions: ['swarm', 'pre_swarm', 'normal', 'abscondment', 'missing_queen', 'queenbee_present', 'pest_infested', 'external_noise', 'uncertain'],
             Cell: ({ row }) => {
                 return row.original.hiveStatus ? (
-                    <span className="text-[10px] font-bold px-2 py-1 rounded uppercase tracking-widest"
+                    <span className="text-[10px] font-bold px-2 py-1 rounded tracking-widest"
                         style={{ backgroundColor: `${hiveStateColor(row.original.hiveStatus)}15`, color: hiveStateColor(row.original.hiveStatus) }}>
-                        {row.original.hiveStatus}
+                        {toSentenceCase(row.original.hiveStatus)}
                     </span>
                 ) : (
                     <span className="text-[10px] text-gray-400">—</span>
@@ -354,7 +355,7 @@ export default function AlertsPage({
             Cell: ({ cell }) => {
                 const sc = severityCfg(cell.getValue<string>());
                 return (
-                    <span className="text-[10px] font-bold px-2 py-1 rounded uppercase tracking-widest"
+                    <span className="text-[10px] font-bold px-2 py-1 rounded tracking-widest"
                         style={{ backgroundColor: sc.bg, color: sc.color }}>
                         {sc.label}
                     </span>
@@ -379,12 +380,12 @@ export default function AlertsPage({
                 const isSent = row.original.status === 'sent';
                 const isPending = row.original.status === 'pending';
                 return isSent ? (
-                    <span className="text-[10px] font-bold px-2 py-1 rounded uppercase tracking-widest"
+                    <span className="text-[10px] font-bold px-2 py-1 rounded tracking-widest"
                         style={{ backgroundColor: '#ecfdf5', color: '#065f46' }}>
                         Sent
                     </span>
                 ) : isPending ? (
-                    <span className="text-[10px] font-bold px-2 py-1 rounded uppercase tracking-widest"
+                    <span className="text-[10px] font-bold px-2 py-1 rounded tracking-widest"
                         style={{ backgroundColor: '#fff7ed', color: '#c2410c' }}>
                         Pending
                     </span>
@@ -469,10 +470,10 @@ export default function AlertsPage({
                             className="border border-gray-300 rounded-lg p-2 text-sm bg-white" 
                         > 
                             <option value="all">All Beekeepers</option> 
-                            {beekeeperList?.map((beekeeper) => ( 
-                                <option key={beekeeper.id} value={beekeeper.id}> 
-                                    {beekeeper.name} 
-                                </option> 
+                            {beekeeperList?.map((beekeeper) => (
+                                <option key={beekeeper.id} value={beekeeper.id}>
+                                    {toTitleCase(beekeeper.name)}
+                                </option>
                             ))} 
                         </select>
                         <select value={severityFilter} onChange={(e) => setSeverityFilter(e.target.value)}

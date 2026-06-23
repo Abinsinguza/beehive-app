@@ -5,6 +5,7 @@ import { type MRT_ColumnDef } from 'material-react-table';
 import { MenuItem } from '@mui/material';
 import { DataTable } from '@/components/data-table';
 import { formatDisplayText, cleanDataArray } from '@/lib/utils';
+import { toTitleCase } from '@/lib/format-text';
 
 type Owner = { id: string; name: string };
 type Beehive = {
@@ -177,7 +178,7 @@ export default function Beehives({ beehives = [], owners = [], search: initialSe
             enableColumnFilter: true,
             size: 160,
             Cell: ({ row }) => {
-                return <p className="text-sm text-gray-600">{row.original.owner?.name ?? '—'}</p>;
+                return <p className="text-sm text-gray-600">{toTitleCase(row.original.owner?.name ?? '—')}</p>;
             },
         },
         {

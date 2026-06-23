@@ -13,6 +13,7 @@ import {
 import { useMemo, useState } from 'react';
 import { dashboard } from '@/routes';
 import { formatDisplayText, cleanDataArray } from '@/lib/utils';
+import { toSentenceCase } from '@/lib/format-text';
 
 type Stats = {
     total_hives: number;
@@ -90,7 +91,7 @@ const STATE_META: Record<string, { label: string; bg: string; text: string }> = 
 
 function stateMeta(state: string) {
     return STATE_META[state] ?? {
-        label: state.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()),
+        label: toSentenceCase(state),
         bg: '#f1f5f9', text: '#64748b',
     };
 }

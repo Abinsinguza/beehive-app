@@ -4,6 +4,7 @@ import React, { useState, useMemo } from 'react';
 import { type MRT_ColumnDef } from 'material-react-table';
 import AppLayout from '@/layouts/app-layout';
 import { DataTable } from '@/components/data-table';
+import { toSentenceCase, toTitleCase } from '@/lib/format-text';
 
 interface Log {
     log_id: string;
@@ -39,19 +40,19 @@ const levelConfig: Record<string, { badge: string; dot: string; icon: React.Reac
         badge: 'text-red-700',
         dot: '#ef4444',
         icon: <AlertCircle className="w-3.5 h-3.5" />,
-        label: 'ERROR',
+        label: 'Error',
     },
     warning: {
         badge: 'text-yellow-700',
         dot: '#f59e0b',
         icon: <AlertTriangle className="w-3.5 h-3.5" />,
-        label: 'WARNING',
+        label: 'Warning',
     },
     info: {
         badge: 'text-blue-700',
         dot: '#3b82f6',
         icon: <Info className="w-3.5 h-3.5" />,
-        label: 'INFO',
+        label: 'Info',
     },
 };
 
@@ -102,14 +103,14 @@ export default function SystemLogs({ logs, stats, eventTypes, filters }: Props) 
                 const cfg = levelConfig[row.original.level] ?? levelConfig.info;
                 return (
                     <span
-                        className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold uppercase tracking-wider ${cfg.badge}`}
+                        className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold tracking-wider ${cfg.badge}`}
                         style={{ backgroundColor: `${cfg.dot}15` }}
                     >
                         <span
                             className="w-1.5 h-1.5 rounded-full shrink-0"
                             style={{ backgroundColor: cfg.dot }}
                         />
-                        {cfg.label}
+                        {toSentenceCase(row.original.level)}
                     </span>
                 );
             },
@@ -123,7 +124,7 @@ export default function SystemLogs({ logs, stats, eventTypes, filters }: Props) 
             filterSelectOptions: ['', ...eventTypes],
             Cell: ({ row }) => (
                 <span className="font-mono text-[11px] px-2 py-1 rounded border border-gray-200 bg-gray-50 text-gray-600 whitespace-nowrap">
-                    {row.original.event_type ?? '—'}
+                    {toSentenceCase(row.original.event_type) ?? '—'}
                 </span>
             ),
         },
@@ -133,7 +134,7 @@ export default function SystemLogs({ logs, stats, eventTypes, filters }: Props) 
             enableSorting: false,
             enableColumnFilter: true,
             Cell: ({ row }) => (
-                <span className="block truncate text-gray-700 max-w-sm">{row.original.message}</span>
+                <span className="block truncate text-gray-700 max-w-sm">{toSentenceCase(row.original.message)}</span>
             ),
         },
         {
@@ -154,7 +155,7 @@ export default function SystemLogs({ logs, stats, eventTypes, filters }: Props) 
                             </span>
                         )}
                         {log.user_name && (
-                            <span className="block text-gray-400">{log.user_name}</span>
+                            <span className="block text-gray-400">{toTitleCase(log.user_name)}</span>
                         )}
                         {!log.hive_name && !log.user_name && (
                             <span className="text-gray-300">—</span>

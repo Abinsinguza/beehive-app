@@ -5,6 +5,7 @@ import { type MRT_ColumnDef } from 'material-react-table';
 import { DataTable } from '@/components/data-table';
 import AppLayout from '@/layouts/app-layout';
 import { formatDisplayText, cleanDataArray } from '@/lib/utils';
+import { toSentenceCase } from '@/lib/format-text';
 
 type Template = {
     template_id: number;
@@ -148,7 +149,7 @@ export default function Advisories({
             size: 130,
             Cell: ({ cell }) => (
                 <span className="text-sm font-medium" style={{ color: '#0d1b2a' }}>
-                    {cell.getValue<string>()}
+                    {toSentenceCase(cell.getValue<string>())}
                 </span>
             ),
         },
@@ -156,6 +157,11 @@ export default function Advisories({
             accessorKey: 'advisory_type',
             header: 'Type',
             size: 100,
+            Cell: ({ cell }) => (
+                <span className="text-sm font-medium" style={{ color: '#0d1b2a' }}>
+                    {toSentenceCase(cell.getValue<string>())}
+                </span>
+            ),
         },
         {
             accessorKey: 'severity',
@@ -172,7 +178,7 @@ export default function Advisories({
             Cell: ({ cell }) => {
                 const sc = severityConfig[cell.getValue<string>()] ?? severityConfig.medium;
                 return (
-                    <span className="text-[10px] font-bold px-2.5 py-1 rounded uppercase tracking-widest"
+                    <span className="text-[10px] font-bold px-2.5 py-1 rounded tracking-widest"
                         style={{ backgroundColor: sc.bg, color: sc.color }}>
                         {sc.label}
                     </span>
@@ -227,7 +233,7 @@ export default function Advisories({
             size: 130,
             Cell: ({ row }) => (
                 <span className="text-sm font-medium" style={{ color: '#0d1b2a' }}>
-                    {row.original.template?.hive_state ?? `#${row.original.template_id}`}
+                    {toSentenceCase(row.original.template?.hive_state ?? `#${row.original.template_id}`)}
                 </span>
             ),
         },
@@ -259,7 +265,7 @@ export default function Advisories({
             Cell: ({ cell }) => {
                 const pc = priorityConfig[cell.getValue<string>()] ?? priorityConfig.medium;
                 return (
-                    <span className="text-[10px] font-bold px-2.5 py-1 rounded uppercase tracking-widest"
+                    <span className="text-[10px] font-bold px-2.5 py-1 rounded tracking-widest"
                         style={{ backgroundColor: pc.bg, color: pc.color }}>
                         {pc.label}
                     </span>
@@ -290,7 +296,7 @@ export default function Advisories({
             ],
             size: 90,
             Cell: ({ cell }) => (
-                <span className="text-[10px] font-bold px-2.5 py-1 rounded uppercase tracking-widest"
+                <span className="text-[10px] font-bold px-2.5 py-1 rounded tracking-widest"
                     style={cell.getValue<boolean>()
                         ? { backgroundColor: '#f0fdf4', color: '#16a34a' }
                         : { backgroundColor: '#f1f5f9', color: '#94a3b8' }}>
@@ -366,7 +372,7 @@ export default function Advisories({
             Cell: ({ cell }) => {
                 const pc = priorityConfig[cell.getValue<string>()] ?? priorityConfig.medium;
                 return (
-                    <span className="text-[10px] font-bold px-2.5 py-1 rounded uppercase tracking-widest"
+                    <span className="text-[10px] font-bold px-2.5 py-1 rounded tracking-widest"
                         style={{ backgroundColor: pc.bg, color: pc.color }}>
                         {pc.label}
                     </span>
@@ -393,7 +399,7 @@ export default function Advisories({
             Cell: ({ cell }) => {
                 const sc = statusConfig[cell.getValue<string>()] ?? statusConfig.pending;
                 return (
-                    <span className="text-[10px] font-bold px-2.5 py-1 rounded uppercase tracking-widest"
+                    <span className="text-[10px] font-bold px-2.5 py-1 rounded tracking-widest"
                         style={{ backgroundColor: sc.bg, color: sc.color }}>
                         {sc.label}
                     </span>

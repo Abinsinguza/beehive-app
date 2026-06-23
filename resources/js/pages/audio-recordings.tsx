@@ -17,6 +17,7 @@ import { MenuItem } from '@mui/material';
 import { DataTable } from '@/components/data-table';
 import { toast } from 'sonner';
 import { formatDisplayText, cleanDataArray } from '@/lib/utils';
+import { toSentenceCase } from '@/lib/format-text';
 
 type HiveRef   = { hive_id: string; hive_name: string; hive_location: string };
 type Recording = {
@@ -408,7 +409,7 @@ export default function AudioRecordings({ recordings, stats, formats, hives, fil
                 const val = cell.getValue<string | null>();
                 return val ? (
                     <span className="text-xs font-semibold" style={{ color: hiveStateColor(val) }}>
-                        {formatDisplayText(val)}
+                        {toSentenceCase(val)}
                     </span>
                 ) : (
                     <span className="text-xs text-gray-400 italic">Not analysed</span>

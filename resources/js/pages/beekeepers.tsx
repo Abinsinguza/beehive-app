@@ -5,6 +5,7 @@ import { type MRT_ColumnDef } from 'material-react-table';
 import { MenuItem } from '@mui/material';
 import { DataTable } from '@/components/data-table';
 import { cleanDataArray, formatDisplayText } from '@/lib/utils';
+import { toTitleCase } from '@/lib/format-text';
 
 type Beekeeper = {
     user_id: string;
@@ -349,7 +350,7 @@ export default function Beekeepers({
                             {getInitials(bk.full_name)}
                         </div>
                         <div>
-                            <p className="font-semibold text-sm" style={{ color: '#0d1b2a' }}>{bk.full_name}</p>
+                            <p className="font-semibold text-sm" style={{ color: '#0d1b2a' }}>{toTitleCase(bk.full_name)}</p>
                             <p className="text-xs text-gray-400">{bk.email ?? bk.phone}</p>
                         </div>
                     </div>

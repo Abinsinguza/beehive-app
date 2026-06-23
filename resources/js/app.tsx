@@ -5,6 +5,7 @@ import { initializeTheme } from '@/hooks/use-appearance';
 import AppLayout from '@/layouts/app-layout';
 import AuthLayout from '@/layouts/auth-layout';
 import SettingsLayout from '@/layouts/settings/layout';
+import { toSentenceCase } from '@/lib/format-text';
 
 const appName = import.meta.env.VITE_APP_NAME || 'Laravel';
 
@@ -25,10 +26,6 @@ const shouldExclude = (key: string): boolean => {
 // String cleaning helpers
 const stripUnderscores = (str: string): string => str.replace(/_/g, ' ');
 const trimAndCollapse = (str: string): string => str.trim().replace(/\s+/g, ' ');
-const toTitleCase = (str: string): string =>
-    str.toLowerCase().replace(/\b\w/g, char => char.toUpperCase());
-const toSentenceCase = (str: string): string =>
-    str.charAt(0).toUpperCase() + str.slice(1).toLowerCase();
 
 // Determine field type based on key
 const getFieldType = (key: string): 'short' | 'long' | 'other' => {
@@ -55,14 +52,14 @@ const sanitizeData = (data: any, parentKey: string = ''): any => {
         
         const fieldType = getFieldType(parentKey);
         if (fieldType === 'short') {
-            cleaned = toTitleCase(cleaned);
+            cleaned = toSentenceCase(cleaned);
         } else if (fieldType === 'long') {
             // For long fields: convert entire string to lowercase first, then sentence case
             cleaned = toSentenceCase(cleaned.toLowerCase());
         } else {
             // For other fields: still clean underscores and trim, but keep original case unless it's all caps
             if (cleaned === cleaned.toUpperCase()) {
-                cleaned = toTitleCase(cleaned);
+                cleaned = toSentenceCase(cleaned);
             }
         }
         
@@ -88,10 +85,7 @@ createInertiaApp({
     title: (title) => (title ? `${title} - ${appName}` : appName),
     resolve: (name) => {
         const pages = import.meta.glob('./pages/**/*.tsx', { eager: true });
-        return pages[`./pages/${name}.tsx`];
-    },
-    transformProps: (props) => {
-        return sanitizeData(props);
+        return pages[`./pages/${name}.tsx`] as any;
     },
     layout: (name) => {
         switch (true) {

@@ -2,6 +2,7 @@ import type { InertiaLinkProps } from '@inertiajs/react';
 import { clsx } from 'clsx';
 import type { ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
+import { toSentenceCase } from './format-text';
 
 export function cn(...inputs: ClassValue[]) {
     return twMerge(clsx(inputs));
@@ -12,13 +13,7 @@ export function toUrl(url: NonNullable<InertiaLinkProps['href']>): string {
 }
 
 export const formatDisplayText = (value: string | number | null | undefined): string => {
-    if (!value) return "";
-
-    return String(value)
-        .replace(/_/g, " ")
-        .trim()
-        .toLowerCase()
-        .replace(/\b\w/g, (char) => char.toUpperCase());
+    return toSentenceCase(String(value ?? ''));
 };
 
 /**

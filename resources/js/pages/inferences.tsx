@@ -4,6 +4,7 @@ import React, { useState, useMemo } from 'react';
 import { FileBarChart2, FlaskConical, Hexagon, X } from 'lucide-react';
 import { type MRT_ColumnDef } from 'material-react-table';
 import { DataTable } from '@/components/data-table';
+import { toSentenceCase } from '@/lib/format-text';
 
 type Beehive = {
     hive_id: string;
@@ -70,7 +71,7 @@ const DONUT_STATE_META: Record<string, { label: string; color: string }> = {
 };
 function donutMeta(state: string) {
     return DONUT_STATE_META[state] ?? {
-        label: state.replace(/_/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase()),
+        label: toSentenceCase(state),
         color: '#94a3b8',
     };
 }
@@ -403,10 +404,10 @@ export default function Inferences({
                 const style = stateStyle(row.original.hive_state);
                 return (
                     <span
-                        className="text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-widest whitespace-nowrap"
+                        className="text-[10px] font-bold px-2 py-0.5 rounded tracking-widest whitespace-nowrap"
                         style={{ backgroundColor: style.bg, color: style.text }}
                     >
-                        {row.original.hive_state}
+                        {toSentenceCase(row.original.hive_state)}
                     </span>
                 );
             },
@@ -867,7 +868,7 @@ export default function Inferences({
                     >
                         <option value="">All States</option>
                         {['swarm','pre_swarm','external_noise','normal','abscondence','pest_disturbance','uncertain'].map((s) => (
-                            <option key={s} value={s}>{s.replace(/_/g, ' ')}</option>
+                            <option key={s} value={s}>{toSentenceCase(s)}</option>
                         ))}
                     </select>
                     {(search || stateFilter) && (
