@@ -1,5 +1,5 @@
 import { Head, useForm } from '@inertiajs/react';
-import { CheckSquare, ClipboardList, Edit2, MessageSquareWarning, Plus, Trash2, X } from 'lucide-react';
+import { ClipboardList, Edit2, MessageSquareWarning, Plus, Search, Trash2, X } from 'lucide-react';
 import React, { useState, useMemo } from 'react';
 import { type MRT_ColumnDef } from 'material-react-table';
 import { DataTable } from '@/components/data-table';
@@ -47,13 +47,6 @@ type ActionItem = {
     hive?: { hive_id: string; hive_name: string | null; hive_location: string } | null;
 };
 
-const statusConfig: Record<string, { label: string; bg: string; color: string }> = {
-    pending:     { label: 'Pending',     bg: '#fff7ed', color: '#c2410c' },
-    in_progress: { label: 'In Progress', bg: '#eff6ff', color: '#1d4ed8' },
-    completed:   { label: 'Completed',   bg: '#f0fdf4', color: '#16a34a' },
-    resolved:    { label: 'Resolved',    bg: '#f0fdf4', color: '#16a34a' },
-};
-
 const severityConfig: Record<string, { label: string; bg: string; color: string }> = {
     info:     { label: 'Info',     bg: '#f1f5f9', color: '#64748b' },
     low:      { label: 'Low',      bg: '#f0fdf4', color: '#16a34a' },
@@ -86,13 +79,19 @@ export default function Advisories({
     advisories?: Advisory[];
     actions?: ActionItem[];
 }) {
-    const [tab, setTab] = useState<'templates' | 'advisories' | 'actions'>('templates');
+    const [tab, setTab] = useState<'templates' | 'advisories'>('templates');
     const [showModal, setShowModal] = useState(false);
     const [editTemplate, setEditTemplate] = useState<Template | null>(null);
     const [deleteTemplate, setDeleteTemplate] = useState<Template | null>(null);
     const [showAddItem, setShowAddItem] = useState(false);
     const [editItem, setEditItem] = useState<Advisory | null>(null);
     const [deleteItem, setDeleteItem] = useState<Advisory | null>(null);
+
+    // Advisories tab filters
+    const [advisorySearch, setAdvisorySearch] = useState('');
+    const [advisoryHiveState, setAdvisoryHiveState] = useState('All');
+    const [advisoryPriority, setAdvisoryPriority] = useState('All');
+    const [advisoryStatus, setAdvisoryStatus] = useState('All');
 
     // Clean incoming data
     const cleanedTemplates = useMemo(() => {
@@ -106,6 +105,32 @@ export default function Advisories({
     const cleanedActions = useMemo(() => {
         return cleanDataArray(actions, ['hive.hive_name', 'hive.hive_location', 'action_title', 'action_description']);
     }, [actions]);
+
+    // Distinct hive states available to filter Advisories by
+    const advisoryHiveStates = useMemo(() => {
+        return [...new Set(cleanedAdvisories.map((a) => a.template?.hive_state).filter((s): s is string => !!s))].sort();
+    }, [cleanedAdvisories]);
+
+    const filteredAdvisories = useMemo(() => {
+        return cleanedAdvisories.filter((a) => {
+            if (advisorySearch.trim()) {
+                const haystack = `${a.action_title} ${a.action_description}`.toLowerCase();
+                if (!haystack.includes(advisorySearch.trim().toLowerCase())) return false;
+            }
+            if (advisoryHiveState !== 'All' && a.template?.hive_state !== advisoryHiveState) return false;
+            if (advisoryPriority !== 'All' && a.priority_level !== advisoryPriority) return false;
+            if (advisoryStatus !== 'All') {
+                const wantActive = advisoryStatus === 'Active';
+                if (a.is_active !== wantActive) return false;
+            }
+            return true;
+        });
+    }, [cleanedAdvisories, advisorySearch, advisoryHiveState, advisoryPriority, advisoryStatus]);
+
+    const advisoryFiltersActive = advisorySearch.trim() !== '' || advisoryHiveState !== 'All' || advisoryPriority !== 'All' || advisoryStatus !== 'All';
+    const clearAdvisoryFilters = () => {
+        setAdvisorySearch(''); setAdvisoryHiveState('All'); setAdvisoryPriority('All'); setAdvisoryStatus('All');
+    };
 
     const { data, setData, post, reset, processing, errors } = useForm({
         prediction_code: '',
@@ -235,6 +260,7 @@ export default function Advisories({
             accessorKey: 'template.hive_state',
             header: 'Hive State',
             size: 130,
+            enableColumnFilter: false,
             Cell: ({ row }) => (
                 <span className="text-sm font-medium" style={{ color: '#0d1b2a' }}>
                     {toSentenceCase(row.original.template?.hive_state ?? `#${row.original.template_id}`)}
@@ -254,13 +280,8 @@ export default function Advisories({
         {
             accessorKey: 'priority_level',
             header: 'Priority',
-            filterVariant: 'select',
-            filterSelectOptions: [
-                { text: 'Low', value: 'low' },
-                { text: 'Medium', value: 'medium' },
-                { text: 'High', value: 'high' },
-            ],
             size: 100,
+            enableColumnFilter: false,
             Cell: ({ cell }) => {
                 const pc = priorityConfig[cell.getValue<string>()] ?? priorityConfig.medium;
                 return (
@@ -274,12 +295,8 @@ export default function Advisories({
         {
             accessorKey: 'is_active',
             header: 'Active',
-            filterVariant: 'select',
-            filterSelectOptions: [
-                { text: 'Active', value: true },
-                { text: 'Inactive', value: false },
-            ],
             size: 90,
+            enableColumnFilter: false,
             Cell: ({ cell }) => (
                 <span className="text-[10px] font-bold px-2.5 py-1 rounded tracking-widest"
                     style={cell.getValue<boolean>()
@@ -336,97 +353,6 @@ export default function Advisories({
         );
     };
 
-    // --- Advisory Actions MRT columns ---
-    const actionColumns = useMemo<MRT_ColumnDef<ActionItem>[]>(() => [
-        {
-            id: 'hive',
-            header: 'Hive',
-            accessorKey: 'hive.hive_name',
-            size: 140,
-            Cell: ({ row }) => (
-                <span className="text-sm font-medium" style={{ color: '#0d1b2a' }}>
-                    {row.original.hive?.hive_name ?? row.original.hive?.hive_location ?? '—'}
-                </span>
-            ),
-        },
-        {
-            accessorKey: 'action_title',
-            header: 'Action Title',
-            size: 180,
-            Cell: ({ cell }) => (
-                <span className="text-sm font-medium" style={{ color: '#0d1b2a' }}>
-                    {cell.getValue<string>()}
-                </span>
-            ),
-        },
-        {
-            accessorKey: 'priority_level',
-            header: 'Priority',
-            filterVariant: 'select',
-            filterSelectOptions: [
-                { text: 'Low', value: 'low' },
-                { text: 'Medium', value: 'medium' },
-                { text: 'High', value: 'high' },
-            ],
-            size: 100,
-            Cell: ({ cell }) => {
-                const pc = priorityConfig[cell.getValue<string>()] ?? priorityConfig.medium;
-                return (
-                    <span className="text-[10px] font-bold px-2.5 py-1 rounded tracking-widest"
-                        style={{ backgroundColor: pc.bg, color: pc.color }}>
-                        {pc.label}
-                    </span>
-                );
-            },
-        },
-        {
-            accessorKey: 'status',
-            header: 'Status',
-            filterVariant: 'select',
-            filterSelectOptions: [
-                { text: 'Pending', value: 'pending' },
-                { text: 'In Progress', value: 'in_progress' },
-                { text: 'Completed', value: 'completed' },
-                { text: 'Resolved', value: 'resolved' },
-            ],
-            size: 120,
-            Cell: ({ cell }) => {
-                const sc = statusConfig[cell.getValue<string>()] ?? statusConfig.pending;
-                return (
-                    <span className="text-[10px] font-bold px-2.5 py-1 rounded tracking-widest"
-                        style={{ backgroundColor: sc.bg, color: sc.color }}>
-                        {sc.label}
-                    </span>
-                );
-            },
-        },
-    ], []);
-
-    const renderActionDetailPanel = ({ row }: { row: any }) => {
-        const action = row.original as ActionItem;
-        return (
-            <div className="px-4 py-3 bg-gray-50 border-t border-gray-100">
-                <div className="grid grid-cols-2 gap-4">
-                    <div className="col-span-2">
-                        <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-400 mb-1">Description</p>
-                        <p className="text-sm leading-snug" style={{ color: '#0d1b2a' }}>{action.action_description ?? '—'}</p>
-                    </div>
-                    <div>
-                        <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-400 mb-1">Confidence</p>
-                        <p className="text-sm" style={{ color: '#0d1b2a' }}>{fmtPct(action.confidence_score)}</p>
-                    </div>
-                    <div>
-                        <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-400 mb-1">Created</p>
-                        <p className="text-sm" style={{ color: '#0d1b2a' }}>{fmtDate(action.created_at)}</p>
-                    </div>
-                    <div>
-                        <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-400 mb-1">Completed</p>
-                        <p className="text-sm" style={{ color: '#0d1b2a' }}>{fmtDate(action.completed_at)}</p>
-                    </div>
-                </div>
-            </div>
-        );
-    };
 
     return (
         <>
@@ -438,7 +364,7 @@ export default function Advisories({
                     <div>
                         <h1 className="text-2xl font-bold" style={{ color: '#0d1b2a' }}>Advisories</h1>
                         <p className="text-sm text-gray-400 mt-1">
-                            {cleanedTemplates.length} template{cleanedTemplates.length !== 1 ? 's' : ''} · {cleanedAdvisories.length} advisor{cleanedAdvisories.length !== 1 ? 'ies' : 'y'} · {cleanedActions.length} triggered action{cleanedActions.length !== 1 ? 's' : ''}
+                            {cleanedTemplates.length} label{cleanedTemplates.length !== 1 ? 's' : ''} · {cleanedAdvisories.length} advisor{cleanedAdvisories.length !== 1 ? 'ies' : 'y'} · {cleanedActions.length} triggered action{cleanedActions.length !== 1 ? 's' : ''}
                         </p>
                     </div>
                     {tab === 'templates' && (
@@ -447,7 +373,7 @@ export default function Advisories({
                             className="shrink-0 flex items-center gap-2 px-4 py-2.5 rounded-lg text-sm font-semibold hover:opacity-90 transition-opacity"
                             style={{ backgroundColor: '#f5a623', color: '#0d1b2a' }}
                         >
-                            <Plus className="w-4 h-4" /> Add Template
+                            <Plus className="w-4 h-4" /> Add Label
                         </button>
                     )}
                     {tab === 'advisories' && (
@@ -469,7 +395,7 @@ export default function Advisories({
                         style={tab === 'templates' ? { backgroundColor: '#0d1b2a', color: '#ffffff' } : { color: '#64748b' }}
                     >
                         <MessageSquareWarning className="w-4 h-4" />
-                        Templates
+                        Labels
                         <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full"
                             style={tab === 'templates' ? { backgroundColor: '#f5a623', color: '#0d1b2a' } : { backgroundColor: '#f1f5f9', color: '#64748b' }}>
                             {cleanedTemplates.length}
@@ -487,26 +413,14 @@ export default function Advisories({
                             {cleanedAdvisories.length}
                         </span>
                     </button>
-                    <button
-                        onClick={() => setTab('actions')}
-                        className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-colors"
-                        style={tab === 'actions' ? { backgroundColor: '#0d1b2a', color: '#ffffff' } : { color: '#64748b' }}
-                    >
-                        <CheckSquare className="w-4 h-4" />
-                        Advisory Actions
-                        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full"
-                            style={tab === 'actions' ? { backgroundColor: '#f5a623', color: '#0d1b2a' } : { backgroundColor: '#f1f5f9', color: '#64748b' }}>
-                            {cleanedActions.length}
-                        </span>
-                    </button>
                 </div>
 
                 {/* ── Templates tab ── */}
                 {tab === 'templates' && (
                     cleanedTemplates.length === 0 ? (
                         <EmptyState
-                            label="No advisory templates yet"
-                            hint="Add your first template to get started"
+                            label="No advisory labels yet"
+                            hint="Add your first label to get started"
                             onAdd={() => setShowModal(true)}
                         />
                     ) : (
@@ -516,6 +430,12 @@ export default function Advisories({
                                 data={cleanedTemplates}
                                 getRowId={(row) => String(row.template_id)}
                                 renderDetailPanel={renderTemplateDetailPanel}
+                                renderTopToolbarCustomActions={() => (
+                                    <div>
+                                        <p className="text-base font-bold" style={{ color: '#0d1b2a' }}>AI Model Labels</p>
+                                        <p className="text-xs text-gray-400 mt-0.5">Labels that are expected from ML model</p>
+                                    </div>
+                                )}
                             />
                         </div>
                     )
@@ -534,32 +454,70 @@ export default function Advisories({
                         <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
                             <DataTable
                                 columns={advisoryColumns}
-                                data={cleanedAdvisories}
+                                data={filteredAdvisories}
                                 getRowId={(row) => row.advisory_id}
                                 renderDetailPanel={renderAdvisoryDetailPanel}
+                                renderTopToolbarCustomActions={() => (
+                                    <div className="flex items-center gap-3 flex-wrap py-1">
+                                        <div className="relative">
+                                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                                            <input
+                                                type="text"
+                                                value={advisorySearch}
+                                                onChange={(e) => setAdvisorySearch(e.target.value)}
+                                                placeholder="Search for Action Titles..."
+                                                className="border border-gray-200 rounded-lg pl-9 pr-3 py-2 text-sm outline-none focus:border-[#f5a623] focus:ring-2 focus:ring-[#f5a623]/20 w-64"
+                                                style={{ color: '#0d1b2a' }}
+                                            />
+                                        </div>
+                                        <select
+                                            value={advisoryHiveState}
+                                            onChange={(e) => setAdvisoryHiveState(e.target.value)}
+                                            className="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white outline-none focus:border-[#f5a623]"
+                                            style={{ color: '#0d1b2a' }}
+                                        >
+                                            <option value="All">Hive State: All</option>
+                                            {advisoryHiveStates.map((s) => (
+                                                <option key={s} value={s}>{toSentenceCase(s)}</option>
+                                            ))}
+                                        </select>
+                                        <select
+                                            value={advisoryPriority}
+                                            onChange={(e) => setAdvisoryPriority(e.target.value)}
+                                            className="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white outline-none focus:border-[#f5a623]"
+                                            style={{ color: '#0d1b2a' }}
+                                        >
+                                            <option value="All">Priority: All</option>
+                                            <option value="low">Low</option>
+                                            <option value="medium">Medium</option>
+                                            <option value="high">High</option>
+                                        </select>
+                                        <select
+                                            value={advisoryStatus}
+                                            onChange={(e) => setAdvisoryStatus(e.target.value)}
+                                            className="border border-gray-200 rounded-lg px-3 py-2 text-sm bg-white outline-none focus:border-[#f5a623]"
+                                            style={{ color: '#0d1b2a' }}
+                                        >
+                                            <option value="All">Status: All</option>
+                                            <option value="Active">Active</option>
+                                            <option value="Inactive">Inactive</option>
+                                        </select>
+                                        {advisoryFiltersActive && (
+                                            <button
+                                                onClick={clearAdvisoryFilters}
+                                                className="text-xs font-semibold hover:opacity-80 transition-opacity"
+                                                style={{ color: '#f5a623' }}
+                                            >
+                                                Clear all filters
+                                            </button>
+                                        )}
+                                    </div>
+                                )}
                             />
                         </div>
                     )
                 )}
 
-                {/* ── Advisory Actions tab ── */}
-                {tab === 'actions' && (
-                    cleanedActions.length === 0 ? (
-                        <EmptyState
-                            label="No advisory actions triggered yet"
-                            hint="Actions are created automatically when an inference triggers an advisory"
-                        />
-                    ) : (
-                        <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
-                            <DataTable
-                                columns={actionColumns}
-                                data={cleanedActions}
-                                getRowId={(row) => row.action_id}
-                                renderDetailPanel={renderActionDetailPanel}
-                            />
-                        </div>
-                    )
-                )}
             </div>
 
             {/* Add Template Modal */}
@@ -567,7 +525,7 @@ export default function Advisories({
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 modal-overlay">
                     <div className="w-full max-w-md rounded-2xl bg-white shadow-2xl modal-content overflow-hidden">
                         <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 shrink-0">
-                            <h2 className="text-base font-semibold" style={{ color: '#0d1b2a' }}>Add Advisory Template</h2>
+                            <h2 className="text-base font-semibold" style={{ color: '#0d1b2a' }}>Add Advisory Label</h2>
                             <button onClick={() => setShowModal(false)} className="p-1 rounded hover:bg-gray-100 text-gray-400 transition-colors">
                                 <X className="w-4 h-4" />
                             </button>
@@ -628,7 +586,7 @@ export default function Advisories({
                                 <button type="submit" disabled={processing}
                                     className="px-4 py-2 rounded-lg text-sm font-semibold hover:opacity-90 disabled:opacity-60 transition-opacity"
                                     style={{ backgroundColor: '#f5a623', color: '#0d1b2a' }}>
-                                    {processing ? 'Saving…' : 'Save Template'}
+                                    {processing ? 'Saving…' : 'Save Label'}
                                 </button>
                             </div>
                         </form>
@@ -654,8 +612,8 @@ export default function Advisories({
             {/* Delete Template confirmation */}
             {deleteTemplate && (
                 <ConfirmDeleteModal
-                    title="Delete Advisory Template"
-                    message={`Delete the "${deleteTemplate.hive_state}" template? This cannot be undone.`}
+                    title="Delete Advisory Label"
+                    message={`Delete the "${deleteTemplate.hive_state}" label? This cannot be undone.`}
                     processing={deleting}
                     onCancel={() => setDeleteTemplate(null)}
                     onConfirm={confirmDeleteTemplate}
@@ -696,7 +654,7 @@ function EditTemplateModal({ template, onClose }: { template: Template; onClose:
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 modal-overlay">
             <div className="w-full max-w-md rounded-2xl bg-white shadow-2xl modal-content overflow-hidden">
                 <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 shrink-0">
-                    <h2 className="text-base font-semibold" style={{ color: '#0d1b2a' }}>Edit Advisory Template</h2>
+                    <h2 className="text-base font-semibold" style={{ color: '#0d1b2a' }}>Edit Advisory Label</h2>
                     <button onClick={onClose} className="p-1 rounded hover:bg-gray-100 text-gray-400 transition-colors">
                         <X className="w-4 h-4" />
                     </button>
@@ -793,7 +751,7 @@ function AdvisoryItemModal({ templates, item, onClose }: { templates: Template[]
                 </div>
                 <form onSubmit={submit} className="p-6 flex flex-col gap-4 overflow-y-auto max-h-[80vh]">
                     <div>
-                        <label className="text-xs font-semibold uppercase tracking-widest text-gray-400 block mb-1.5">Hive State Template</label>
+                        <label className="text-xs font-semibold uppercase tracking-widest text-gray-400 block mb-1.5">Hive State Label</label>
                         <select value={data.template_id} onChange={(e) => setData('template_id', e.target.value)}
                             className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-700 outline-none bg-white transition-all focus:border-[#f5a623] focus:ring-2 focus:ring-[#f5a623]/20" required>
                             <option value="">Select template…</option>
@@ -894,7 +852,7 @@ function ConfirmDeleteModal({ title, message, processing, onCancel, onConfirm }:
     );
 }
 
-function EmptyState({ label, hint, onAdd, addLabel = 'Add Template' }: { label: string; hint: string; onAdd?: () => void; addLabel?: string }) {
+function EmptyState({ label, hint, onAdd, addLabel = 'Add Label' }: { label: string; hint: string; onAdd?: () => void; addLabel?: string }) {
     return (
         <div className="flex flex-col items-center justify-center bg-white rounded-xl border border-gray-200 py-20 text-center shadow-sm">
             <div className="rounded-full p-4 mb-3" style={{ backgroundColor: '#fff7ed' }}>
