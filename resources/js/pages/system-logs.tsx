@@ -87,7 +87,7 @@ export default function SystemLogs({ logs, stats, eventTypes, filters }: Props) 
                 const { date, time } = fmt(row.original.created_at);
                 return (
                     <div>
-                        <span className="block font-mono text-gray-700">{time}</span>
+                        <span className="block font-mono" style={{ color: '#0d1b2a' }}>{time}</span>
                         <span className="block text-gray-400">{date}</span>
                     </div>
                 );
@@ -126,7 +126,7 @@ export default function SystemLogs({ logs, stats, eventTypes, filters }: Props) 
             filterSelectOptions: ['', ...eventTypes],
             size: 140,
             Cell: ({ row }) => (
-                <span className="font-mono text-[11px] px-2 py-1 rounded border border-gray-200 bg-gray-50 text-gray-600 whitespace-nowrap">
+                <span className="font-mono text-[11px] px-2 py-1 rounded border border-gray-200 bg-gray-50 whitespace-nowrap" style={{ color: '#0d1b2a' }}>
                     {toSentenceCase(row.original.event_type) ?? '—'}
                 </span>
             ),
@@ -140,7 +140,7 @@ export default function SystemLogs({ logs, stats, eventTypes, filters }: Props) 
                 <div className="grid grid-cols-2 gap-4">
                     <div className="col-span-2">
                         <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-400 mb-1">Message</p>
-                        <p className="text-sm text-gray-700 leading-snug">{toSentenceCase(log.message)}</p>
+                        <p className="text-sm leading-snug" style={{ color: '#0d1b2a' }}>{toSentenceCase(log.message)}</p>
                     </div>
                     <div>
                         <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-400 mb-1">Hive</p>
@@ -157,7 +157,7 @@ export default function SystemLogs({ logs, stats, eventTypes, filters }: Props) 
                     </div>
                     <div>
                         <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-400 mb-1">User</p>
-                        <p className="text-sm text-gray-700">{log.user_name ? toTitleCase(log.user_name) : '—'}</p>
+                        <p className="text-sm" style={{ color: '#0d1b2a' }}>{log.user_name ? toTitleCase(log.user_name) : '—'}</p>
                     </div>
                 </div>
             </div>
@@ -215,7 +215,7 @@ export default function SystemLogs({ logs, stats, eventTypes, filters }: Props) 
 
                 {/* Sub-header — subtitle only (breadcrumb is in the top AppHeader) */}
                 <div className="px-6 py-3 bg-white border-b border-gray-200 flex items-center justify-between">
-                    <p className="text-sm text-gray-500">
+                    <p className="text-sm text-gray-400">
                         Real-time application event history and diagnostics. Monitoring the hive ecosystem's digital pulse.
                     </p>
                     <span className="inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full bg-green-50 text-green-700 border border-green-200">

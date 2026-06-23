@@ -283,9 +283,9 @@ function TableCard({ table, groupColor }: { table: Table; groupColor: string }) 
                                 <tr key={col.name}
                                     className="hover:bg-gray-50 transition-colors"
                                     style={isPK ? { backgroundColor: '#fffbeb' } : {}}>
-                                    <td className="px-4 py-2 text-gray-300 tabular-nums">{i + 1}</td>
+                                    <td className="px-4 py-2 tabular-nums" style={{ color: '#0d1b2a' }}>{i + 1}</td>
                                     <td className="px-4 py-2">
-                                        <span className={`font-mono font-semibold ${isPK ? 'text-amber-700' : 'text-gray-800'}`}>
+                                        <span className={`font-mono font-semibold ${isPK ? 'text-amber-700' : ''}`} style={{ color: isPK ? undefined : '#0d1b2a' }}>
                                             {col.name}
                                         </span>
                                         {col.notes && (
@@ -302,12 +302,12 @@ function TableCard({ table, groupColor }: { table: Table; groupColor: string }) 
                                     <td className="px-4 py-2">
                                         {col.nullable
                                             ? <span className="text-gray-400">YES</span>
-                                            : <span className="font-semibold text-gray-700">NO</span>}
+                                            : <span className="font-semibold" style={{ color: '#0d1b2a' }}>NO</span>}
                                     </td>
                                     <td className="px-4 py-2">
                                         {col.default
                                             ? <span className="font-mono text-emerald-700 bg-emerald-50 px-1.5 py-0.5 rounded text-[11px]">{col.default}</span>
-                                            : <span className="text-gray-300">—</span>}
+                                            : <span style={{ color: '#0d1b2a' }}>—</span>}
                                     </td>
                                     <td className="px-4 py-2">
                                         <div className="flex items-center gap-1.5 flex-wrap">
@@ -344,10 +344,10 @@ export default function DatabaseSchema() {
                     <div className="flex items-start justify-between gap-4">
                         <div>
                             <div className="flex items-center gap-2">
-                                <Database className="w-5 h-5 text-gray-500" />
+                                <Database className="w-5 h-5 text-gray-400" />
                                 <h1 className="text-xl font-bold" style={{ color: '#0d1b2a' }}>Database Schema</h1>
                             </div>
-                            <p className="text-sm text-gray-500 mt-0.5">PostgreSQL · beehive database</p>
+                            <p className="text-sm text-gray-400 mt-0.5">PostgreSQL · beehive database</p>
                         </div>
                         <div className="flex items-center gap-3 shrink-0">
                             <div className="bg-white border border-gray-200 rounded-xl px-4 py-2 text-center shadow-sm">
@@ -369,7 +369,7 @@ export default function DatabaseSchema() {
                                     style={{ backgroundColor: cfg.bg, color: cfg.text }}>
                                     {cfg.icon}{cfg.label}
                                 </span>
-                                <span className="text-xs text-gray-500">
+                                <span className="text-xs text-gray-400">
                                     {key === 'PK' ? 'Primary key' : key === 'FK' ? 'Foreign key' : key === 'UK' ? 'Unique' : 'Indexed'}
                                 </span>
                             </div>
@@ -390,7 +390,7 @@ export default function DatabaseSchema() {
                             {/* Group header */}
                             <div className="flex items-center gap-3">
                                 <span className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: group.color }} />
-                                <h2 className="text-sm font-bold uppercase tracking-widest text-gray-500">{group.label}</h2>
+                                <h2 className="text-sm font-bold uppercase tracking-widest" style={{ color: '#0d1b2a' }}>{group.label}</h2>
                                 <span className="text-xs text-gray-400">{group.tables.length} table{group.tables.length !== 1 ? 's' : ''}</span>
                                 <div className="flex-1 h-px bg-gray-200" />
                             </div>

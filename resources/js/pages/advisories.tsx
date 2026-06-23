@@ -186,24 +186,6 @@ export default function Advisories({
             },
         },
         {
-            accessorKey: 'min_confidence_threshold',
-            header: 'Min Confidence',
-            size: 120,
-            Cell: ({ cell }) => fmtPct(cell.getValue<number | null>()),
-        },
-        {
-            accessorKey: 'description',
-            header: 'Description',
-            size: 250,
-            Cell: ({ cell }) => cell.getValue<string | null>() ?? '—',
-        },
-        {
-            accessorKey: 'created_at',
-            header: 'Created',
-            size: 110,
-            Cell: ({ cell }) => fmtDate(cell.getValue<string | null>()),
-        },
-        {
             id: 'actions',
             header: 'Actions',
             enableSorting: false,
@@ -224,6 +206,28 @@ export default function Advisories({
         },
     ], []);
 
+    const renderTemplateDetailPanel = ({ row }: { row: any }) => {
+        const tpl = row.original as Template;
+        return (
+            <div className="px-4 py-3 bg-gray-50 border-t border-gray-100">
+                <div className="grid grid-cols-2 gap-4">
+                    <div className="col-span-2">
+                        <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-400 mb-1">Description</p>
+                        <p className="text-sm leading-snug" style={{ color: '#0d1b2a' }}>{tpl.description ?? '—'}</p>
+                    </div>
+                    <div>
+                        <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-400 mb-1">Min Confidence</p>
+                        <p className="text-sm" style={{ color: '#0d1b2a' }}>{fmtPct(tpl.min_confidence_threshold)}</p>
+                    </div>
+                    <div>
+                        <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-400 mb-1">Created</p>
+                        <p className="text-sm" style={{ color: '#0d1b2a' }}>{fmtDate(tpl.created_at)}</p>
+                    </div>
+                </div>
+            </div>
+        );
+    };
+
     // --- Advisories MRT columns ---
     const advisoryColumns = useMemo<MRT_ColumnDef<Advisory>[]>(() => [
         {
@@ -240,17 +244,12 @@ export default function Advisories({
         {
             accessorKey: 'action_title',
             header: 'Action Title',
-            size: 200,
+            size: 180,
             Cell: ({ cell }) => (
                 <span className="text-sm font-medium" style={{ color: '#0d1b2a' }}>
                     {cell.getValue<string>()}
                 </span>
             ),
-        },
-        {
-            accessorKey: 'action_description',
-            header: 'Description',
-            size: 250,
         },
         {
             accessorKey: 'priority_level',
@@ -273,20 +272,6 @@ export default function Advisories({
             },
         },
         {
-            id: 'confidence_range',
-            header: 'Confidence Range',
-            accessorKey: 'confidence_threshold_min', // For sorting purposes
-            size: 140,
-            Cell: ({ row }) => (
-                `${fmtPct(row.original.confidence_threshold_min)} – ${fmtPct(row.original.confidence_threshold_max)}`
-            ),
-        },
-        {
-            accessorKey: 'action_order',
-            header: 'Order',
-            size: 70,
-        },
-        {
             accessorKey: 'is_active',
             header: 'Active',
             filterVariant: 'select',
@@ -303,12 +288,6 @@ export default function Advisories({
                     {cell.getValue<boolean>() ? 'Active' : 'Inactive'}
                 </span>
             ),
-        },
-        {
-            accessorKey: 'created_at',
-            header: 'Created',
-            size: 110,
-            Cell: ({ cell }) => fmtDate(cell.getValue<string | null>()),
         },
         {
             id: 'actions',
@@ -331,13 +310,39 @@ export default function Advisories({
         },
     ], []);
 
+    const renderAdvisoryDetailPanel = ({ row }: { row: any }) => {
+        const adv = row.original as Advisory;
+        return (
+            <div className="px-4 py-3 bg-gray-50 border-t border-gray-100">
+                <div className="grid grid-cols-2 gap-4">
+                    <div className="col-span-2">
+                        <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-400 mb-1">Description</p>
+                        <p className="text-sm leading-snug" style={{ color: '#0d1b2a' }}>{adv.action_description ?? '—'}</p>
+                    </div>
+                    <div>
+                        <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-400 mb-1">Confidence Range</p>
+                        <p className="text-sm" style={{ color: '#0d1b2a' }}>{fmtPct(adv.confidence_threshold_min)} – {fmtPct(adv.confidence_threshold_max)}</p>
+                    </div>
+                    <div>
+                        <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-400 mb-1">Order</p>
+                        <p className="text-sm" style={{ color: '#0d1b2a' }}>{adv.action_order ?? '—'}</p>
+                    </div>
+                    <div>
+                        <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-400 mb-1">Created</p>
+                        <p className="text-sm" style={{ color: '#0d1b2a' }}>{fmtDate(adv.created_at)}</p>
+                    </div>
+                </div>
+            </div>
+        );
+    };
+
     // --- Advisory Actions MRT columns ---
     const actionColumns = useMemo<MRT_ColumnDef<ActionItem>[]>(() => [
         {
             id: 'hive',
             header: 'Hive',
             accessorKey: 'hive.hive_name',
-            size: 160,
+            size: 140,
             Cell: ({ row }) => (
                 <span className="text-sm font-medium" style={{ color: '#0d1b2a' }}>
                     {row.original.hive?.hive_name ?? row.original.hive?.hive_location ?? '—'}
@@ -347,17 +352,12 @@ export default function Advisories({
         {
             accessorKey: 'action_title',
             header: 'Action Title',
-            size: 200,
+            size: 180,
             Cell: ({ cell }) => (
                 <span className="text-sm font-medium" style={{ color: '#0d1b2a' }}>
                     {cell.getValue<string>()}
                 </span>
             ),
-        },
-        {
-            accessorKey: 'action_description',
-            header: 'Description',
-            size: 250,
         },
         {
             accessorKey: 'priority_level',
@@ -380,12 +380,6 @@ export default function Advisories({
             },
         },
         {
-            accessorKey: 'confidence_score',
-            header: 'Confidence',
-            size: 110,
-            Cell: ({ cell }) => fmtPct(cell.getValue<number | null>()),
-        },
-        {
             accessorKey: 'status',
             header: 'Status',
             filterVariant: 'select',
@@ -406,19 +400,33 @@ export default function Advisories({
                 );
             },
         },
-        {
-            accessorKey: 'completed_at',
-            header: 'Completed',
-            size: 110,
-            Cell: ({ cell }) => fmtDate(cell.getValue<string | null>()),
-        },
-        {
-            accessorKey: 'created_at',
-            header: 'Created',
-            size: 110,
-            Cell: ({ cell }) => fmtDate(cell.getValue<string | null>()),
-        },
     ], []);
+
+    const renderActionDetailPanel = ({ row }: { row: any }) => {
+        const action = row.original as ActionItem;
+        return (
+            <div className="px-4 py-3 bg-gray-50 border-t border-gray-100">
+                <div className="grid grid-cols-2 gap-4">
+                    <div className="col-span-2">
+                        <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-400 mb-1">Description</p>
+                        <p className="text-sm leading-snug" style={{ color: '#0d1b2a' }}>{action.action_description ?? '—'}</p>
+                    </div>
+                    <div>
+                        <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-400 mb-1">Confidence</p>
+                        <p className="text-sm" style={{ color: '#0d1b2a' }}>{fmtPct(action.confidence_score)}</p>
+                    </div>
+                    <div>
+                        <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-400 mb-1">Created</p>
+                        <p className="text-sm" style={{ color: '#0d1b2a' }}>{fmtDate(action.created_at)}</p>
+                    </div>
+                    <div>
+                        <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-400 mb-1">Completed</p>
+                        <p className="text-sm" style={{ color: '#0d1b2a' }}>{fmtDate(action.completed_at)}</p>
+                    </div>
+                </div>
+            </div>
+        );
+    };
 
     return (
         <>
@@ -429,7 +437,7 @@ export default function Advisories({
                 <div className="flex items-start justify-between gap-4">
                     <div>
                         <h1 className="text-2xl font-bold" style={{ color: '#0d1b2a' }}>Advisories</h1>
-                        <p className="text-sm text-gray-500 mt-1">
+                        <p className="text-sm text-gray-400 mt-1">
                             {cleanedTemplates.length} template{cleanedTemplates.length !== 1 ? 's' : ''} · {cleanedAdvisories.length} advisor{cleanedAdvisories.length !== 1 ? 'ies' : 'y'} · {cleanedActions.length} triggered action{cleanedActions.length !== 1 ? 's' : ''}
                         </p>
                     </div>
@@ -507,6 +515,7 @@ export default function Advisories({
                                 columns={templateColumns}
                                 data={cleanedTemplates}
                                 getRowId={(row) => String(row.template_id)}
+                                renderDetailPanel={renderTemplateDetailPanel}
                             />
                         </div>
                     )
@@ -527,6 +536,7 @@ export default function Advisories({
                                 columns={advisoryColumns}
                                 data={cleanedAdvisories}
                                 getRowId={(row) => row.advisory_id}
+                                renderDetailPanel={renderAdvisoryDetailPanel}
                             />
                         </div>
                     )
@@ -545,6 +555,7 @@ export default function Advisories({
                                 columns={actionColumns}
                                 data={cleanedActions}
                                 getRowId={(row) => row.action_id}
+                                renderDetailPanel={renderActionDetailPanel}
                             />
                         </div>
                     )
@@ -566,27 +577,27 @@ export default function Advisories({
                                 <label className="text-xs font-semibold uppercase tracking-widest text-gray-400 block mb-1.5">Prediction Code</label>
                                 <input type="number" step="any" value={data.prediction_code} onChange={(e) => setData('prediction_code', e.target.value)}
                                     placeholder="e.g. 2"
-                                    className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm outline-none text-gray-700 placeholder-gray-300 transition-all focus:border-[#f5a623] focus:ring-2 focus:ring-[#f5a623]/20" required />
+                                    className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm outline-none placeholder-gray-300 transition-all focus:border-[#f5a623] focus:ring-2 focus:ring-[#f5a623]/20" required style={{ color: '#0d1b2a' }} />
                                 {errors.prediction_code && <p className="text-xs text-red-500 mt-1">{errors.prediction_code}</p>}
                             </div>
                             <div>
                                 <label className="text-xs font-semibold uppercase tracking-widest text-gray-400 block mb-1.5">Hive State</label>
                                 <input type="text" value={data.hive_state} onChange={(e) => setData('hive_state', e.target.value)}
                                     placeholder="e.g. swarm"
-                                    className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm outline-none text-gray-700 placeholder-gray-300 transition-all focus:border-[#f5a623] focus:ring-2 focus:ring-[#f5a623]/20" required />
+                                    className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm outline-none placeholder-gray-300 transition-all focus:border-[#f5a623] focus:ring-2 focus:ring-[#f5a623]/20" required style={{ color: '#0d1b2a' }} />
                                 {errors.hive_state && <p className="text-xs text-red-500 mt-1">{errors.hive_state}</p>}
                             </div>
                             <div>
                                 <label className="text-xs font-semibold uppercase tracking-widest text-gray-400 block mb-1.5">Advisory Type</label>
                                 <input type="text" value={data.advisory_type} onChange={(e) => setData('advisory_type', e.target.value)}
                                     placeholder="e.g. Reactive"
-                                    className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm outline-none text-gray-700 placeholder-gray-300 transition-all focus:border-[#f5a623] focus:ring-2 focus:ring-[#f5a623]/20" required />
+                                    className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm outline-none placeholder-gray-300 transition-all focus:border-[#f5a623] focus:ring-2 focus:ring-[#f5a623]/20" required style={{ color: '#0d1b2a' }} />
                                 {errors.advisory_type && <p className="text-xs text-red-500 mt-1">{errors.advisory_type}</p>}
                             </div>
                             <div>
                                 <label className="text-xs font-semibold uppercase tracking-widest text-gray-400 block mb-1.5">Severity</label>
                                 <select value={data.severity} onChange={(e) => setData('severity', e.target.value)}
-                                    className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-700 outline-none bg-white transition-all focus:border-[#f5a623] focus:ring-2 focus:ring-[#f5a623]/20" required>
+                                    className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm outline-none bg-white transition-all focus:border-[#f5a623] focus:ring-2 focus:ring-[#f5a623]/20 required" style={{ color: '#0d1b2a' }}>
                                     <option value="">Select severity</option>
                                     <option value="info">Info</option>
                                     <option value="low">Low</option>
@@ -600,7 +611,7 @@ export default function Advisories({
                                 <label className="text-xs font-semibold uppercase tracking-widest text-gray-400 block mb-1.5">Min Confidence Threshold (0–1)</label>
                                 <input type="number" min="0" max="1" step="0.01" value={data.min_confidence_threshold} onChange={(e) => setData('min_confidence_threshold', e.target.value)}
                                     placeholder="e.g. 0.70"
-                                    className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm outline-none text-gray-700 placeholder-gray-300 transition-all focus:border-[#f5a623] focus:ring-2 focus:ring-[#f5a623]/20" />
+                                    className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm outline-none placeholder-gray-300 transition-all focus:border-[#f5a623] focus:ring-2 focus:ring-[#f5a623]/20" style={{ color: '#0d1b2a' }} />
                                 {errors.min_confidence_threshold && <p className="text-xs text-red-500 mt-1">{errors.min_confidence_threshold}</p>}
                             </div>
                             <div>
@@ -608,12 +619,12 @@ export default function Advisories({
                                 <textarea value={data.description} onChange={(e) => setData('description', e.target.value)}
                                     placeholder="Describe this advisory condition..."
                                     rows={3}
-                                    className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm outline-none text-gray-700 placeholder-gray-300 transition-all focus:border-[#f5a623] focus:ring-2 focus:ring-[#f5a623]/20 resize-none" />
+                                    className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm outline-none placeholder-gray-300 transition-all focus:border-[#f5a623] focus:ring-2 focus:ring-[#f5a623]/20 resize-none" style={{ color: '#0d1b2a' }} />
                                 {errors.description && <p className="text-xs text-red-500 mt-1">{errors.description}</p>}
                             </div>
                             <div className="flex justify-end gap-3 pt-2">
                                 <button type="button" onClick={() => setShowModal(false)}
-                                    className="px-4 py-2 rounded-lg border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors">Cancel</button>
+                                    className="px-4 py-2 rounded-lg border border-gray-200 text-sm font-medium text-gray-400 hover:bg-gray-50 transition-colors">Cancel</button>
                                 <button type="submit" disabled={processing}
                                     className="px-4 py-2 rounded-lg text-sm font-semibold hover:opacity-90 disabled:opacity-60 transition-opacity"
                                     style={{ backgroundColor: '#f5a623', color: '#0d1b2a' }}>

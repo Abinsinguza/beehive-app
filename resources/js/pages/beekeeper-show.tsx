@@ -75,7 +75,7 @@ function AddHiveModal({ beekeeperId, onClose }: { beekeeperId: string; onClose: 
                 <form onSubmit={submit} className="px-6 pb-6 pt-4 flex flex-col gap-4 overflow-y-auto">
                     {fields.map((f) => (
                         <div key={f.key} className="flex flex-col gap-1.5">
-                            <label className="text-sm font-semibold text-gray-700 flex items-center gap-1.5">
+                            <label className="text-sm font-semibold flex items-center gap-1.5" style={{ color: '#0d1b2a' }}>
                                 {f.label}
                                 {f.required
                                     ? <span className="text-red-500 font-bold">*</span>
@@ -88,12 +88,13 @@ function AddHiveModal({ beekeeperId, onClose }: { beekeeperId: string; onClose: 
                                 placeholder={f.placeholder}
                                 required={f.required}
                                 className={[
-                                    'w-full rounded-lg px-3.5 py-2.5 text-sm text-gray-800 placeholder-gray-400',
+                                    'w-full rounded-lg px-3.5 py-2.5 text-sm placeholder-gray-400',
                                     'border outline-none transition-colors',
                                     errors[f.key]
                                         ? 'border-red-400 bg-red-50 focus:border-red-500'
                                         : 'border-gray-300 bg-white focus:border-amber-400 focus:ring-2 focus:ring-amber-100',
                                 ].join(' ')}
+                                style={{ color: '#0d1b2a' }}
                             />
                             {errors[f.key] && (
                                 <p className="text-xs text-red-500 flex items-center gap-1">
@@ -104,7 +105,7 @@ function AddHiveModal({ beekeeperId, onClose }: { beekeeperId: string; onClose: 
                     ))}
                     <div className="flex justify-end gap-3 pt-1">
                         <button type="button" onClick={onClose}
-                            className="px-4 py-2 rounded-lg border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-50">
+                            className="px-4 py-2 rounded-lg border border-gray-200 text-sm font-medium text-gray-400 hover:bg-gray-50">
                             Cancel
                         </button>
                         <button type="submit" disabled={processing}
@@ -175,7 +176,7 @@ export default function BeekeeperShow({ beekeeper }: { beekeeper: Beekeeper }) {
                 {/* Back */}
                 <button
                     onClick={() => router.visit('/beekeepers')}
-                    className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-800 w-fit"
+                    className="flex items-center gap-1.5 text-sm text-gray-400 hover:text-gray-800 w-fit"
                 >
                     <ChevronLeft className="w-4 h-4" /> Back to Beekeepers
                 </button>
@@ -198,7 +199,7 @@ export default function BeekeeperShow({ beekeeper }: { beekeeper: Beekeeper }) {
                                     <span style={{ color: sc.labelColor }}>{sc.label}</span>
                                 </span>
                             </div>
-                            <div className="flex items-center gap-4 flex-wrap text-xs text-gray-500 mt-0.5">
+                            <div className="flex items-center gap-4 flex-wrap text-xs text-gray-400 mt-0.5">
                                 {beekeeper.email && (
                                     <span className="flex items-center gap-1">
                                         <Mail className="w-3.5 h-3.5" /> {beekeeper.email}
@@ -240,7 +241,7 @@ export default function BeekeeperShow({ beekeeper }: { beekeeper: Beekeeper }) {
                             <div className="flex items-center gap-2 min-w-0">
                                 <KeyRound className="w-4 h-4 text-gray-400 shrink-0" />
                                 <p className="text-[11px] font-semibold uppercase tracking-widest text-gray-400 shrink-0">ML API Key</p>
-                                <span className="text-sm font-mono text-gray-600 truncate">{beekeeper.api_key ?? 'Not set'}</span>
+                                <span className="text-sm font-mono truncate" style={{ color: '#0d1b2a' }}>{beekeeper.api_key ?? 'Not set'}</span>
                             </div>
                             <button
                                 onClick={regenerateApiKey}
@@ -294,7 +295,7 @@ export default function BeekeeperShow({ beekeeper }: { beekeeper: Beekeeper }) {
                                     <button
                                         onClick={(e) => { e.stopPropagation(); createFolder(hive.id); }}
                                         title="Create / retry recordings folder"
-                                        className="shrink-0 p-1.5 rounded hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors"
+                                        className="shrink-0 p-1.5 rounded hover:bg-gray-100 text-gray-400 hover:text-gray-800 transition-colors"
                                     >
                                         <FolderPlus className="w-3.5 h-3.5" />
                                     </button>

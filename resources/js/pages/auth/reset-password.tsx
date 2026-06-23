@@ -46,8 +46,8 @@ export default function ResetPassword({ token, email }: Props) {
                             </svg>
                         </div>
                         <div className="text-center">
-                            <h2 className="text-4xl font-bold text-gray-900 tracking-tight">Reset Password</h2>
-                            <p className="text-base text-gray-500 mt-1.5">
+                            <h2 className="text-4xl font-bold tracking-tight" style={{ color: '#0d1b2a' }}>Reset Password</h2>
+                            <p className="text-base text-gray-400 mt-1.5">
                                 Please enter your new password below
                             </p>
                         </div>
@@ -67,7 +67,7 @@ export default function ResetPassword({ token, email }: Props) {
                             {({ processing, errors }) => (
                                 <>
                                     <div className="flex flex-col gap-2">
-                                        <label htmlFor="email" className="text-sm font-medium text-gray-700">
+                                        <label htmlFor="email" className="text-sm font-medium" style={{ color: '#0d1b2a' }}>
                                             Email Address
                                         </label>
                                         <div className="relative">
@@ -79,14 +79,14 @@ export default function ResetPassword({ token, email }: Props) {
                                                 autoComplete="email"
                                                 value={email}
                                                 readOnly
-                                                className="w-full h-[52px] pl-12 pr-4 text-sm bg-gray-50 border border-gray-200 rounded-xl outline-none text-gray-500"
+                                                className="w-full h-[52px] pl-12 pr-4 text-sm bg-gray-50 border border-gray-200 rounded-xl outline-none" style={{ color: '#0d1b2a' }}
                                             />
                                         </div>
                                         <InputError message={errors.email} />
                                     </div>
 
                                     <div className="flex flex-col gap-2">
-                                        <label htmlFor="password" className="text-sm font-medium text-gray-700">
+                                        <label htmlFor="password" className="text-sm font-medium" style={{ color: '#0d1b2a' }}>
                                             Password
                                         </label>
                                         <div className="relative">
@@ -98,12 +98,12 @@ export default function ResetPassword({ token, email }: Props) {
                                                 autoComplete="new-password"
                                                 autoFocus
                                                 placeholder="••••••••"
-                                                className="w-full h-[52px] pl-12 pr-12 text-sm bg-white border border-[#E5E7EB] rounded-xl outline-none transition-all duration-200 text-gray-900 placeholder:text-gray-400 focus:border-[#F59E0B] focus:ring-4 focus:ring-[#F59E0B]/10 focus:scale-[1.01]"
+                                                className="w-full h-[52px] pl-12 pr-12 text-sm bg-white border border-[#E5E7EB] rounded-xl outline-none transition-all duration-200 placeholder:text-gray-400 focus:border-[#F59E0B] focus:ring-4 focus:ring-[#F59E0B]/10 focus:scale-[1.01]" style={{ color: '#0d1b2a' }}
                                             />
                                             <button
                                                 type="button"
                                                 onClick={() => setShowPassword(!showPassword)}
-                                                className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                                                className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-800 transition-colors"
                                             >
                                                 {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                                             </button>
@@ -112,7 +112,7 @@ export default function ResetPassword({ token, email }: Props) {
                                     </div>
 
                                     <div className="flex flex-col gap-2">
-                                        <label htmlFor="password_confirmation" className="text-sm font-medium text-gray-700">
+                                        <label htmlFor="password_confirmation" className="text-sm font-medium" style={{ color: '#0d1b2a' }}>
                                             Confirm Password
                                         </label>
                                         <div className="relative">
@@ -123,12 +123,12 @@ export default function ResetPassword({ token, email }: Props) {
                                                 name="password_confirmation"
                                                 autoComplete="new-password"
                                                 placeholder="••••••••"
-                                                className="w-full h-[52px] pl-12 pr-12 text-sm bg-white border border-[#E5E7EB] rounded-xl outline-none transition-all duration-200 text-gray-900 placeholder:text-gray-400 focus:border-[#F59E0B] focus:ring-4 focus:ring-[#F59E0B]/10 focus:scale-[1.01]"
+                                                className="w-full h-[52px] pl-12 pr-12 text-sm bg-white border border-[#E5E7EB] rounded-xl outline-none transition-all duration-200 placeholder:text-gray-400 focus:border-[#F59E0B] focus:ring-4 focus:ring-[#F59E0B]/10 focus:scale-[1.01]" style={{ color: '#0d1b2a' }}
                                             />
                                             <button
                                                 type="button"
                                                 onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                                                className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                                                className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-800 transition-colors"
                                             >
                                                 {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                                             </button>
@@ -157,7 +157,7 @@ export default function ResetPassword({ token, email }: Props) {
                                         )}
                                     </button>
 
-                                    <p className="text-center text-sm text-gray-500 mt-4">
+                                    <p className="text-center text-sm text-gray-400 mt-4">
                                         Remember your password?{' '}
                                         <TextLink href={login()} className="font-semibold text-[#F59E0B] hover:text-[#D97706] transition-colors hover:underline underline-offset-4">
                                             Sign In
