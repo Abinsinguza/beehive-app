@@ -547,7 +547,7 @@ export default function Inferences({
                                     value={data.audio_id}
                                     onChange={(e) => setData('audio_id', e.target.value)}
                                     placeholder="UUID of audio source…"
-                                    className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-amber-400"
+                                    className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm bg-white outline-none focus:border-amber-400"
                                     style={{ color: '#0d1b2a' }}
                                 />
                             </div>
@@ -586,7 +586,7 @@ export default function Inferences({
                                     value={data.confidence_score}
                                     onChange={(e) => setData('confidence_score', e.target.value)}
                                     placeholder="e.g. 0.8750"
-                                    className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-amber-400"
+                                    className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm bg-white outline-none focus:border-amber-400"
                                     style={{ color: '#0d1b2a' }}
                                     required
                                 />
@@ -602,7 +602,7 @@ export default function Inferences({
                                     value={data.inference_latency_ms}
                                     onChange={(e) => setData('inference_latency_ms', e.target.value)}
                                     placeholder="e.g. 142.50"
-                                    className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-amber-400"
+                                    className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm bg-white outline-none focus:border-amber-400"
                                     style={{ color: '#0d1b2a' }}
                                 />
                             </div>
@@ -614,7 +614,7 @@ export default function Inferences({
                                     type="datetime-local"
                                     value={data.analyzed_at}
                                     onChange={(e) => setData('analyzed_at', e.target.value)}
-                                    className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm outline-none focus:border-amber-400"
+                                    className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm bg-white outline-none focus:border-amber-400"
                                     style={{ color: '#0d1b2a' }}
                                     required
                                 />

@@ -79,7 +79,7 @@ export default function ResetPassword({ token, email }: Props) {
                                                 autoComplete="email"
                                                 value={email}
                                                 readOnly
-                                                className="w-full h-[52px] pl-12 pr-4 text-sm bg-gray-50 border border-gray-200 rounded-xl outline-none" style={{ color: '#0d1b2a' }}
+                                                className="w-full h-[52px] pl-12 pr-4 text-sm bg-white border border-gray-200 rounded-xl outline-none" style={{ color: '#0d1b2a' }}
                                             />
                                         </div>
                                         <InputError message={errors.email} />

@@ -145,7 +145,7 @@ function AddRecordingModal({ hives, onClose }: { hives: HiveRef[]; onClose: () =
                         <select
                             value={data.hive_id}
                             onChange={(e) => setData('hive_id', e.target.value)}
-                            className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-100"
+                            className="w-full border rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-100"
                             style={{ color: '#0d1b2a', borderColor: errors.hive_id ? '#f87171' : '#d1d5db' }}
                             required>
                             <option value="">Select hive…</option>
@@ -166,7 +166,7 @@ function AddRecordingModal({ hives, onClose }: { hives: HiveRef[]; onClose: () =
                             value={data.source_url}
                             onChange={(e) => setData('source_url', e.target.value)}
                             placeholder="e.g. recordings/hive1/rec_001.wav"
-                            className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-100"
+                            className="w-full border rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-100"
                             style={{ color: '#0d1b2a', borderColor: errors.source_url ? '#f87171' : '#d1d5db' }}
                             required />
                         {errors.source_url && <p className="text-xs text-red-500">{errors.source_url}</p>}
@@ -181,7 +181,7 @@ function AddRecordingModal({ hives, onClose }: { hives: HiveRef[]; onClose: () =
                             <select
                                 value={data.file_format}
                                 onChange={(e) => setData('file_format', e.target.value)}
-                                className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-100" style={{ color: '#0d1b2a' }}
+                                className="w-full border rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-100" style={{ color: '#0d1b2a' }}
                                 required>
                                 {['WAV', 'MP3', 'FLAC', 'OGG', 'AAC'].map((f) => (
                                     <option key={f} value={f}>{f}</option>
@@ -196,7 +196,7 @@ function AddRecordingModal({ hives, onClose }: { hives: HiveRef[]; onClose: () =
                                 onChange={(e) => setData('duration_seconds', e.target.value)}
                                 placeholder="e.g. 30"
                                 min="0"
-                                className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-100" style={{ color: '#0d1b2a' }} />
+                                className="w-full border rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-100" style={{ color: '#0d1b2a' }} />
                         </div>
                     </div>
 
@@ -209,7 +209,7 @@ function AddRecordingModal({ hives, onClose }: { hives: HiveRef[]; onClose: () =
                             type="datetime-local"
                             value={data.captured_at}
                             onChange={(e) => setData('captured_at', e.target.value)}
-                            className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-100" style={{ color: '#0d1b2a' }} />
+                            className="w-full border rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-100" style={{ color: '#0d1b2a' }} />
                     </div>
 
                     {/* Status */}
@@ -218,7 +218,7 @@ function AddRecordingModal({ hives, onClose }: { hives: HiveRef[]; onClose: () =
                         <select
                             value={data.status}
                             onChange={(e) => setData('status', e.target.value)}
-                            className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-100" style={{ color: '#0d1b2a' }}
+                            className="w-full border rounded-lg px-3 py-2 text-sm bg-white focus:outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-100" style={{ color: '#0d1b2a' }}
                             required>
                             <option value="pending">Pending</option>
                             <option value="processed">Processed</option>

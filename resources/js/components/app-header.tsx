@@ -199,7 +199,7 @@ export function AppHeader({ breadcrumbs = [] }: Props) {
                             onChange={handleChange}
                             onFocus={() => { if (query.trim()) setOpen(true); }}
                             placeholder={placeholder}
-                            className="flex-1 text-xs bg-transparent outline-none text-gray-400 placeholder-gray-400"
+                            className="flex-1 text-xs bg-white outline-none text-gray-400 placeholder-gray-400"
                         />
                         {query && (
                             <button onClick={() => { setQuery(''); setOpen(false); }} className="text-gray-400 hover:text-gray-800 text-xs">✕</button>

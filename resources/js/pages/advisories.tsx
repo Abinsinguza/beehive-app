@@ -619,7 +619,7 @@ export default function Advisories({
                                 <textarea value={data.description} onChange={(e) => setData('description', e.target.value)}
                                     placeholder="Describe this advisory condition..."
                                     rows={3}
-                                    className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm outline-none placeholder-gray-300 transition-all focus:border-[#f5a623] focus:ring-2 focus:ring-[#f5a623]/20 resize-none" style={{ color: '#0d1b2a' }} />
+                                    className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm bg-white outline-none placeholder-gray-300 transition-all focus:border-[#f5a623] focus:ring-2 focus:ring-[#f5a623]/20 resize-none" style={{ color: '#0d1b2a' }} />
                                 {errors.description && <p className="text-xs text-red-500 mt-1">{errors.description}</p>}
                             </div>
                             <div className="flex justify-end gap-3 pt-2">
@@ -705,19 +705,19 @@ function EditTemplateModal({ template, onClose }: { template: Template; onClose:
                     <div>
                         <label className="text-xs font-semibold uppercase tracking-widest text-gray-400 block mb-1.5">Prediction Code</label>
                         <input type="number" step="any" value={data.prediction_code} onChange={(e) => setData('prediction_code', e.target.value)}
-                            className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm outline-none text-gray-700 transition-all focus:border-[#f5a623] focus:ring-2 focus:ring-[#f5a623]/20" required />
+                            className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm bg-white outline-none text-gray-700 transition-all focus:border-[#f5a623] focus:ring-2 focus:ring-[#f5a623]/20" required />
                         {errors.prediction_code && <p className="text-xs text-red-500 mt-1">{errors.prediction_code}</p>}
                     </div>
                     <div>
                         <label className="text-xs font-semibold uppercase tracking-widest text-gray-400 block mb-1.5">Hive State</label>
                         <input type="text" value={data.hive_state} onChange={(e) => setData('hive_state', e.target.value)}
-                            className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm outline-none text-gray-700 transition-all focus:border-[#f5a623] focus:ring-2 focus:ring-[#f5a623]/20" required />
+                            className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm bg-white outline-none text-gray-700 transition-all focus:border-[#f5a623] focus:ring-2 focus:ring-[#f5a623]/20" required />
                         {errors.hive_state && <p className="text-xs text-red-500 mt-1">{errors.hive_state}</p>}
                     </div>
                     <div>
                         <label className="text-xs font-semibold uppercase tracking-widest text-gray-400 block mb-1.5">Advisory Type</label>
                         <input type="text" value={data.advisory_type} onChange={(e) => setData('advisory_type', e.target.value)}
-                            className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm outline-none text-gray-700 transition-all focus:border-[#f5a623] focus:ring-2 focus:ring-[#f5a623]/20" required />
+                            className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm bg-white outline-none text-gray-700 transition-all focus:border-[#f5a623] focus:ring-2 focus:ring-[#f5a623]/20" required />
                         {errors.advisory_type && <p className="text-xs text-red-500 mt-1">{errors.advisory_type}</p>}
                     </div>
                     <div>
@@ -742,7 +742,7 @@ function EditTemplateModal({ template, onClose }: { template: Template; onClose:
                         <label className="text-xs font-semibold uppercase tracking-widest text-gray-400 block mb-1.5">Description</label>
                         <textarea value={data.description} onChange={(e) => setData('description', e.target.value)}
                             rows={3}
-                            className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm outline-none text-gray-700 resize-none transition-all focus:border-[#f5a623] focus:ring-2 focus:ring-[#f5a623]/20" />
+                            className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm bg-white outline-none text-gray-700 resize-none transition-all focus:border-[#f5a623] focus:ring-2 focus:ring-[#f5a623]/20" />
                         {errors.description && <p className="text-xs text-red-500 mt-1">{errors.description}</p>}
                     </div>
                     <div className="flex justify-end gap-3 pt-2">
@@ -807,14 +807,14 @@ function AdvisoryItemModal({ templates, item, onClose }: { templates: Template[]
                         <label className="text-xs font-semibold uppercase tracking-widest text-gray-400 block mb-1.5">Action Title</label>
                         <input type="text" value={data.action_title} onChange={(e) => setData('action_title', e.target.value)}
                             placeholder="e.g. Inspect for Overcrowding"
-                            className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm outline-none text-gray-700 placeholder-gray-300 transition-all focus:border-[#f5a623] focus:ring-2 focus:ring-[#f5a623]/20" required />
+                            className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm bg-white outline-none text-gray-700 placeholder-gray-300 transition-all focus:border-[#f5a623] focus:ring-2 focus:ring-[#f5a623]/20" required />
                         {errors.action_title && <p className="text-xs text-red-500 mt-1">{errors.action_title}</p>}
                     </div>
                     <div>
                         <label className="text-xs font-semibold uppercase tracking-widest text-gray-400 block mb-1.5">Action Description</label>
                         <textarea value={data.action_description} onChange={(e) => setData('action_description', e.target.value)}
                             rows={3}
-                            className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm outline-none text-gray-700 resize-none transition-all focus:border-[#f5a623] focus:ring-2 focus:ring-[#f5a623]/20" required />
+                            className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm bg-white outline-none text-gray-700 resize-none transition-all focus:border-[#f5a623] focus:ring-2 focus:ring-[#f5a623]/20" required />
                         {errors.action_description && <p className="text-xs text-red-500 mt-1">{errors.action_description}</p>}
                     </div>
                     <div>
@@ -832,21 +832,21 @@ function AdvisoryItemModal({ templates, item, onClose }: { templates: Template[]
                             <label className="text-xs font-semibold uppercase tracking-widest text-gray-400 block mb-1.5">Min Confidence</label>
                             <input type="number" min="0" max="1" step="0.01" value={data.confidence_threshold_min} onChange={(e) => setData('confidence_threshold_min', e.target.value)}
                                 placeholder="0.70"
-                                className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm outline-none text-gray-700 placeholder-gray-300 transition-all focus:border-[#f5a623] focus:ring-2 focus:ring-[#f5a623]/20" required />
+                                className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm bg-white outline-none text-gray-700 placeholder-gray-300 transition-all focus:border-[#f5a623] focus:ring-2 focus:ring-[#f5a623]/20" required />
                             {errors.confidence_threshold_min && <p className="text-xs text-red-500 mt-1">{errors.confidence_threshold_min}</p>}
                         </div>
                         <div>
                             <label className="text-xs font-semibold uppercase tracking-widest text-gray-400 block mb-1.5">Max Confidence</label>
                             <input type="number" min="0" max="1" step="0.01" value={data.confidence_threshold_max} onChange={(e) => setData('confidence_threshold_max', e.target.value)}
                                 placeholder="1.00"
-                                className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm outline-none text-gray-700 placeholder-gray-300 transition-all focus:border-[#f5a623] focus:ring-2 focus:ring-[#f5a623]/20" required />
+                                className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm bg-white outline-none text-gray-700 placeholder-gray-300 transition-all focus:border-[#f5a623] focus:ring-2 focus:ring-[#f5a623]/20" required />
                             {errors.confidence_threshold_max && <p className="text-xs text-red-500 mt-1">{errors.confidence_threshold_max}</p>}
                         </div>
                     </div>
                     <div>
                         <label className="text-xs font-semibold uppercase tracking-widest text-gray-400 block mb-1.5">Order</label>
                         <input type="number" min="1" step="1" value={data.action_order} onChange={(e) => setData('action_order', e.target.value)}
-                            className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm outline-none text-gray-700 transition-all focus:border-[#f5a623] focus:ring-2 focus:ring-[#f5a623]/20" required />
+                            className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm bg-white outline-none text-gray-700 transition-all focus:border-[#f5a623] focus:ring-2 focus:ring-[#f5a623]/20" required />
                         {errors.action_order && <p className="text-xs text-red-500 mt-1">{errors.action_order}</p>}
                     </div>
                     <label className="flex items-center gap-2 cursor-pointer">

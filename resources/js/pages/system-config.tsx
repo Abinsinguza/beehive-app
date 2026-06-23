@@ -160,7 +160,7 @@ export default function SystemConfig({ settings }: { settings: Settings }) {
                                     value={data.sms_server_url}
                                     onChange={(e) => setData('sms_server_url', e.target.value)}
                                     placeholder="https://comms-test.pahappa.net/api/v1/json/"
-                                    className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm outline-none placeholder-gray-300" style={{ color: '#0d1b2a' }}
+                                    className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm bg-white outline-none placeholder-gray-300" style={{ color: '#0d1b2a' }}
                                 />
                                 {errors.sms_server_url && <p className="text-xs text-red-500 mt-1">{errors.sms_server_url}</p>}
                             </div>
@@ -174,7 +174,7 @@ export default function SystemConfig({ settings }: { settings: Settings }) {
                                         value={data.sms_username}
                                         onChange={(e) => setData('sms_username', e.target.value)}
                                         placeholder="your-sms-username"
-                                        className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm outline-none placeholder-gray-300" style={{ color: '#0d1b2a' }}
+                                        className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm bg-white outline-none placeholder-gray-300" style={{ color: '#0d1b2a' }}
                                     />
                                     {errors.sms_username && <p className="text-xs text-red-500 mt-1">{errors.sms_username}</p>}
                                 </div>
@@ -185,7 +185,7 @@ export default function SystemConfig({ settings }: { settings: Settings }) {
                                         value={data.sms_sender_id}
                                         onChange={(e) => setData('sms_sender_id', e.target.value)}
                                         placeholder="BeeHive"
-                                        className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm outline-none placeholder-gray-300" style={{ color: '#0d1b2a' }}
+                                        className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm bg-white outline-none placeholder-gray-300" style={{ color: '#0d1b2a' }}
                                     />
                                     {errors.sms_sender_id && <p className="text-xs text-red-500 mt-1">{errors.sms_sender_id}</p>}
                                 </div>
@@ -202,7 +202,7 @@ export default function SystemConfig({ settings }: { settings: Settings }) {
                                         value={data.sms_api_key}
                                         onChange={(e) => setData('sms_api_key', e.target.value)}
                                         placeholder="••••••••••••••••"
-                                        className="flex-1 border border-gray-200 rounded-lg px-3 py-2.5 text-sm outline-none placeholder-gray-300" style={{ color: '#0d1b2a' }}
+                                        className="flex-1 border border-gray-200 rounded-lg px-3 py-2.5 text-sm bg-white outline-none placeholder-gray-300" style={{ color: '#0d1b2a' }}
                                     />
                                     <button type="button" onClick={() => setShowApiKey((v) => !v)}
                                         className="p-2.5 rounded-lg border border-gray-200 text-gray-400 hover:text-gray-800 hover:bg-gray-50 transition-colors">
@@ -222,7 +222,7 @@ export default function SystemConfig({ settings }: { settings: Settings }) {
                                     value={data.sms_template}
                                     onChange={(e) => setData('sms_template', e.target.value)}
                                     rows={5}
-                                    className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm outline-none resize-none font-mono" style={{ color: '#0d1b2a' }}
+                                    className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm bg-white outline-none resize-none font-mono" style={{ color: '#0d1b2a' }}
                                 />
                                 {errors.sms_template && <p className="text-xs text-red-500 mt-1">{errors.sms_template}</p>}
 

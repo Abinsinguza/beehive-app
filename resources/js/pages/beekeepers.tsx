@@ -141,7 +141,7 @@ function AddBeekeeperModal({ onClose }: { onClose: () => void }) {
                             placeholder="Click Generate to mint a key"
                             required
                             className={[
-                                'flex-1 rounded-lg px-3.5 py-2.5 text-sm placeholder-gray-400 bg-gray-50',
+                                'flex-1 rounded-lg px-3.5 py-2.5 text-sm placeholder-gray-400 bg-white',
                                 'border outline-none',
                                 errors.api_key ? 'border-red-400' : 'border-gray-300',
                             ].join(' ')}

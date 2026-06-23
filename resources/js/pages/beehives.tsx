@@ -347,7 +347,7 @@ export default function Beehives({ beehives = [], owners = [], search: initialSe
                                     onChange={(e) => setData('hive_name', e.target.value)}
                                     placeholder='e.g. Hive #1'
                                     required
-                                    className="w-full border border-gray-300 rounded-lg px-3.5 py-2.5 text-sm outline-none placeholder-gray-400 focus:border-amber-400 focus:ring-2 focus:ring-amber-100" style={{ color: '#0d1b2a' }}
+                                    className="w-full border border-gray-300 rounded-lg px-3.5 py-2.5 text-sm bg-white outline-none placeholder-gray-400 focus:border-amber-400 focus:ring-2 focus:ring-amber-100" style={{ color: '#0d1b2a' }}
                                 />
                                 {errors.hive_name && <p className="text-xs text-red-500">⚠ {errors.hive_name}</p>}
                             </div>
@@ -361,7 +361,7 @@ export default function Beehives({ beehives = [], owners = [], search: initialSe
                                     onChange={(e) => setData('hive_location', e.target.value)}
                                     placeholder="e.g. North Orchard – Plot 4"
                                     required
-                                    className="w-full border border-gray-300 rounded-lg px-3.5 py-2.5 text-sm outline-none placeholder-gray-400 focus:border-amber-400 focus:ring-2 focus:ring-amber-100" style={{ color: '#0d1b2a' }}
+                                    className="w-full border border-gray-300 rounded-lg px-3.5 py-2.5 text-sm bg-white outline-none placeholder-gray-400 focus:border-amber-400 focus:ring-2 focus:ring-amber-100" style={{ color: '#0d1b2a' }}
                                 />
                                 {errors.hive_location && <p className="text-xs text-red-500">⚠ {errors.hive_location}</p>}
                             </div>
@@ -420,7 +420,7 @@ export default function Beehives({ beehives = [], owners = [], search: initialSe
                                             value={data.latitude}
                                             onChange={(e) => setData('latitude', e.target.value)}
                                             placeholder="e.g. 0.347596"
-                                            className="w-full border border-gray-300 rounded-lg px-3.5 py-2.5 text-sm outline-none placeholder-gray-400 focus:border-amber-400 focus:ring-2 focus:ring-amber-100" style={{ color: '#0d1b2a' }}
+                                            className="w-full border border-gray-300 rounded-lg px-3.5 py-2.5 text-sm bg-white outline-none placeholder-gray-400 focus:border-amber-400 focus:ring-2 focus:ring-amber-100" style={{ color: '#0d1b2a' }}
                                         />
                                         {errors.latitude && <p className="text-xs text-red-500">⚠ {errors.latitude}</p>}
                                     </div>
@@ -433,7 +433,7 @@ export default function Beehives({ beehives = [], owners = [], search: initialSe
                                             value={data.longitude}
                                             onChange={(e) => setData('longitude', e.target.value)}
                                             placeholder="e.g. 32.582520"
-                                            className="w-full border border-gray-300 rounded-lg px-3.5 py-2.5 text-sm outline-none placeholder-gray-400 focus:border-amber-400 focus:ring-2 focus:ring-amber-100" style={{ color: '#0d1b2a' }}
+                                            className="w-full border border-gray-300 rounded-lg px-3.5 py-2.5 text-sm bg-white outline-none placeholder-gray-400 focus:border-amber-400 focus:ring-2 focus:ring-amber-100" style={{ color: '#0d1b2a' }}
                                         />
                                         {errors.longitude && <p className="text-xs text-red-500">⚠ {errors.longitude}</p>}
                                     </div>

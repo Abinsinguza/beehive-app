@@ -287,7 +287,7 @@ export default function SystemLogs({ logs, stats, eventTypes, filters }: Props) 
                     {/* Filter bar */}
                     <div className="bg-white rounded-xl border border-gray-200 shadow-sm px-4 py-3 flex flex-wrap items-center gap-3">
                         <select
-                            className="text-sm rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 outline-none focus:border-gray-400 transition-colors"
+                            className="text-sm rounded-lg border border-gray-200 bg-white px-3 py-2 outline-none focus:border-gray-400 transition-colors"
                             value={level}
                             onChange={e => { setLevel(e.target.value); applyFilters({ level: e.target.value }); }}
                             style={{ color: '#0d1b2a' }}
@@ -299,7 +299,7 @@ export default function SystemLogs({ logs, stats, eventTypes, filters }: Props) 
                         </select>
 
                         <select
-                            className="text-sm rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 outline-none focus:border-gray-400 transition-colors"
+                            className="text-sm rounded-lg border border-gray-200 bg-white px-3 py-2 outline-none focus:border-gray-400 transition-colors"
                             value={eventType}
                             onChange={e => { setEventType(e.target.value); applyFilters({ eventType: e.target.value }); }}
                             style={{ color: '#0d1b2a' }}
