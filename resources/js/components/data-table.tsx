@@ -150,5 +150,9 @@ function DataTableInner<T extends Record<string, any>>({
         ...rest,
     });
 
-    return <MaterialReactTable table={table} />;
+    return (
+        <div className="overflow-x-auto">
+            <MaterialReactTable table={table} />
+        </div>
+    );
 }

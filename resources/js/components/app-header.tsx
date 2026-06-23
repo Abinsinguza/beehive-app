@@ -1,11 +1,12 @@
 import { Link, router, usePage } from '@inertiajs/react';
-import { AlertTriangle, Bell, Hexagon, LayoutGrid, Search, Settings, User } from 'lucide-react';
+import { AlertTriangle, Bell, Hexagon, LayoutGrid, Menu, Search, Settings, User } from 'lucide-react';
 import { useEffect, useRef, useState } from 'react';
 import {
     DropdownMenu,
     DropdownMenuContent,
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
+import { SidebarTrigger } from '@/components/ui/sidebar';
 import { UserMenuContent } from '@/components/user-menu-content';
 import { dashboard } from '@/routes';
 import type { BreadcrumbItem } from '@/types';
@@ -162,9 +163,12 @@ export function AppHeader({ breadcrumbs = [] }: Props) {
     const crumbs = breadcrumbs.length > 0 ? breadcrumbs : [{ title: 'Admin Dashboard', href: dashboard() }];
 
     return (
-        <div className="flex items-center h-14 px-6 bg-white border-b border-gray-200 gap-4">
+        <div className="flex items-center h-14 px-4 lg:px-6 bg-white border-b border-gray-200 gap-2 lg:gap-4">
+            {/* Hamburger menu - mobile only */}
+            <SidebarTrigger className="lg:hidden" />
+
             {/* Breadcrumb */}
-            <div className="flex items-center gap-2 text-sm font-semibold">
+            <div className="flex items-center gap-2 text-sm font-semibold truncate">
                 {crumbs.map((crumb, i) => {
                     const isLast = i === crumbs.length - 1;
                     return (
@@ -185,9 +189,9 @@ export function AppHeader({ breadcrumbs = [] }: Props) {
             {/* Right side */}
             <div className="ml-auto flex items-center gap-2">
 
-                {/* Search */}
-                <div className="relative" ref={wrapperRef}>
-                    <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-gray-200 bg-gray-50 w-64">
+                {/* Search - full width on mobile, fixed on desktop */}
+                <div className="relative hidden sm:block" ref={wrapperRef}>
+                    <div className="flex items-center gap-2 px-3 py-1.5 rounded-lg border border-gray-200 bg-gray-50 w-48 lg:w-64">
                         <Search className="w-3.5 h-3.5 text-gray-400 shrink-0" />
                         <input
                             type="text"
@@ -338,7 +342,7 @@ export function AppHeader({ breadcrumbs = [] }: Props) {
                 </div>
 
                 {/* Bell */}
-                <Link href="/notifications" className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500 transition-colors">
+                <Link href="/notifications" className="hidden sm:block p-1.5 rounded-lg hover:bg-gray-100 text-gray-500 transition-colors">
                     <Bell className="w-5 h-5" />
                 </Link>
 
@@ -355,7 +359,7 @@ export function AppHeader({ breadcrumbs = [] }: Props) {
                 </DropdownMenu>
 
                 {/* Settings */}
-                <Link href="/system-config" className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500 transition-colors">
+                <Link href="/system-config" className="hidden sm:block p-1.5 rounded-lg hover:bg-gray-100 text-gray-500 transition-colors">
                     <Settings className="w-5 h-5" />
                 </Link>
             </div>
