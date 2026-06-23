@@ -335,10 +335,10 @@ export default function Beekeepers({
         },
         {
             accessorKey: 'full_name',
-            header: 'User Identity',
+            header: 'Name',
             enableSorting: true,
             enableColumnFilter: true,
-            size: 220,
+            size: 180,
             Cell: ({ row }) => {
                 const bk = row.original;
                 return (
@@ -351,7 +351,6 @@ export default function Beekeepers({
                         </div>
                         <div>
                             <p className="font-semibold text-sm" style={{ color: '#0d1b2a' }}>{toTitleCase(bk.full_name)}</p>
-                            <p className="text-xs text-gray-400">{bk.email ?? bk.phone}</p>
                         </div>
                     </div>
                 );
@@ -395,41 +394,43 @@ export default function Beekeepers({
                 );
             },
         },
-        {
-            id: 'lastLogin',
-            header: 'Last Login',
-            enableSorting: false,
-            enableColumnFilter: false,
-            size: 100,
-            Cell: () => <span className="text-xs italic text-gray-400">Never</span>,
-        },
-        {
-            accessorKey: 'address',
-            header: 'Address',
-            enableSorting: true,
-            enableColumnFilter: true,
-            size: 170,
-            Cell: ({ cell }) => {
-                const address = cell.getValue<string>();
-                return address ? <span className="text-xs text-gray-400">{address}</span> : <span className="text-xs text-gray-400">—</span>;
-            },
-        },
-        {
-            accessorKey: 'created_at',
-            header: 'Sign Up Date',
-            size: 120,
-            enableSorting: true,
-            enableColumnFilter: false,
-            Cell: ({ cell }) => {
-                const date = cell.getValue<string>();
-                return date ? (
-                    <span className="text-xs text-gray-400">
-                        {new Date(date).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' })}
-                    </span>
-                ) : <span className="italic text-gray-400">Never</span>;
-            },
-        },
     ], []);
+
+    const renderDetailPanel = ({ row }: { row: any }) => {
+        const bk = row.original as Beekeeper;
+        return (
+            <div className="px-4 py-3 bg-gray-50 border-t border-gray-100">
+                <div className="grid grid-cols-2 gap-4">
+                    <div>
+                        <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-400 mb-1">Email</p>
+                        <p className="text-sm text-gray-700">{bk.email ?? '—'}</p>
+                    </div>
+                    <div>
+                        <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-400 mb-1">Phone</p>
+                        <p className="text-sm text-gray-700">{bk.phone ?? '—'}</p>
+                    </div>
+                    <div>
+                        <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-400 mb-1">Address</p>
+                        <p className="text-sm text-gray-700">{bk.address ?? '—'}</p>
+                    </div>
+                    <div>
+                        <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-400 mb-1">Sign Up Date</p>
+                        <p className="text-sm text-gray-700">
+                            {bk.created_at ? new Date(bk.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) : '—'}
+                        </p>
+                    </div>
+                    <div>
+                        <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-400 mb-1">Last Login</p>
+                        <p className="text-sm text-gray-400 italic">Never</p>
+                    </div>
+                    <div>
+                        <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-400 mb-1">Role</p>
+                        <p className="text-sm text-gray-700">{getRole(bk)}</p>
+                    </div>
+                </div>
+            </div>
+        );
+    };
 
     return (
         <>
@@ -499,6 +500,7 @@ export default function Beekeepers({
                         data={cleanedBeekeepers}
                         getRowId={(row) => row.user_id}
                         enableRowActions={true}
+                        renderDetailPanel={renderDetailPanel}
                         renderRowActionMenuItems={({ closeMenu, row }) => [
                             <MenuItem
                                 key="view"
