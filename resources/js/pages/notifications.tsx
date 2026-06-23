@@ -84,7 +84,7 @@ function NotifCard({ n }: { n: NotificationItem }) {
                     <p className="text-sm font-semibold" style={{ color: '#0d1b2a' }}>{n.title}</p>
                     <span className="text-xs text-gray-400 shrink-0 whitespace-nowrap">{n.time}</span>
                 </div>
-                <p className="text-xs text-gray-500 mt-1 leading-relaxed"
+                <p className="text-xs text-gray-400 mt-1 leading-relaxed"
                     dangerouslySetInnerHTML={{
                         __html: n.body.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>'),
                     }}
@@ -133,12 +133,12 @@ export default function Notifications() {
                     <div className="flex items-start justify-between gap-4 flex-wrap">
                         <div>
                             <h1 className="text-lg font-semibold" style={{ color: '#0d1b2a' }}>Notifications</h1>
-                            <p className="text-sm text-gray-500 mt-0.5">
+                            <p className="text-sm text-gray-400 mt-0.5">
                                 Manage and track all hive alerts, team updates, and system messages.
                             </p>
                         </div>
                         <div className="flex items-center gap-3">
-                            <button className="flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-300 text-sm font-medium text-gray-600 hover:bg-gray-50 transition-colors">
+                            <button className="flex items-center gap-2 px-4 py-2 rounded-lg border border-gray-300 text-sm font-medium text-gray-400 hover:bg-gray-50 transition-colors">
                                 ✓ Mark all read
                             </button>
                             <button className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold hover:opacity-90 transition-opacity" style={{ backgroundColor: '#f5a623', color: '#0d1b2a' }}>
@@ -163,8 +163,8 @@ export default function Notifications() {
                                     {categories.map((cat) => (
                                         <button
                                             key={cat.label}
-                                            className={`flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${cat.active ? 'text-gray-700' : 'text-gray-500 hover:bg-gray-50'}`}
-                                            style={cat.active ? { backgroundColor: '#f8f9fa', border: '1px solid #e5e7eb' } : {}}
+                                            className={`flex items-center justify-between px-3 py-2.5 rounded-lg text-sm font-medium transition-colors ${cat.active ? '' : 'text-gray-400 hover:bg-gray-50'}`}
+                                            style={cat.active ? { backgroundColor: '#f8f9fa', border: '1px solid #e5e7eb', color: '#0d1b2a' } : {}}
                                         >
                                             <div className="flex items-center gap-2">
                                                 <cat.icon className="w-4 h-4" />
@@ -205,7 +205,7 @@ export default function Notifications() {
 
                             {/* Today */}
                             <div>
-                                <p className="text-sm font-semibold text-gray-500 mb-3">Today, October 24</p>
+                                <p className="text-sm font-semibold mb-3" style={{ color: '#0d1b2a' }}>Today, October 24</p>
                                 <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
                                     {todayNotifications.map((n) => <NotifCard key={n.id} n={n} />)}
                                 </div>
@@ -213,7 +213,7 @@ export default function Notifications() {
 
                             {/* Yesterday */}
                             <div>
-                                <p className="text-sm font-semibold text-gray-500 mb-3">Yesterday, October 23</p>
+                                <p className="text-sm font-semibold mb-3" style={{ color: '#0d1b2a' }}>Yesterday, October 23</p>
                                 <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
                                     {yesterdayNotifications.map((n) => <NotifCard key={n.id} n={n} />)}
                                 </div>

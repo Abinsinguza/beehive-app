@@ -372,7 +372,7 @@ export default function AlertsPage({
                 <div className="grid grid-cols-2 gap-4">
                     <div className="col-span-2">
                         <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-400 mb-1">Event Description</p>
-                        <p className="text-sm text-gray-700 leading-snug">{log.desc}</p>
+                        <p className="text-sm leading-snug" style={{ color: '#0d1b2a' }}>{log.desc}</p>
                     </div>
                     <div>
                         <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-400 mb-1">Hive Status</p>
@@ -416,7 +416,7 @@ export default function AlertsPage({
                         </button>
                         <button
                             onClick={generateReport}
-                            className="px-4 py-2 rounded-lg text-sm font-semibold border border-gray-300 text-gray-600 hover:bg-gray-50 transition-colors"
+                            className="px-4 py-2 rounded-lg text-sm font-semibold border border-gray-300 text-gray-400 hover:bg-gray-50 transition-colors"
                         >
                             Generate Report
                         </button>
@@ -479,7 +479,7 @@ export default function AlertsPage({
                             ))} 
                         </select>
                         <select value={severityFilter} onChange={(e) => setSeverityFilter(e.target.value)}
-                            className="border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-600 outline-none bg-white">
+                            className="border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none bg-white" style={{ color: '#0d1b2a' }}>
                             <option>All Levels</option>
                             <option>Critical</option>
                             <option>Warning</option>
@@ -526,8 +526,8 @@ export default function AlertsPage({
                                 renderEmptyRowsFallback={() => (
                                     <div className="px-4 py-16 text-center">
                                         <div className="flex flex-col items-center gap-2">
-                                            <Inbox className="w-8 h-8 text-gray-300" />
-                                            <p className="text-sm font-semibold text-gray-500">No alerts found</p>
+                                            <Inbox className="w-8 h-8 text-gray-400" />
+                                            <p className="text-sm font-semibold" style={{ color: '#0d1b2a' }}>No alerts found</p>
                                             <p className="text-xs text-gray-400">
                                                 {cleanedAlerts.length === 0
                                                     ? 'No alerts have been recorded yet.'
@@ -560,7 +560,7 @@ export default function AlertsPage({
                                         setData('inference_id', e.target.value);
                                         setData('hive_id', selected?.hive_id ?? '');
                                     }}
-                                    className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-700 outline-none bg-white" required>
+                                    className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm outline-none bg-white" style={{ color: '#0d1b2a' }} required>
                                     <option value="" disabled>Select an inference</option>
                                     {cleanedInferences.map((inf) => (
                                         <option key={inf.inference_id} value={inf.inference_id}>
@@ -574,7 +574,7 @@ export default function AlertsPage({
                             <div>
                                 <label className="text-xs font-semibold uppercase tracking-widest text-gray-400 block mb-1.5">Severity Level</label>
                                 <select value={data.severity_level} onChange={(e) => setData('severity_level', e.target.value)}
-                                    className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-700 outline-none bg-white" required>
+                                    className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm outline-none bg-white" style={{ color: '#0d1b2a' }} required>
                                     <option value="" disabled>Select severity</option>
                                     <option value="info">Info</option>
                                     <option value="low">Low</option>
@@ -587,12 +587,12 @@ export default function AlertsPage({
                             <div>
                                 <label className="text-xs font-semibold uppercase tracking-widest text-gray-400 block mb-1.5">Timestamp</label>
                                 <input type="datetime-local" value={data.alert_timestamp} onChange={(e) => setData('alert_timestamp', e.target.value)}
-                                    className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-700 outline-none bg-white" required />
+                                    className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm outline-none bg-white" style={{ color: '#0d1b2a' }} required />
                                 {errors.alert_timestamp && <p className="text-xs text-red-500 mt-1">{errors.alert_timestamp}</p>}
                             </div>
                             <div className="flex justify-end gap-3 pt-2">
                                 <button type="button" onClick={() => setShowModal(false)}
-                                    className="px-4 py-2 rounded-lg border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-50">Cancel</button>
+                                    className="px-4 py-2 rounded-lg border border-gray-200 text-sm font-medium text-gray-400 hover:bg-gray-50">Cancel</button>
                                 <button type="submit" disabled={processing}
                                     className="px-4 py-2 rounded-lg text-sm font-semibold hover:opacity-90 disabled:opacity-60"
                                     style={{ backgroundColor: '#f5a623', color: '#0d1b2a' }}>

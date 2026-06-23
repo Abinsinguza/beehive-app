@@ -38,8 +38,8 @@ export default function ConfirmPassword() {
                             </svg>
                         </div>
                         <div className="text-center">
-                            <h2 className="text-4xl font-bold text-gray-900 tracking-tight">Confirm Password</h2>
-                            <p className="text-base text-gray-500 mt-1.5">
+                            <h2 className="text-4xl font-bold tracking-tight" style={{ color: '#0d1b2a' }}>Confirm Password</h2>
+                            <p className="text-base text-gray-400 mt-1.5">
                                 This is a secure area of the application. Please confirm your password before continuing.
                             </p>
                         </div>
@@ -54,7 +54,7 @@ export default function ConfirmPassword() {
                             {({ processing, errors }) => (
                                 <>
                                     <div className="flex flex-col gap-2">
-                                        <label htmlFor="password" className="text-sm font-medium text-gray-700">
+                                        <label htmlFor="password" className="text-sm font-medium" style={{ color: '#0d1b2a' }}>
                                             Password
                                         </label>
                                         <div className="relative">
@@ -66,12 +66,12 @@ export default function ConfirmPassword() {
                                                 placeholder="••••••••"
                                                 autoComplete="current-password"
                                                 autoFocus
-                                                className="w-full h-[52px] pl-12 pr-12 text-sm bg-white border border-[#E5E7EB] rounded-xl outline-none transition-all duration-200 text-gray-900 placeholder:text-gray-400 focus:border-[#F59E0B] focus:ring-4 focus:ring-[#F59E0B]/10 focus:scale-[1.01]"
+                                                className="w-full h-[52px] pl-12 pr-12 text-sm bg-white border border-[#E5E7EB] rounded-xl outline-none transition-all duration-200 placeholder:text-gray-400 focus:border-[#F59E0B] focus:ring-4 focus:ring-[#F59E0B]/10 focus:scale-[1.01]" style={{ color: '#0d1b2a' }}
                                             />
                                             <button
                                                 type="button"
                                                 onClick={() => setShowPassword(!showPassword)}
-                                                className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                                                className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-800 transition-colors"
                                             >
                                                 {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                                             </button>

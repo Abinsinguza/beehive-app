@@ -85,13 +85,13 @@ function AddBeekeeperModal({ onClose }: { onClose: () => void }) {
         <ModalShell title="Add New Beekeeper" onClose={onClose}>
             <form onSubmit={submit} className="px-6 pb-6 pt-2 flex flex-col gap-5">
                 {/* Header note */}
-                <p className="text-sm text-gray-500 border-l-4 pl-3" style={{ borderColor: '#f5a623' }}>
+                <p className="text-sm text-gray-400 border-l-4 pl-3" style={{ borderColor: '#f5a623' }}>
                     Fields marked <span className="text-red-500 font-bold">*</span> are required.
                 </p>
                 {fields.map((f) => (
                     <div key={f.key} className="flex flex-col gap-1.5">
                         {/* Label */}
-                        <label className="text-sm font-semibold text-gray-700 flex items-center gap-1.5">
+                        <label className="text-sm font-semibold flex items-center gap-1.5" style={{ color: '#0d1b2a' }}>
                             {f.label}
                             {f.required
                                 ? <span className="text-red-500 font-bold">*</span>
@@ -109,12 +109,13 @@ function AddBeekeeperModal({ onClose }: { onClose: () => void }) {
                             placeholder={f.placeholder}
                             required={f.required}
                             className={[
-                                'w-full rounded-lg px-3.5 py-2.5 text-sm text-gray-800 placeholder-gray-400',
+                                'w-full rounded-lg px-3.5 py-2.5 text-sm placeholder-gray-400',
                                 'border outline-none transition-colors',
                                 errors[f.key]
                                     ? 'border-red-400 bg-red-50 focus:border-red-500'
                                     : 'border-gray-300 bg-white focus:border-amber-400 focus:ring-2 focus:ring-amber-100',
                             ].join(' ')}
+                            style={{ color: '#0d1b2a' }}
                         />
 
                         {/* Error */}
@@ -140,10 +141,11 @@ function AddBeekeeperModal({ onClose }: { onClose: () => void }) {
                             placeholder="Click Generate to mint a key"
                             required
                             className={[
-                                'flex-1 rounded-lg px-3.5 py-2.5 text-sm text-gray-800 placeholder-gray-400 bg-gray-50',
+                                'flex-1 rounded-lg px-3.5 py-2.5 text-sm placeholder-gray-400 bg-gray-50',
                                 'border outline-none',
                                 errors.api_key ? 'border-red-400' : 'border-gray-300',
                             ].join(' ')}
+                            style={{ color: '#0d1b2a' }}
                         />
                         <button
                             type="button"
@@ -203,7 +205,7 @@ function EditBeekeeperModal({ beekeeper, onClose }: { beekeeper: Beekeeper; onCl
                             onChange={(e) => setData(f.key as keyof typeof data, e.target.value)}
                             placeholder={f.placeholder}
                             required={f.required}
-                            className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm outline-none text-gray-700 placeholder-gray-300"
+                            className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm outline-none placeholder-gray-300" style={{ color: '#0d1b2a' }}
                         />
                         {errors[f.key as keyof typeof errors] && (
                             <p className="text-xs text-red-500 mt-1">{errors[f.key as keyof typeof errors]}</p>
@@ -244,7 +246,7 @@ function ModalActions({ onCancel, processing, label }: { onCancel: () => void; p
     return (
         <div className="flex justify-end gap-3 pt-2">
             <button type="button" onClick={onCancel}
-                className="px-4 py-2 rounded-lg border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-50"
+                className="px-4 py-2 rounded-lg border border-gray-200 text-sm font-medium text-gray-400 hover:bg-gray-50"
             >
                 Cancel
             </button>
@@ -403,19 +405,19 @@ export default function Beekeepers({
                 <div className="grid grid-cols-2 gap-4">
                     <div>
                         <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-400 mb-1">Email</p>
-                        <p className="text-sm text-gray-700">{bk.email ?? '—'}</p>
+                        <p className="text-sm" style={{ color: '#0d1b2a' }}>{bk.email ?? '—'}</p>
                     </div>
                     <div>
                         <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-400 mb-1">Phone</p>
-                        <p className="text-sm text-gray-700">{bk.phone ?? '—'}</p>
+                        <p className="text-sm" style={{ color: '#0d1b2a' }}>{bk.phone ?? '—'}</p>
                     </div>
                     <div>
                         <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-400 mb-1">Address</p>
-                        <p className="text-sm text-gray-700">{bk.address ?? '—'}</p>
+                        <p className="text-sm" style={{ color: '#0d1b2a' }}>{bk.address ?? '—'}</p>
                     </div>
                     <div>
                         <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-400 mb-1">Sign Up Date</p>
-                        <p className="text-sm text-gray-700">
+                        <p className="text-sm" style={{ color: '#0d1b2a' }}>
                             {bk.created_at ? new Date(bk.created_at).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' }) : '—'}
                         </p>
                     </div>
@@ -425,7 +427,7 @@ export default function Beekeepers({
                     </div>
                     <div>
                         <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-400 mb-1">Role</p>
-                        <p className="text-sm text-gray-700">{getRole(bk)}</p>
+                        <p className="text-sm" style={{ color: '#0d1b2a' }}>{getRole(bk)}</p>
                     </div>
                 </div>
             </div>
@@ -440,7 +442,7 @@ export default function Beekeepers({
                 <div className="flex items-start justify-between gap-4">
                     <div>
                         <h1 className="text-2xl font-bold" style={{ color: '#0d1b2a' }}>Beekeeper Management</h1>
-                        <p className="text-sm text-gray-500 mt-1">Manage and monitor all registered beekeepers in the system.</p>
+                        <p className="text-sm text-gray-400 mt-1">Manage and monitor all registered beekeepers in the system.</p>
                     </div>
                     <button
                         onClick={() => setShowAddModal(true)}
@@ -491,7 +493,7 @@ export default function Beekeepers({
                 {/* Table */}
                 <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
                     <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
-                        <button onClick={exportCSV} className="flex items-center gap-1.5 text-xs font-semibold text-gray-500 hover:text-gray-700 transition-colors">
+                        <button onClick={exportCSV} className="flex items-center gap-1.5 text-xs font-semibold text-gray-400 hover:text-gray-700 transition-colors">
                             <Download className="w-3.5 h-3.5" /> Export CSV
                         </button>
                     </div>
@@ -558,15 +560,15 @@ export default function Beekeepers({
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
                     <div className="w-full max-w-sm rounded-2xl bg-white shadow-2xl p-6 flex flex-col gap-4">
                         <h2 className="text-base font-semibold" style={{ color: '#0d1b2a' }}>Revoke Access</h2>
-                        <p className="text-sm text-gray-500">
+                        <p className="text-sm text-gray-400">
                             Revoke access for{' '}
-                            <span className="font-semibold text-gray-700">{revokeTarget.full_name}</span>?
+                            <span className="font-semibold" style={{ color: '#0d1b2a' }}>{revokeTarget.full_name}</span>?
                             They will no longer be able to access the system.
                         </p>
                         <div className="flex justify-end gap-3">
                             <button
                                 onClick={() => setRevokeTarget(null)}
-                                className="px-4 py-2 rounded-lg border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-50"
+                                className="px-4 py-2 rounded-lg border border-gray-200 text-sm font-medium text-gray-400 hover:bg-gray-50"
                             >
                                 Cancel
                             </button>
@@ -588,15 +590,15 @@ export default function Beekeepers({
                 <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
                     <div className="w-full max-w-sm rounded-2xl bg-white shadow-2xl p-6 flex flex-col gap-4">
                         <h2 className="text-base font-semibold" style={{ color: '#0d1b2a' }}>Restore Access</h2>
-                        <p className="text-sm text-gray-500">
+                        <p className="text-sm text-gray-400">
                             Restore access for{' '}
-                            <span className="font-semibold text-gray-700">{restoreTarget.full_name}</span>?
+                            <span className="font-semibold" style={{ color: '#0d1b2a' }}>{restoreTarget.full_name}</span>?
                             They will regain full access to the system.
                         </p>
                         <div className="flex justify-end gap-3">
                             <button
                                 onClick={() => setRestoreTarget(null)}
-                                className="px-4 py-2 rounded-lg border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-50"
+                                className="px-4 py-2 rounded-lg border border-gray-200 text-sm font-medium text-gray-400 hover:bg-gray-50"
                             >
                                 Cancel
                             </button>

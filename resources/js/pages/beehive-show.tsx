@@ -145,7 +145,7 @@ export default function BeehiveShow({
             header: '',
             Cell: () => (
                 <button className="w-7 h-7 rounded-full flex items-center justify-center shrink-0 border border-gray-200 hover:bg-gray-100">
-                    <Play className="w-3 h-3 text-gray-500" />
+                    <Play className="w-3 h-3 text-gray-400" />
                 </button>
             ),
         },
@@ -156,7 +156,7 @@ export default function BeehiveShow({
                 const audio = row.original;
                 return (
                     <div>
-                        <p className="font-medium text-gray-700 truncate max-w-[160px]">{filename(audio.source_url)}</p>
+                        <p className="font-medium truncate max-w-[160px]" style={{ color: '#0d1b2a' }}>{filename(audio.source_url)}</p>
                         <p className="text-gray-400">
                             {audio.file_format.toUpperCase()}
                             {audio.duration_seconds ? ` · ${audio.duration_seconds}s` : ''}
@@ -168,7 +168,7 @@ export default function BeehiveShow({
         {
             accessorKey: 'created_at',
             header: 'Recorded',
-            Cell: ({ row }) => <span className="text-gray-500 whitespace-nowrap">{fmtTime(row.original.created_at)}</span>,
+            Cell: ({ row }) => <span className="whitespace-nowrap" style={{ color: '#0d1b2a' }}>{fmtTime(row.original.created_at)}</span>,
         },
         {
             accessorKey: 'detected_state',
@@ -188,7 +188,7 @@ export default function BeehiveShow({
             accessorKey: 'confidence_score',
             header: 'Confidence',
             Cell: ({ row }) => (
-                <span className="text-gray-500">
+                <span style={{ color: '#0d1b2a' }}>
                     {row.original.confidence_score != null ? `${(row.original.confidence_score * 100).toFixed(1)}%` : '—'}
                 </span>
             ),
@@ -196,12 +196,12 @@ export default function BeehiveShow({
         {
             accessorKey: 'analyzed_at',
             header: 'Analysed At',
-            Cell: ({ row }) => <span className="text-gray-500 whitespace-nowrap">{row.original.analyzed_at ? fmtTime(row.original.analyzed_at) : '—'}</span>,
+            Cell: ({ row }) => <span className="whitespace-nowrap" style={{ color: '#0d1b2a' }}>{row.original.analyzed_at ? fmtTime(row.original.analyzed_at) : '—'}</span>,
         },
         {
             accessorKey: 'inference_latency_ms',
             header: 'Latency',
-            Cell: ({ row }) => <span className="text-gray-500">{row.original.inference_latency_ms != null ? `${row.original.inference_latency_ms}ms` : '—'}</span>,
+            Cell: ({ row }) => <span style={{ color: '#0d1b2a' }}>{row.original.inference_latency_ms != null ? `${row.original.inference_latency_ms}ms` : '—'}</span>,
         },
         {
             accessorKey: 'status',
@@ -231,7 +231,7 @@ export default function BeehiveShow({
                 {/* Back */}
                 <button
                     onClick={() => router.visit('/beehives')}
-                    className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-800 w-fit"
+                    className="flex items-center gap-1.5 text-sm text-gray-400 hover:text-gray-800 w-fit"
                 >
                     <ChevronLeft className="w-4 h-4" /> Back to Hive Inventory
                 </button>
@@ -256,7 +256,7 @@ export default function BeehiveShow({
                                     </span>
                                 )}
                             </div>
-                            <div className="flex items-center gap-4 flex-wrap text-xs text-gray-500 mt-0.5">
+                            <div className="flex items-center gap-4 flex-wrap text-xs text-gray-400 mt-0.5">
                                 <span className="flex items-center gap-1">
                                     <MapPin className="w-3.5 h-3.5" /> {beehive.hive_location}
                                 </span>
@@ -268,7 +268,7 @@ export default function BeehiveShow({
                     </div>
                     <button
                         onClick={() => router.visit(`/beehives/${beehive.id}/edit`)}
-                        className="shrink-0 px-4 py-2 rounded-lg border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-50"
+                        className="shrink-0 px-4 py-2 rounded-lg border border-gray-200 text-sm font-medium text-gray-400 hover:bg-gray-50"
                     >
                         Edit
                     </button>
@@ -365,7 +365,7 @@ export default function BeehiveShow({
                                         <span className="w-2 h-2 rounded-full mt-1 shrink-0"
                                             style={{ backgroundColor: severityDot[adv.severity] ?? '#94a3b8' }} />
                                         <div>
-                                            <p className="text-sm text-gray-700">{adv.condition_label ?? adv.advisory_text ?? '—'}</p>
+                                            <p className="text-sm" style={{ color: '#0d1b2a' }}>{adv.condition_label ?? adv.advisory_text ?? '—'}</p>
                                             <p className="text-xs text-gray-400 mt-0.5">
                                                 {fmtTime(adv.created_at)} · {adv.severity} severity
                                             </p>
@@ -397,7 +397,7 @@ export default function BeehiveShow({
                             <div className="flex flex-col gap-3">
                                 {inferenceDistribution.map((item) => (
                                     <div key={item.state} className="flex items-center gap-3">
-                                        <span className="text-xs text-gray-600 w-28 shrink-0">{item.state}</span>
+                                        <span className="text-xs w-28 shrink-0" style={{ color: '#0d1b2a' }}>{item.state}</span>
                                         <div className="flex-1 h-2 rounded-full bg-gray-100">
                                             <div
                                                 className="h-2 rounded-full transition-all"
@@ -407,7 +407,7 @@ export default function BeehiveShow({
                                                 }}
                                             />
                                         </div>
-                                        <span className="text-xs font-semibold text-gray-500 w-8 text-right">{item.percentage}%</span>
+                                        <span className="text-xs font-semibold w-8 text-right" style={{ color: '#0d1b2a' }}>{item.percentage}%</span>
                                     </div>
                                 ))}
                             </div>
@@ -442,12 +442,12 @@ export default function BeehiveShow({
                 <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5 flex flex-col gap-4">
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
-                            <ClipboardList className="w-4 h-4 text-gray-500" />
+                            <ClipboardList className="w-4 h-4 text-gray-400" />
                             <h2 className="font-semibold text-sm" style={{ color: '#0d1b2a' }}>Hive Details</h2>
                         </div>
                         <button
                             onClick={() => router.visit(`/beehives/${beehive.id}/edit`)}
-                            className="text-xs font-semibold text-gray-500 hover:text-gray-800 flex items-center gap-1"
+                            className="text-xs font-semibold text-gray-400 hover:text-gray-800 flex items-center gap-1"
                         >
                             ✎ Edit
                         </button>
@@ -477,7 +477,7 @@ export default function BeehiveShow({
                                         {row.value}
                                     </span>
                                 ) : (
-                                    <span className="text-sm text-gray-700">{row.value}</span>
+                                    <span className="text-sm" style={{ color: '#0d1b2a' }}>{row.value}</span>
                                 )}
                             </div>
                         ))}
@@ -491,7 +491,7 @@ export default function BeehiveShow({
                 <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5 flex flex-col gap-4">
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-2">
-                            <Plug className="w-4 h-4 text-gray-500" />
+                            <Plug className="w-4 h-4 text-gray-400" />
                             <h2 className="font-semibold text-sm" style={{ color: '#0d1b2a' }}>Sensor Data Source</h2>
                         </div>
                         {dataSource && (
@@ -514,23 +514,23 @@ export default function BeehiveShow({
                                 <span className="text-xs text-gray-400 w-40 shrink-0 pt-0.5 flex items-center gap-1.5">
                                     <Link2 className="w-3.5 h-3.5" /> Source Path
                                 </span>
-                                <span className="text-sm font-mono text-gray-700 break-all">{dataSource.source_path ?? '—'}</span>
+                                <span className="text-sm font-mono break-all" style={{ color: '#0d1b2a' }}>{dataSource.source_path ?? '—'}</span>
                             </div>
                             <div className="flex items-start py-3 gap-4">
                                 <span className="text-xs text-gray-400 w-40 shrink-0 pt-0.5">Source Type</span>
-                                <span className="text-sm text-gray-700 uppercase">{dataSource.source_type}</span>
+                                <span className="text-sm uppercase" style={{ color: '#0d1b2a' }}>{dataSource.source_type}</span>
                             </div>
                             <div className="flex items-start py-3 gap-4">
                                 <span className="text-xs text-gray-400 w-40 shrink-0 pt-0.5">API Base URL</span>
-                                <span className="text-sm font-mono text-gray-700 break-all">{dataSource.connection_config?.api_base_url ?? '—'}</span>
+                                <span className="text-sm font-mono break-all" style={{ color: '#0d1b2a' }}>{dataSource.connection_config?.api_base_url ?? '—'}</span>
                             </div>
                             <div className="flex items-start py-3 gap-4">
                                 <span className="text-xs text-gray-400 w-40 shrink-0 pt-0.5">API Key</span>
-                                <span className="text-sm font-mono text-gray-500">{dataSource.connection_config?.api_key ?? '—'}</span>
+                                <span className="text-sm font-mono" style={{ color: '#0d1b2a' }}>{dataSource.connection_config?.api_key ?? '—'}</span>
                             </div>
                             <div className="flex items-start py-3 gap-4">
                                 <span className="text-xs text-gray-400 w-40 shrink-0 pt-0.5">Last Sync</span>
-                                <span className="text-sm text-gray-700">{fmtTimeFull(dataSource.last_scanned_at)}</span>
+                                <span className="text-sm" style={{ color: '#0d1b2a' }}>{fmtTimeFull(dataSource.last_scanned_at)}</span>
                             </div>
                             <div className="flex items-start py-3 gap-4">
                                 <span className="text-xs text-gray-400 w-40 shrink-0 pt-0.5">Status</span>

@@ -37,8 +37,8 @@ export default function ForgotPassword({ status }: { status?: string }) {
                             </svg>
                         </div>
                         <div className="text-center">
-                            <h2 className="text-4xl font-bold text-gray-900 tracking-tight">Reset Password</h2>
-                            <p className="text-base text-gray-500 mt-1.5">
+                            <h2 className="text-4xl font-bold tracking-tight" style={{ color: '#0d1b2a' }}>Reset Password</h2>
+                            <p className="text-base text-gray-400 mt-1.5">
                                 Enter your email address and we will send you a password reset link.
                             </p>
                         </div>
@@ -59,7 +59,7 @@ export default function ForgotPassword({ status }: { status?: string }) {
                             {({ processing, errors }) => (
                                 <>
                                     <div className="flex flex-col gap-2">
-                                        <label htmlFor="email" className="text-sm font-medium text-gray-700">
+                                        <label htmlFor="email" className="text-sm font-medium" style={{ color: '#0d1b2a' }}>
                                             Email Address
                                         </label>
                                         <div className="relative">
@@ -72,7 +72,7 @@ export default function ForgotPassword({ status }: { status?: string }) {
                                                 autoFocus
                                                 autoComplete="off"
                                                 placeholder="you@example.com"
-                                                className="w-full h-[52px] pl-12 pr-4 text-sm bg-white border border-[#E5E7EB] rounded-xl outline-none transition-all duration-200 text-gray-900 placeholder:text-gray-400 focus:border-[#F59E0B] focus:ring-4 focus:ring-[#F59E0B]/10 focus:scale-[1.01]"
+                                                className="w-full h-[52px] pl-12 pr-4 text-sm bg-white border border-[#E5E7EB] rounded-xl outline-none transition-all duration-200 placeholder:text-gray-400 focus:border-[#F59E0B] focus:ring-4 focus:ring-[#F59E0B]/10 focus:scale-[1.01]" style={{ color: '#0d1b2a' }}
                                             />
                                         </div>
                                         <InputError message={errors.email} />
@@ -99,7 +99,7 @@ export default function ForgotPassword({ status }: { status?: string }) {
                                         )}
                                     </button>
 
-                                    <p className="text-center text-sm text-gray-500 mt-4">
+                                    <p className="text-center text-sm text-gray-400 mt-4">
                                         Remember your password?{' '}
                                         <TextLink href={login()} className="font-semibold text-[#F59E0B] hover:text-[#D97706] transition-colors hover:underline underline-offset-4">
                                             Sign In

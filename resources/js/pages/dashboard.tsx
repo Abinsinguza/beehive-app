@@ -204,14 +204,14 @@ function StatCard({
             className="relative bg-white rounded-xl border border-gray-200 p-4 shadow-sm flex flex-col gap-1 cursor-pointer hover:shadow-md hover:border-gray-300 transition-all"
         >
             <div className="flex items-center justify-between">
-                <p className="text-xs text-gray-500">{label}</p>
+                <p className="text-xs text-gray-400">{label}</p>
                 {icon}
             </div>
             <p className="text-3xl font-bold mt-1" style={{ color: valueColor ?? '#0d1b2a' }}>{value}</p>
             <p className="text-xs font-medium mt-1" style={{ color: footerColor }}>{footer}</p>
 
             <div className="group absolute bottom-3 right-3 inline-flex" onClick={(e) => e.stopPropagation()}>
-                <Info className="w-3.5 h-3.5 text-gray-300 hover:text-gray-500 transition-colors" />
+                <Info className="w-3.5 h-3.5 text-gray-400 hover:text-gray-800 transition-colors" />
                 <div className="invisible group-hover:visible absolute right-0 bottom-full mb-2 z-20 w-52 rounded-lg bg-gray-900 text-white text-[11px] leading-snug p-2.5 shadow-lg">
                     {description}
                 </div>
@@ -260,7 +260,7 @@ export default function Dashboard({
                         <h1 className="text-2xl font-bold" style={{ color: '#0d1b2a' }}>
                             {getTimeGreeting()}, {cleanedGreetingName}
                         </h1>
-                        <p className="text-sm text-gray-500 mt-0.5">
+                        <p className="text-sm text-gray-400 mt-0.5">
                             {getDayLabel()}
                         </p>
                     </div>
@@ -317,7 +317,7 @@ export default function Dashboard({
                                     <span className="font-semibold text-sm" style={{ color: '#0d1b2a' }}>Latest Hive Status Updated</span>
                                 </div>
                                 <button onClick={() => router.visit('/beehives')}
-                                    className="flex items-center gap-1 text-xs font-medium text-gray-500 border border-gray-200 rounded-lg px-3 py-1.5 hover:bg-gray-50 transition-colors">
+                                    className="flex items-center gap-1 text-xs font-medium text-gray-400 border border-gray-200 rounded-lg px-3 py-1.5 hover:bg-gray-50 transition-colors">
                                     View all <ExternalLink className="w-3 h-3" />
                                 </button>
                             </div>
@@ -345,7 +345,7 @@ export default function Dashboard({
                                                     {meta.label}
                                                 </span>
                                                 {hive.confidence !== null && (
-                                                    <span className="shrink-0 text-xs font-medium text-gray-500 w-8 text-right">
+                                                    <span className="shrink-0 text-xs font-medium w-8 text-right" style={{ color: '#0d1b2a' }}>
                                                         {hive.confidence}%
                                                     </span>
                                                 )}
@@ -373,7 +373,7 @@ export default function Dashboard({
                                         .map(([key, count]) => (
                                             <div key={key} className="flex items-center gap-2">
                                                 <span className="w-3 h-3 rounded-full shrink-0" style={{ backgroundColor: donutColor(key) }} />
-                                                <span className="text-sm text-gray-600">{stateMeta(key).label}</span>
+                                                <span className="text-sm text-gray-400">{stateMeta(key).label}</span>
                                                 <span className="text-sm font-semibold ml-auto pl-4" style={{ color: '#0d1b2a' }}>
                                                     {count}
                                                 </span>
@@ -396,7 +396,7 @@ export default function Dashboard({
                                     <span className="font-semibold text-sm" style={{ color: '#0d1b2a' }}>Recent alerts</span>
                                 </div>
                                 <button onClick={() => router.visit('/alerts')}
-                                    className="flex items-center gap-1 text-xs font-medium text-gray-500 border border-gray-200 rounded-lg px-3 py-1.5 hover:bg-gray-50 transition-colors">
+                                    className="flex items-center gap-1 text-xs font-medium text-gray-400 border border-gray-200 rounded-lg px-3 py-1.5 hover:bg-gray-50 transition-colors">
                                     View all <ExternalLink className="w-3 h-3" />
                                 </button>
                             </div>
@@ -487,7 +487,7 @@ export default function Dashboard({
                                                     />
                                                 );
                                             })}
-                                            <span className="text-[10px] text-gray-500 absolute -bottom-5 left-1/2 -translate-x-1/2">{d.label}</span>
+                                            <span className="text-[10px] text-gray-400 absolute -bottom-5 left-1/2 -translate-x-1/2">{d.label}</span>
                                         </div>
                                     ))}
                                 </div>
@@ -497,7 +497,7 @@ export default function Dashboard({
                                 {recording_states.map((s) => (
                                     <div key={s} className="flex items-center gap-2">
                                         <span className="w-2.5 h-2.5 rounded-full" style={{ backgroundColor: donutColor(s) }} />
-                                        <span className="text-xs text-gray-500">{stateMeta(s).label}</span>
+                                        <span className="text-xs text-gray-400">{stateMeta(s).label}</span>
                                     </div>
                                 ))}
                             </div>

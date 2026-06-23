@@ -139,14 +139,14 @@ function AddRecordingModal({ hives, onClose }: { hives: HiveRef[]; onClose: () =
                 <form onSubmit={submit} className="flex flex-col gap-4">
                     {/* Hive */}
                     <div className="flex flex-col gap-1.5">
-                        <label className="text-sm font-semibold text-gray-700">
+                        <label className="text-sm font-semibold" style={{ color: '#0d1b2a' }}>
                             Hive <span className="text-red-500">*</span>
                         </label>
                         <select
                             value={data.hive_id}
                             onChange={(e) => setData('hive_id', e.target.value)}
                             className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-100"
-                            style={{ borderColor: errors.hive_id ? '#f87171' : '#d1d5db' }}
+                            style={{ color: '#0d1b2a', borderColor: errors.hive_id ? '#f87171' : '#d1d5db' }}
                             required>
                             <option value="">Select hive…</option>
                             {hives.map((h) => (
@@ -158,7 +158,7 @@ function AddRecordingModal({ hives, onClose }: { hives: HiveRef[]; onClose: () =
 
                     {/* Source URL */}
                     <div className="flex flex-col gap-1.5">
-                        <label className="text-sm font-semibold text-gray-700">
+                        <label className="text-sm font-semibold" style={{ color: '#0d1b2a' }}>
                             Source file path <span className="text-red-500">*</span>
                         </label>
                         <input
@@ -167,7 +167,7 @@ function AddRecordingModal({ hives, onClose }: { hives: HiveRef[]; onClose: () =
                             onChange={(e) => setData('source_url', e.target.value)}
                             placeholder="e.g. recordings/hive1/rec_001.wav"
                             className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-100"
-                            style={{ borderColor: errors.source_url ? '#f87171' : '#d1d5db' }}
+                            style={{ color: '#0d1b2a', borderColor: errors.source_url ? '#f87171' : '#d1d5db' }}
                             required />
                         {errors.source_url && <p className="text-xs text-red-500">{errors.source_url}</p>}
                     </div>
@@ -175,13 +175,13 @@ function AddRecordingModal({ hives, onClose }: { hives: HiveRef[]; onClose: () =
                     {/* Format + Duration */}
                     <div className="grid grid-cols-2 gap-3">
                         <div className="flex flex-col gap-1.5">
-                            <label className="text-sm font-semibold text-gray-700">
+                            <label className="text-sm font-semibold" style={{ color: '#0d1b2a' }}>
                                 Format <span className="text-red-500">*</span>
                             </label>
                             <select
                                 value={data.file_format}
                                 onChange={(e) => setData('file_format', e.target.value)}
-                                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-100"
+                                className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-100" style={{ color: '#0d1b2a' }}
                                 required>
                                 {['WAV', 'MP3', 'FLAC', 'OGG', 'AAC'].map((f) => (
                                     <option key={f} value={f}>{f}</option>
@@ -189,36 +189,36 @@ function AddRecordingModal({ hives, onClose }: { hives: HiveRef[]; onClose: () =
                             </select>
                         </div>
                         <div className="flex flex-col gap-1.5">
-                            <label className="text-sm font-semibold text-gray-700">Duration (s)</label>
+                            <label className="text-sm font-semibold" style={{ color: '#0d1b2a' }}>Duration (s)</label>
                             <input
                                 type="number"
                                 value={data.duration_seconds}
                                 onChange={(e) => setData('duration_seconds', e.target.value)}
                                 placeholder="e.g. 30"
                                 min="0"
-                                className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-100" />
+                                className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-100" style={{ color: '#0d1b2a' }} />
                         </div>
                     </div>
 
                     {/* Captured at */}
                     <div className="flex flex-col gap-1.5">
-                        <label className="text-sm font-semibold text-gray-700">
+                        <label className="text-sm font-semibold" style={{ color: '#0d1b2a' }}>
                             Captured at <span className="text-gray-400 text-xs font-normal">(optional)</span>
                         </label>
                         <input
                             type="datetime-local"
                             value={data.captured_at}
                             onChange={(e) => setData('captured_at', e.target.value)}
-                            className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-100" />
+                            className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-100" style={{ color: '#0d1b2a' }} />
                     </div>
 
                     {/* Status */}
                     <div className="flex flex-col gap-1.5">
-                        <label className="text-sm font-semibold text-gray-700">Status <span className="text-red-500">*</span></label>
+                        <label className="text-sm font-semibold" style={{ color: '#0d1b2a' }}>Status <span className="text-red-500">*</span></label>
                         <select
                             value={data.status}
                             onChange={(e) => setData('status', e.target.value)}
-                            className="w-full border border-gray-200 rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-100"
+                            className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-100" style={{ color: '#0d1b2a' }}
                             required>
                             <option value="pending">Pending</option>
                             <option value="processed">Processed</option>
@@ -228,7 +228,7 @@ function AddRecordingModal({ hives, onClose }: { hives: HiveRef[]; onClose: () =
 
                     <div className="flex gap-3 pt-1">
                         <button type="button" onClick={onClose}
-                            className="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm font-semibold text-gray-600 hover:bg-gray-50 transition-colors">
+                            className="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm font-semibold text-gray-400 hover:bg-gray-50 transition-colors">
                             Cancel
                         </button>
                         <button type="submit" disabled={processing}
@@ -357,7 +357,7 @@ export default function AudioRecordings({ recordings, stats, formats, hives, fil
             enableColumnFilter: true,
             size: 140,
             Cell: ({ cell }) => (
-                <span className="text-xs text-gray-600 font-mono">
+                <span className="text-xs tabular-nums" style={{ color: '#0d1b2a' }}>
                     {truncatePath(cell.getValue<string>())}
                 </span>
             ),
@@ -379,7 +379,7 @@ export default function AudioRecordings({ recordings, stats, formats, hives, fil
             enableColumnFilter: false,
             size: 90,
             Cell: ({ cell }) => (
-                <span className="text-xs text-gray-600 tabular-nums">
+                <span className="text-xs tabular-nums" style={{ color: '#0d1b2a' }}>
                     {formatDuration(cell.getValue<number | null>())}
                 </span>
             ),
@@ -427,7 +427,7 @@ export default function AudioRecordings({ recordings, stats, formats, hives, fil
                 <div className="grid grid-cols-2 gap-4">
                     <div>
                         <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-400 mb-1">Recorded</p>
-                        <p className="text-sm text-gray-700 tabular-nums whitespace-nowrap">
+                        <p className="text-sm tabular-nums whitespace-nowrap" style={{ color: '#0d1b2a' }}>
                             {formatDate(rec.created_at)}
                         </p>
                     </div>
@@ -443,19 +443,19 @@ export default function AudioRecordings({ recordings, stats, formats, hives, fil
                     </div>
                     <div>
                         <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-400 mb-1">Confidence</p>
-                        <p className="text-sm text-gray-700 tabular-nums">
+                        <p className="text-sm tabular-nums" style={{ color: '#0d1b2a' }}>
                             {rec.confidence_score != null ? `${(rec.confidence_score * 100).toFixed(1)}%` : '—'}
                         </p>
                     </div>
                     <div>
                         <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-400 mb-1">Analysed At</p>
-                        <p className="text-sm text-gray-700 whitespace-nowrap">
+                        <p className="text-sm whitespace-nowrap" style={{ color: '#0d1b2a' }}>
                             {formatDate(rec.analyzed_at)}
                         </p>
                     </div>
                     <div>
                         <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-400 mb-1">Latency</p>
-                        <p className="text-sm text-gray-700 tabular-nums">
+                        <p className="text-sm tabular-nums" style={{ color: '#0d1b2a' }}>
                             {rec.inference_latency_ms != null ? `${rec.inference_latency_ms}ms` : '—'}
                         </p>
                     </div>
@@ -485,16 +485,16 @@ export default function AudioRecordings({ recordings, stats, formats, hives, fil
                     <div className="flex items-start justify-between gap-4">
                         <div>
                             <div className="flex items-center gap-2">
-                                <Mic className="w-5 h-5 text-gray-500" />
+                                <Mic className="w-5 h-5 text-gray-400" />
                                 <h1 className="text-xl font-bold" style={{ color: '#0d1b2a' }}>Audio recordings</h1>
                             </div>
-                            <p className="text-sm text-gray-500 mt-0.5">All audio sources captured from hives</p>
+                            <p className="text-sm text-gray-400 mt-0.5">All audio sources captured from hives</p>
                         </div>
                         <div className="flex items-center gap-2 shrink-0">
                             <button
                                 onClick={handleRefresh}
                                 disabled={isRefreshing}
-                                className="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-xl text-sm font-semibold text-gray-600 bg-white hover:bg-gray-50 transition-colors shadow-sm disabled:opacity-60 disabled:cursor-not-allowed">
+                                className="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-xl text-sm font-semibold text-gray-400 bg-white hover:bg-gray-50 transition-colors shadow-sm disabled:opacity-60 disabled:cursor-not-allowed">
                                 <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
                                 Refresh
                             </button>
@@ -520,7 +520,7 @@ export default function AudioRecordings({ recordings, stats, formats, hives, fil
                             <div key={label} className={`bg-white rounded-xl border ${border} p-4 shadow-sm flex flex-col gap-1`}>
                                 <div className="flex items-center gap-1.5">
                                     {icon}
-                                    <p className="text-xs text-gray-500">{label}</p>
+                                    <p className="text-xs text-gray-400">{label}</p>
                                 </div>
                                 <p className="text-3xl font-bold mt-1" style={{ color }}>{value}</p>
                             </div>
@@ -532,7 +532,7 @@ export default function AudioRecordings({ recordings, stats, formats, hives, fil
                         <select
                             value={status}
                             onChange={(e) => { setStatus(e.target.value); applyFilters({ status: e.target.value }); }}
-                            className="bg-white border border-gray-200 rounded-xl px-3 py-2 text-sm shadow-sm focus:outline-none focus:border-amber-400 text-gray-600">
+                            className="bg-white border border-gray-200 rounded-xl px-3 py-2 text-sm shadow-sm focus:outline-none focus:border-amber-400" style={{ color: '#0d1b2a' }}>
                             <option value="">All statuses</option>
                             <option value="processed">Processed</option>
                             <option value="pending">Pending</option>
@@ -542,7 +542,7 @@ export default function AudioRecordings({ recordings, stats, formats, hives, fil
                         <select
                             value={format}
                             onChange={(e) => { setFormat(e.target.value); applyFilters({ format: e.target.value }); }}
-                            className="bg-white border border-gray-200 rounded-xl px-3 py-2 text-sm shadow-sm focus:outline-none focus:border-amber-400 text-gray-600">
+                            className="bg-white border border-gray-200 rounded-xl px-3 py-2 text-sm shadow-sm focus:outline-none focus:border-amber-400" style={{ color: '#0d1b2a' }}>
                             <option value="">All formats</option>
                             {formats.map((f) => <option key={f} value={f}>{f}</option>)}
                         </select>
@@ -550,7 +550,7 @@ export default function AudioRecordings({ recordings, stats, formats, hives, fil
                         <select
                             value={hive}
                             onChange={(e) => { setHive(e.target.value); applyFilters({ hive: e.target.value }); }}
-                            className="bg-white border border-gray-200 rounded-xl px-3 py-2 text-sm shadow-sm focus:outline-none focus:border-amber-400 text-gray-600">
+                            className="bg-white border border-gray-200 rounded-xl px-3 py-2 text-sm shadow-sm focus:outline-none focus:border-amber-400" style={{ color: '#0d1b2a' }}>
                             <option value="">All hives</option>
                             {cleanedHives.map((h) => (
                                 <option key={h.hive_id} value={h.hive_id}>{h.hive_name}</option>
@@ -559,7 +559,7 @@ export default function AudioRecordings({ recordings, stats, formats, hives, fil
 
                         {hasFilters && (
                             <button onClick={clearFilters}
-                                className="flex items-center gap-1.5 px-3 py-2 bg-white border border-gray-200 rounded-xl text-sm font-medium text-gray-500 hover:bg-gray-50 shadow-sm transition-colors">
+                                className="flex items-center gap-1.5 px-3 py-2 bg-white border border-gray-200 rounded-xl text-sm font-medium text-gray-400 hover:bg-gray-50 shadow-sm transition-colors">
                                 <X className="w-3.5 h-3.5" />
                                 Clear
                             </button>

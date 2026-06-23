@@ -173,7 +173,7 @@ export function AppHeader({ breadcrumbs = [] }: Props) {
                     const isLast = i === crumbs.length - 1;
                     return (
                         <span key={i} className="flex items-center gap-2">
-                            {i > 0 && <span className="text-gray-300">/</span>}
+                            {i > 0 && <span className="text-gray-400">/</span>}
                             {isLast && crumbs.length > 1 ? (
                                 <span style={{ color: '#f5a623' }}>{crumb.title}</span>
                             ) : (
@@ -199,10 +199,10 @@ export function AppHeader({ breadcrumbs = [] }: Props) {
                             onChange={handleChange}
                             onFocus={() => { if (query.trim()) setOpen(true); }}
                             placeholder={placeholder}
-                            className="flex-1 text-xs bg-transparent outline-none text-gray-500 placeholder-gray-400"
+                            className="flex-1 text-xs bg-transparent outline-none text-gray-400 placeholder-gray-400"
                         />
                         {query && (
-                            <button onClick={() => { setQuery(''); setOpen(false); }} className="text-gray-400 hover:text-gray-600 text-xs">✕</button>
+                            <button onClick={() => { setQuery(''); setOpen(false); }} className="text-gray-400 hover:text-gray-800 text-xs">✕</button>
                         )}
                     </div>
 
@@ -211,7 +211,7 @@ export function AppHeader({ breadcrumbs = [] }: Props) {
                         <div className="absolute right-0 top-full mt-1.5 w-96 bg-white rounded-xl border border-gray-200 shadow-xl z-50 overflow-hidden">
                             {!hasResults ? (
                                 <div className="px-4 py-6 text-center text-xs text-gray-400">
-                                    No results found for <span className="font-semibold text-gray-600">"{query}"</span>
+                                    No results found for <span className="font-semibold" style={{ color: '#0d1b2a' }}>"{query}"</span>
                                 </div>
                             ) : (
                                 <div className="max-h-96 overflow-y-auto">
@@ -265,7 +265,7 @@ export function AppHeader({ breadcrumbs = [] }: Props) {
                                                 >
                                                     <div className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0"
                                                         style={{ backgroundColor: '#f1f5f9' }}>
-                                                        <Hexagon className="w-3.5 h-3.5 text-gray-500" />
+                                                        <Hexagon className="w-3.5 h-3.5 text-gray-400" />
                                                     </div>
                                                     <div className="flex-1 min-w-0">
                                                         <p className="text-xs font-semibold truncate" style={{ color: '#0d1b2a' }}>{hive.id}</p>
@@ -342,14 +342,14 @@ export function AppHeader({ breadcrumbs = [] }: Props) {
                 </div>
 
                 {/* Bell */}
-                <Link href="/notifications" className="hidden sm:block p-1.5 rounded-lg hover:bg-gray-100 text-gray-500 transition-colors">
+                <Link href="/notifications" className="hidden sm:block p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 transition-colors">
                     <Bell className="w-5 h-5" />
                 </Link>
 
                 {/* User */}
                 <DropdownMenu>
                     <DropdownMenuTrigger asChild>
-                        <button className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-500 transition-colors">
+                        <button className="p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 transition-colors">
                             <User className="w-5 h-5" />
                         </button>
                     </DropdownMenuTrigger>
@@ -359,7 +359,7 @@ export function AppHeader({ breadcrumbs = [] }: Props) {
                 </DropdownMenu>
 
                 {/* Settings */}
-                <Link href="/system-config" className="hidden sm:block p-1.5 rounded-lg hover:bg-gray-100 text-gray-500 transition-colors">
+                <Link href="/system-config" className="hidden sm:block p-1.5 rounded-lg hover:bg-gray-100 text-gray-400 transition-colors">
                     <Settings className="w-5 h-5" />
                 </Link>
             </div>

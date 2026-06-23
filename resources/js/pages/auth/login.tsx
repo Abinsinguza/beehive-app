@@ -47,8 +47,8 @@ export default function Login({ status, canResetPassword, canRegister }: Props) 
                             </svg>
                         </div>
                         <div className="text-center">
-                            <h2 className="text-4xl font-bold text-gray-900 tracking-tight">Welcome Back</h2>
-                            <p className="text-base text-gray-500 mt-1.5">Sign in to access the admin dashboard</p>
+                            <h2 className="text-4xl font-bold tracking-tight" style={{ color: '#0d1b2a' }}>Welcome Back</h2>
+                            <p className="text-base text-gray-400 mt-1.5">Sign in to access the admin dashboard</p>
                         </div>
                     </div>
 
@@ -68,7 +68,7 @@ export default function Login({ status, canResetPassword, canRegister }: Props) 
                                 <>
                                     {/* Email Field */}
                                     <div className="flex flex-col gap-2">
-                                        <label htmlFor="email" className="text-sm font-medium text-gray-700">
+                                        <label htmlFor="email" className="text-sm font-medium" style={{ color: '#0d1b2a' }}>
                                             Email Address
                                         </label>
                                         <div className="relative">
@@ -82,7 +82,7 @@ export default function Login({ status, canResetPassword, canRegister }: Props) 
                                                 tabIndex={1}
                                                 autoComplete="email"
                                                 placeholder="you@example.com"
-                                                className="w-full h-[52px] pl-12 pr-4 text-sm bg-white border border-[#E5E7EB] rounded-xl outline-none transition-all duration-200 text-gray-900 placeholder:text-gray-400 focus:border-[#F59E0B] focus:ring-4 focus:ring-[#F59E0B]/10 focus:scale-[1.01]"
+                                                className="w-full h-[52px] pl-12 pr-4 text-sm bg-white border border-[#E5E7EB] rounded-xl outline-none transition-all duration-200 placeholder:text-gray-400 focus:border-[#F59E0B] focus:ring-4 focus:ring-[#F59E0B]/10 focus:scale-[1.01]" style={{ color: '#0d1b2a' }}
                                             />
                                         </div>
                                         <InputError message={errors.email} />
@@ -91,7 +91,7 @@ export default function Login({ status, canResetPassword, canRegister }: Props) 
                                     {/* Password Field */}
                                     <div className="flex flex-col gap-2">
                                         <div className="flex items-center justify-between">
-                                            <label htmlFor="password" className="text-sm font-medium text-gray-700">
+                                            <label htmlFor="password" className="text-sm font-medium" style={{ color: '#0d1b2a' }}>
                                                 Password
                                             </label>
                                             {canResetPassword && (
@@ -110,13 +110,13 @@ export default function Login({ status, canResetPassword, canRegister }: Props) 
                                                 tabIndex={2}
                                                 autoComplete="current-password"
                                                 placeholder="••••••••"
-                                                className="w-full h-[52px] pl-12 pr-12 text-sm bg-white border border-[#E5E7EB] rounded-xl outline-none transition-all duration-200 text-gray-900 placeholder:text-gray-400 focus:border-[#F59E0B] focus:ring-4 focus:ring-[#F59E0B]/10 focus:scale-[1.01]"
+                                                className="w-full h-[52px] pl-12 pr-12 text-sm bg-white border border-[#E5E7EB] rounded-xl outline-none transition-all duration-200 placeholder:text-gray-400 focus:border-[#F59E0B] focus:ring-4 focus:ring-[#F59E0B]/10 focus:scale-[1.01]" style={{ color: '#0d1b2a' }}
                                             />
                                             <button
                                                 type="button"
                                                 onClick={() => setShowPassword(!showPassword)}
                                                 tabIndex={3}
-                                                className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                                                className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-800 transition-colors"
                                             >
                                                 {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                                             </button>
@@ -132,7 +132,7 @@ export default function Login({ status, canResetPassword, canRegister }: Props) 
                                             id="remember"
                                             className="w-5 h-5 rounded border-[#E5E7EB] text-[#F59E0B] focus:ring-[#F59E0B]"
                                         />
-                                        <label htmlFor="remember" className="text-sm font-medium text-gray-600 cursor-pointer">
+                                        <label htmlFor="remember" className="text-sm font-medium text-gray-400 cursor-pointer">
                                             Remember Me
                                         </label>
                                     </div>
@@ -161,7 +161,7 @@ export default function Login({ status, canResetPassword, canRegister }: Props) 
 
                                     {/* Sign up */}
                                     {canRegister && (
-                                        <p className="text-center text-sm text-gray-500 mt-4">
+                                        <p className="text-center text-sm text-gray-400 mt-4">
                                             Don't have an account?{' '}
                                             <TextLink href={register()} tabIndex={6} className="font-semibold text-[#F59E0B] hover:text-[#D97706] transition-colors hover:underline underline-offset-4">
                                                 Sign up

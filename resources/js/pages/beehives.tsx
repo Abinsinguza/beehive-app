@@ -143,7 +143,7 @@ export default function Beehives({ beehives = [], owners = [], search: initialSe
             enableColumnFilter: true,
             size: 140,
             Cell: ({ cell }) => {
-                return <p className="text-sm text-gray-600">{cell.getValue<string>()}</p>;
+                return <p className="text-sm" style={{ color: '#0d1b2a' }}>{cell.getValue<string>()}</p>;
             },
         },
         {
@@ -171,7 +171,7 @@ export default function Beehives({ beehives = [], owners = [], search: initialSe
             enableColumnFilter: true,
             size: 140,
             Cell: ({ row }) => {
-                return <p className="text-sm text-gray-600">{toTitleCase(row.original.owner?.name ?? '—')}</p>;
+                return <p className="text-sm" style={{ color: '#0d1b2a' }}>{toTitleCase(row.original.owner?.name ?? '—')}</p>;
             },
         },
     ], []);
@@ -183,19 +183,19 @@ export default function Beehives({ beehives = [], owners = [], search: initialSe
                 <div className="grid grid-cols-2 gap-4">
                     <div>
                         <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-400 mb-1">Hive Type</p>
-                        <p className="text-sm text-gray-700">{hive.hive_type || '—'}</p>
+                        <p className="text-sm" style={{ color: '#0d1b2a' }}>{hive.hive_type || '—'}</p>
                     </div>
                     <div>
                         <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-400 mb-1">Installation Date</p>
-                        <p className="text-sm text-gray-700">{fmtDate(hive.installation_date)}</p>
+                        <p className="text-sm" style={{ color: '#0d1b2a' }}>{fmtDate(hive.installation_date)}</p>
                     </div>
                     <div>
                         <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-400 mb-1">Latitude</p>
-                        <p className="text-sm text-gray-700">{hive.latitude || '—'}</p>
+                        <p className="text-sm" style={{ color: '#0d1b2a' }}>{hive.latitude || '—'}</p>
                     </div>
                     <div>
                         <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-400 mb-1">Longitude</p>
-                        <p className="text-sm text-gray-700">{hive.longitude || '—'}</p>
+                        <p className="text-sm" style={{ color: '#0d1b2a' }}>{hive.longitude || '—'}</p>
                     </div>
                 </div>
             </div>
@@ -211,7 +211,7 @@ export default function Beehives({ beehives = [], owners = [], search: initialSe
                 <div className="flex items-start justify-between gap-4">
                     <div>
                         <h1 className="text-2xl font-bold" style={{ color: '#0d1b2a' }}>Hive Inventory</h1>
-                        <p className="text-sm text-gray-500 mt-1">Manage and monitor active hives across all apiaries.</p>
+                        <p className="text-sm text-gray-400 mt-1">Manage and monitor active hives across all apiaries.</p>
                     </div>
                     <button
                         onClick={() => setShowModal(true)}
@@ -251,7 +251,7 @@ export default function Beehives({ beehives = [], owners = [], search: initialSe
                             </span>
                             <button
                                 onClick={exportCSV}
-                                className="px-4 py-2 rounded-lg border border-gray-300 text-xs font-bold uppercase tracking-widest text-gray-600 hover:bg-gray-50 transition-colors"
+                                className="px-4 py-2 rounded-lg border border-gray-300 text-xs font-bold uppercase tracking-widest text-gray-400 hover:bg-gray-50 transition-colors"
                             >
                                 Export CSV
                             </button>
@@ -322,12 +322,12 @@ export default function Beehives({ beehives = [], owners = [], search: initialSe
 
                             {/* Owner */}
                             <div className="flex flex-col gap-1.5">
-                                <label className="text-sm font-semibold text-gray-700">Owner <span className="text-red-500">*</span></label>
+                                <label className="text-sm font-semibold" style={{ color: '#0d1b2a' }}>Owner <span className="text-red-500">*</span></label>
                                 <select
                                     value={data.owner_id}
                                     onChange={(e) => setData('owner_id', e.target.value)}
                                     required
-                                    className="w-full border border-gray-300 rounded-lg px-3.5 py-2.5 text-sm text-gray-800 outline-none bg-white focus:border-amber-400 focus:ring-2 focus:ring-amber-100"
+                                    className="w-full border border-gray-300 rounded-lg px-3.5 py-2.5 text-sm outline-none bg-white focus:border-amber-400 focus:ring-2 focus:ring-amber-100" style={{ color: '#0d1b2a' }}
                                 >
                                     <option value="" disabled>Select a beekeeper…</option>
                                     {owners.map((o) => <option key={o.id} value={o.id}>{o.name}</option>)}
@@ -337,7 +337,7 @@ export default function Beehives({ beehives = [], owners = [], search: initialSe
 
                             {/* Hive Name */}
                             <div className="flex flex-col gap-1.5">
-                                <label className="text-sm font-semibold text-gray-700">
+                                <label className="text-sm font-semibold" style={{ color: '#0d1b2a' }}>
                                     Hive Name <span className="text-red-500">*</span>
                                     <span className="ml-2 text-xs font-normal text-gray-400">Friendly name e.g. "Hive #1"</span>
                                 </label>
@@ -347,28 +347,28 @@ export default function Beehives({ beehives = [], owners = [], search: initialSe
                                     onChange={(e) => setData('hive_name', e.target.value)}
                                     placeholder='e.g. Hive #1'
                                     required
-                                    className="w-full border border-gray-300 rounded-lg px-3.5 py-2.5 text-sm text-gray-800 placeholder-gray-400 outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-100"
+                                    className="w-full border border-gray-300 rounded-lg px-3.5 py-2.5 text-sm outline-none placeholder-gray-400 focus:border-amber-400 focus:ring-2 focus:ring-amber-100" style={{ color: '#0d1b2a' }}
                                 />
                                 {errors.hive_name && <p className="text-xs text-red-500">⚠ {errors.hive_name}</p>}
                             </div>
 
                             {/* Hive Location */}
                             <div className="flex flex-col gap-1.5">
-                                <label className="text-sm font-semibold text-gray-700">Hive Location <span className="text-red-500">*</span></label>
+                                <label className="text-sm font-semibold" style={{ color: '#0d1b2a' }}>Hive Location <span className="text-red-500">*</span></label>
                                 <input
                                     type="text"
                                     value={data.hive_location}
                                     onChange={(e) => setData('hive_location', e.target.value)}
                                     placeholder="e.g. North Orchard – Plot 4"
                                     required
-                                    className="w-full border border-gray-300 rounded-lg px-3.5 py-2.5 text-sm text-gray-800 placeholder-gray-400 outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-100"
+                                    className="w-full border border-gray-300 rounded-lg px-3.5 py-2.5 text-sm outline-none placeholder-gray-400 focus:border-amber-400 focus:ring-2 focus:ring-amber-100" style={{ color: '#0d1b2a' }}
                                 />
                                 {errors.hive_location && <p className="text-xs text-red-500">⚠ {errors.hive_location}</p>}
                             </div>
 
                             {/* Hive Type */}
                             <div className="flex flex-col gap-1.5">
-                                <label className="text-sm font-semibold text-gray-700">
+                                <label className="text-sm font-semibold" style={{ color: '#0d1b2a' }}>
                                     Hive Type <span className="text-red-500">*</span>
                                     <span className="ml-2 text-xs font-normal text-gray-400">e.g. "Langstroth", "Kenyan Top Bar", "Warre"</span>
                                 </label>
@@ -376,7 +376,7 @@ export default function Beehives({ beehives = [], owners = [], search: initialSe
                                     value={data.hive_type}
                                     onChange={(e) => setData('hive_type', e.target.value)}
                                     required
-                                    className="w-full border border-gray-300 rounded-lg px-3.5 py-2.5 text-sm text-gray-800 outline-none bg-white focus:border-amber-400 focus:ring-2 focus:ring-amber-100"
+                                    className="w-full border border-gray-300 rounded-lg px-3.5 py-2.5 text-sm outline-none bg-white focus:border-amber-400 focus:ring-2 focus:ring-amber-100" style={{ color: '#0d1b2a' }}
                                 >
                                     <option value="" disabled>Select hive type…</option>
                                     <option>Langstroth</option>
@@ -391,7 +391,7 @@ export default function Beehives({ beehives = [], owners = [], search: initialSe
 
                             {/* Installation Date */}
                             <div className="flex flex-col gap-1.5">
-                                <label className="text-sm font-semibold text-gray-700">
+                                <label className="text-sm font-semibold" style={{ color: '#0d1b2a' }}>
                                     Installation Date <span className="text-red-500">*</span>
                                     <span className="ml-2 text-xs font-normal text-gray-400">Date the hive was set up</span>
                                 </label>
@@ -400,19 +400,19 @@ export default function Beehives({ beehives = [], owners = [], search: initialSe
                                     value={data.installation_date ? new Date(data.installation_date).toISOString().split('T')[0] : ''}
                                     onChange={(e) => setData('installation_date', e.target.value)}
                                     required
-                                    className="w-full border border-gray-300 rounded-lg px-3.5 py-2.5 text-sm text-gray-800 outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-100"
+                                    className="w-full border border-gray-300 rounded-lg px-3.5 py-2.5 text-sm outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-100" style={{ color: '#0d1b2a' }}
                                 />
                                 {errors.installation_date && <p className="text-xs text-red-500">⚠ {errors.installation_date}</p>}
                             </div>
 
                             {/* GPS Coordinates */}
                             <div className="flex flex-col gap-1.5">
-                                <label className="text-sm font-semibold text-gray-700">
+                                <label className="text-sm font-semibold" style={{ color: '#0d1b2a' }}>
                                     GPS Coordinates <span className="text-xs font-normal text-gray-400">(optional — up to 6 decimal places)</span>
                                 </label>
                                 <div className="grid grid-cols-2 gap-3">
                                     <div className="flex flex-col gap-1">
-                                        <span className="text-xs text-gray-500 font-medium">Latitude</span>
+                                        <span className="text-xs text-gray-400 font-medium">Latitude</span>
                                         <input
                                             type="number"
                                             step="0.000001"
@@ -420,12 +420,12 @@ export default function Beehives({ beehives = [], owners = [], search: initialSe
                                             value={data.latitude}
                                             onChange={(e) => setData('latitude', e.target.value)}
                                             placeholder="e.g. 0.347596"
-                                            className="w-full border border-gray-300 rounded-lg px-3.5 py-2.5 text-sm text-gray-800 placeholder-gray-400 outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-100"
+                                            className="w-full border border-gray-300 rounded-lg px-3.5 py-2.5 text-sm outline-none placeholder-gray-400 focus:border-amber-400 focus:ring-2 focus:ring-amber-100" style={{ color: '#0d1b2a' }}
                                         />
                                         {errors.latitude && <p className="text-xs text-red-500">⚠ {errors.latitude}</p>}
                                     </div>
                                     <div className="flex flex-col gap-1">
-                                        <span className="text-xs text-gray-500 font-medium">Longitude</span>
+                                        <span className="text-xs text-gray-400 font-medium">Longitude</span>
                                         <input
                                             type="number"
                                             step="0.000001"
@@ -433,7 +433,7 @@ export default function Beehives({ beehives = [], owners = [], search: initialSe
                                             value={data.longitude}
                                             onChange={(e) => setData('longitude', e.target.value)}
                                             placeholder="e.g. 32.582520"
-                                            className="w-full border border-gray-300 rounded-lg px-3.5 py-2.5 text-sm text-gray-800 placeholder-gray-400 outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-100"
+                                            className="w-full border border-gray-300 rounded-lg px-3.5 py-2.5 text-sm outline-none placeholder-gray-400 focus:border-amber-400 focus:ring-2 focus:ring-amber-100" style={{ color: '#0d1b2a' }}
                                         />
                                         {errors.longitude && <p className="text-xs text-red-500">⚠ {errors.longitude}</p>}
                                     </div>
@@ -443,7 +443,7 @@ export default function Beehives({ beehives = [], owners = [], search: initialSe
                             {/* Actions */}
                             <div className="flex justify-end gap-3 pt-1">
                                 <button type="button" onClick={() => setShowModal(false)}
-                                    className="px-4 py-2 rounded-lg border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-50">
+                                    className="px-4 py-2 rounded-lg border border-gray-200 text-sm font-medium text-gray-400 hover:bg-gray-50">
                                     Cancel
                                 </button>
                                 <button type="submit" disabled={processing}
@@ -501,7 +501,7 @@ function EditHiveModal({ hive, owners, onClose }: { hive: Beehive; owners: Owner
                     <div>
                         <label className="text-xs font-semibold uppercase tracking-widest text-gray-400 block mb-1.5">Owner</label>
                         <select value={data.owner_id} onChange={(e) => setData('owner_id', e.target.value)}
-                            className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-700 outline-none bg-white" required>
+                            className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm outline-none bg-white" required style={{ color: '#0d1b2a' }}>
                             <option value="" disabled>Select a beekeeper</option>
                             {owners.map((o) => <option key={o.id} value={o.id}>{o.name}</option>)}
                         </select>
@@ -511,26 +511,26 @@ function EditHiveModal({ hive, owners, onClose }: { hive: Beehive; owners: Owner
                         <label className="text-xs font-semibold uppercase tracking-widest text-gray-400 block mb-1.5">Location</label>
                         <input type="text" value={data.hive_location} onChange={(e) => setData('hive_location', e.target.value)}
                             placeholder="e.g. North Field, Sector B"
-                            className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-700 outline-none placeholder-gray-300" required />
+                            className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm outline-none placeholder-gray-300" required style={{ color: '#0d1b2a' }} />
                         {errors.hive_location && <p className="text-xs text-red-500 mt-1">{errors.hive_location}</p>}
                     </div>
                     <div>
                         <label className="text-xs font-semibold uppercase tracking-widest text-gray-400 block mb-1.5">Hive Type</label>
                         <input type="text" value={data.hive_type} onChange={(e) => setData('hive_type', e.target.value)}
                             placeholder="e.g. Langstroth, Top-bar"
-                            className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-700 outline-none placeholder-gray-300" required />
+                            className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm outline-none placeholder-gray-300" required style={{ color: '#0d1b2a' }} />
                         {errors.hive_type && <p className="text-xs text-red-500 mt-1">{errors.hive_type}</p>}
                     </div>
                     <div>
                         <label className="text-xs font-semibold uppercase tracking-widest text-gray-400 block mb-1.5">Installation Date</label>
                         <input type="date" value={data.installation_date ? new Date(data.installation_date).toISOString().split('T')[0] : ''} onChange={(e) => setData('installation_date', e.target.value)}
-                            className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-700 outline-none" required />
+                            className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm outline-none" required style={{ color: '#0d1b2a' }} />
                         {errors.installation_date && <p className="text-xs text-red-500 mt-1">{errors.installation_date}</p>}
                     </div>
                     <div>
                         <label className="text-xs font-semibold uppercase tracking-widest text-gray-400 block mb-1.5">Current State</label>
                         <select value={data.current_state} onChange={(e) => setData('current_state', e.target.value)}
-                            className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-700 outline-none bg-white" required>
+                            className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm outline-none bg-white" required style={{ color: '#0d1b2a' }}>
                             <option value="">Select state</option>
                             <option value="active">Active / Stable</option>
                             <option value="migrated">Temp Warning</option>
@@ -541,7 +541,7 @@ function EditHiveModal({ hive, owners, onClose }: { hive: Beehive; owners: Owner
                     </div>
                     <div className="flex justify-end gap-3 pt-2">
                         <button type="button" onClick={onClose}
-                            className="px-4 py-2 rounded-lg border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-50">Cancel</button>
+                            className="px-4 py-2 rounded-lg border border-gray-200 text-sm font-medium text-gray-400 hover:bg-gray-50">Cancel</button>
                         <button type="submit" disabled={processing}
                             className="px-4 py-2 rounded-lg text-sm font-semibold hover:opacity-90 disabled:opacity-60"
                             style={{ backgroundColor: '#f5a623', color: '#0d1b2a' }}>
