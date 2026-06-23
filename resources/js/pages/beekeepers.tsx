@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { type MRT_ColumnDef } from 'material-react-table';
 import { MenuItem } from '@mui/material';
 import { DataTable } from '@/components/data-table';
+import { cleanDataArray, formatDisplayText } from '@/lib/utils';
 
 type Beekeeper = {
     user_id: string;
@@ -262,6 +263,14 @@ export default function Beekeepers({
 }: {
     beekeepers?: Beekeeper[];
 }) {
+    // Clean the data immediately when props are received!
+    const cleanedBeekeepers = useMemo(() => {
+        return cleanDataArray(beekeepers, [
+            'full_name',
+            'address'
+        ]);
+    }, [beekeepers]);
+
     const [showAddModal, setShowAddModal] = useState(false);
     const [editTarget, setEditTarget]     = useState<Beekeeper | null>(null);
     const [revokeTarget, setRevokeTarget]     = useState<Beekeeper | null>(null);
@@ -287,7 +296,7 @@ export default function Beekeepers({
 
     const exportCSV = () => {
         const headers = ['Name', 'Email', 'Phone', 'Role', 'Status', 'Hives', 'Address', 'Sign Up Date'];
-        const rows = beekeepers.map((bk) => [
+        const rows = cleanedBeekeepers.map((bk) => [
             bk.full_name,
             bk.email ?? '',
             bk.phone,
@@ -445,7 +454,7 @@ export default function Beekeepers({
                     <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
                         <p className="text-[11px] font-semibold uppercase tracking-widest text-gray-400">Total Beekeepers</p>
                         <div className="flex items-end gap-2 mt-2">
-                            <p className="text-4xl font-bold" style={{ color: '#0d1b2a' }}>{beekeepers.length}</p>
+                            <p className="text-4xl font-bold" style={{ color: '#0d1b2a' }}>{cleanedBeekeepers.length}</p>
                         </div>
                         <div className="mt-3 h-1 w-16 rounded-full" style={{ backgroundColor: '#f5a623' }} />
                     </div>
@@ -461,7 +470,7 @@ export default function Beekeepers({
                         <p className="text-[11px] font-semibold uppercase tracking-widest text-gray-400">Active Beekeepers</p>
                         <div className="flex items-end gap-2 mt-2">
                             <p className="text-4xl font-bold text-emerald-500">
-                                {beekeepers.filter((bk) => getStatus(bk) === 'active').length}
+                                {cleanedBeekeepers.filter((bk) => getStatus(bk) === 'active').length}
                             </p>
                         </div>
                         <div className="mt-3 h-1 w-16 rounded-full bg-emerald-100" />
@@ -470,7 +479,7 @@ export default function Beekeepers({
                         <p className="text-[11px] font-semibold uppercase tracking-widest text-gray-400">Inactive / Revoked</p>
                         <div className="flex items-end gap-2 mt-2">
                             <p className="text-4xl font-bold text-gray-400">
-                                {beekeepers.filter((bk) => getStatus(bk) !== 'active').length}
+                                {cleanedBeekeepers.filter((bk) => getStatus(bk) !== 'active').length}
                             </p>
                         </div>
                         <div className="mt-3 h-1 w-16 rounded-full bg-gray-200" />
@@ -486,7 +495,7 @@ export default function Beekeepers({
                     </div>
                     <DataTable
                         columns={columns}
-                        data={beekeepers}
+                        data={cleanedBeekeepers}
                         getRowId={(row) => row.user_id}
                         enableRowActions={true}
                         renderRowActionMenuItems={({ closeMenu, row }) => [

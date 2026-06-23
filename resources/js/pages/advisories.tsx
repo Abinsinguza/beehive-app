@@ -4,6 +4,7 @@ import React, { useState, useMemo } from 'react';
 import { type MRT_ColumnDef } from 'material-react-table';
 import { DataTable } from '@/components/data-table';
 import AppLayout from '@/layouts/app-layout';
+import { formatDisplayText, cleanDataArray } from '@/lib/utils';
 
 type Template = {
     template_id: number;
@@ -91,6 +92,19 @@ export default function Advisories({
     const [showAddItem, setShowAddItem] = useState(false);
     const [editItem, setEditItem] = useState<Advisory | null>(null);
     const [deleteItem, setDeleteItem] = useState<Advisory | null>(null);
+
+    // Clean incoming data
+    const cleanedTemplates = useMemo(() => {
+        return cleanDataArray(templates, ['hive_state', 'advisory_type', 'description']);
+    }, [templates]);
+
+    const cleanedAdvisories = useMemo(() => {
+        return cleanDataArray(advisories, ['template.hive_state', 'action_title', 'action_description']);
+    }, [advisories]);
+
+    const cleanedActions = useMemo(() => {
+        return cleanDataArray(actions, ['hive.hive_name', 'hive.hive_location', 'action_title', 'action_description']);
+    }, [actions]);
 
     const { data, setData, post, reset, processing, errors } = useForm({
         prediction_code: '',
@@ -410,7 +424,7 @@ export default function Advisories({
                     <div>
                         <h1 className="text-2xl font-bold" style={{ color: '#0d1b2a' }}>Advisories</h1>
                         <p className="text-sm text-gray-500 mt-1">
-                            {templates.length} template{templates.length !== 1 ? 's' : ''} · {advisories.length} advisor{advisories.length !== 1 ? 'ies' : 'y'} · {actions.length} triggered action{actions.length !== 1 ? 's' : ''}
+                            {cleanedTemplates.length} template{cleanedTemplates.length !== 1 ? 's' : ''} · {cleanedAdvisories.length} advisor{cleanedAdvisories.length !== 1 ? 'ies' : 'y'} · {cleanedActions.length} triggered action{cleanedActions.length !== 1 ? 's' : ''}
                         </p>
                     </div>
                     {tab === 'templates' && (
@@ -444,7 +458,7 @@ export default function Advisories({
                         Templates
                         <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full"
                             style={tab === 'templates' ? { backgroundColor: '#f5a623', color: '#0d1b2a' } : { backgroundColor: '#f1f5f9', color: '#64748b' }}>
-                            {templates.length}
+                            {cleanedTemplates.length}
                         </span>
                     </button>
                     <button
@@ -456,7 +470,7 @@ export default function Advisories({
                         Advisories
                         <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full"
                             style={tab === 'advisories' ? { backgroundColor: '#f5a623', color: '#0d1b2a' } : { backgroundColor: '#f1f5f9', color: '#64748b' }}>
-                            {advisories.length}
+                            {cleanedAdvisories.length}
                         </span>
                     </button>
                     <button
@@ -468,14 +482,14 @@ export default function Advisories({
                         Advisory Actions
                         <span className="text-[10px] font-bold px-1.5 py-0.5 rounded-full"
                             style={tab === 'actions' ? { backgroundColor: '#f5a623', color: '#0d1b2a' } : { backgroundColor: '#f1f5f9', color: '#64748b' }}>
-                            {actions.length}
+                            {cleanedActions.length}
                         </span>
                     </button>
                 </div>
 
                 {/* ── Templates tab ── */}
                 {tab === 'templates' && (
-                    templates.length === 0 ? (
+                    cleanedTemplates.length === 0 ? (
                         <EmptyState
                             label="No advisory templates yet"
                             hint="Add your first template to get started"
@@ -485,7 +499,7 @@ export default function Advisories({
                         <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
                             <DataTable
                                 columns={templateColumns}
-                                data={templates}
+                                data={cleanedTemplates}
                                 getRowId={(row) => String(row.template_id)}
                             />
                         </div>
@@ -494,7 +508,7 @@ export default function Advisories({
 
                 {/* ── Advisories tab ── */}
                 {tab === 'advisories' && (
-                    advisories.length === 0 ? (
+                    cleanedAdvisories.length === 0 ? (
                         <EmptyState
                             label="No advisories yet"
                             hint="Add your first advisory action to get started"
@@ -505,7 +519,7 @@ export default function Advisories({
                         <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
                             <DataTable
                                 columns={advisoryColumns}
-                                data={advisories}
+                                data={cleanedAdvisories}
                                 getRowId={(row) => row.advisory_id}
                             />
                         </div>
@@ -514,7 +528,7 @@ export default function Advisories({
 
                 {/* ── Advisory Actions tab ── */}
                 {tab === 'actions' && (
-                    actions.length === 0 ? (
+                    cleanedActions.length === 0 ? (
                         <EmptyState
                             label="No advisory actions triggered yet"
                             hint="Actions are created automatically when an inference triggers an advisory"
@@ -523,7 +537,7 @@ export default function Advisories({
                         <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
                             <DataTable
                                 columns={actionColumns}
-                                data={actions}
+                                data={cleanedActions}
                                 getRowId={(row) => row.action_id}
                             />
                         </div>
@@ -612,12 +626,12 @@ export default function Advisories({
 
             {/* Add Advisory Modal */}
             {showAddItem && (
-                <AdvisoryItemModal templates={templates} onClose={() => setShowAddItem(false)} />
+                <AdvisoryItemModal templates={cleanedTemplates} onClose={() => setShowAddItem(false)} />
             )}
 
             {/* Edit Advisory Modal */}
             {editItem && (
-                <AdvisoryItemModal templates={templates} item={editItem} onClose={() => setEditItem(null)} />
+                <AdvisoryItemModal templates={cleanedTemplates} item={editItem} onClose={() => setEditItem(null)} />
             )}
 
             {/* Delete Template confirmation */}

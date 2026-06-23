@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react';
 import { type MRT_ColumnDef } from 'material-react-table';
 import { MenuItem } from '@mui/material';
 import { DataTable } from '@/components/data-table';
+import { formatDisplayText, cleanDataArray } from '@/lib/utils';
 
 type Owner = { id: string; name: string };
 type Beehive = {
@@ -17,22 +18,22 @@ type Beehive = {
 };
 
 const statusConfig: Record<string, { label: string; bg: string; color: string }> = {
-    active:           { label: 'STABLE',       bg: '#0d1b2a', color: '#ffffff' },
-    inactive:         { label: 'MAINTENANCE',  bg: '#0d1b2a', color: '#ffffff' },
-    migrated:         { label: 'TEMP WARNING', bg: '#fff7ed', color: '#f5a623' },
-    lost:             { label: 'SWARM LIKELY', bg: '#fff7ed', color: '#f5a623' },
-    unknown:          { label: 'UNKNOWN',      bg: '#f1f5f9', color: '#64748b' },
+    active:           { label: 'Stable',       bg: '#0d1b2a', color: '#ffffff' },
+    inactive:         { label: 'Maintenance',  bg: '#0d1b2a', color: '#ffffff' },
+    migrated:         { label: 'Temp Warning', bg: '#fff7ed', color: '#f5a623' },
+    lost:             { label: 'Swarm Likely', bg: '#fff7ed', color: '#f5a623' },
+    unknown:          { label: 'Unknown',      bg: '#f1f5f9', color: '#64748b' },
     // ML-detected hive states — same colors as the ML Results table (inferences.tsx)
-    normal:           { label: 'NORMAL',         bg: '#dcfce7', color: '#16a34a' },
-    pre_swarm:        { label: 'PRE-SWARM',       bg: '#fef3c7', color: '#d97706' },
-    swarm:            { label: 'SWARM',           bg: '#fee2e2', color: '#dc2626' },
-    abscondence:      { label: 'ABSCONDENCE',     bg: '#fce7f3', color: '#9d174d' },
-    external_noise:   { label: 'EXTERNAL NOISE',  bg: '#ffedd5', color: '#ea580c' },
-    pest_disturbance: { label: 'PEST DISTURBANCE', bg: '#ffedd5', color: '#ea580c' },
-    uncertain:        { label: 'UNCERTAIN',       bg: '#f1f5f9', color: '#64748b' },
+    normal:           { label: 'Normal',         bg: '#dcfce7', color: '#16a34a' },
+    pre_swarm:        { label: 'Pre-swarm',       bg: '#fef3c7', color: '#d97706' },
+    swarm:            { label: 'Swarm',           bg: '#fee2e2', color: '#dc2626' },
+    abscondence:      { label: 'Abscondence',     bg: '#fce7f3', color: '#9d174d' },
+    external_noise:   { label: 'External Noise',  bg: '#ffedd5', color: '#ea580c' },
+    pest_disturbance: { label: 'Pest Disturbance', bg: '#ffedd5', color: '#ea580c' },
+    uncertain:        { label: 'Uncertain',       bg: '#f1f5f9', color: '#64748b' },
 };
 
-const defaultStatusStyle = { label: 'UNKNOWN', bg: '#f1f5f9', color: '#64748b' };
+const defaultStatusStyle = { label: 'Unknown', bg: '#f1f5f9', color: '#64748b' };
 
 function fmtDate(v: string | null) {
     if (!v) return '—';
@@ -44,6 +45,16 @@ function fmtDate(v: string | null) {
 export default function Beehives({ beehives = [], owners = [], search: initialSearch = '' }: { beehives?: Beehive[]; owners?: Owner[]; search?: string }) {
     const [showModal, setShowModal] = useState(false);
     const [editTarget, setEditTarget] = useState<Beehive | null>(null);
+
+    // Clean the beehives data on load
+    const cleanedBeehives = useMemo(() => {
+        return cleanDataArray(beehives, [
+            'hive_name',
+            'hive_location',
+            'hive_type',
+            'owner.name'
+        ]);
+    }, [beehives]);
 
     // Debug: Check beehives reference stability
     if (typeof window !== 'undefined') {
@@ -68,20 +79,20 @@ export default function Beehives({ beehives = [], owners = [], search: initialSe
         post('/beehives', { onSuccess: () => { reset(); setShowModal(false); } });
     };
 
-    const filteredHives = beehives;
+    const filteredHives = cleanedBeehives;
 
-    const statusCounts = [...new Set(beehives.map((h) => h.current_state))]
+    const statusCounts = [...new Set(cleanedBeehives.map((h) => h.current_state))]
         .sort()
         .map((state) => ({
             state,
-            count: beehives.filter((h) => h.current_state === state).length,
+            count: cleanedBeehives.filter((h) => h.current_state === state).length,
         }));
 
     // Export CSV
     const exportCSV = () => {
         const headers = ['Hive Name', 'Location', 'Hive Type', 'Current Status', 'Owner', 'Installation Date'];
         const escape  = (v: string) => `"${v.replace(/"/g, '""')}"`;
-        const csvRows = beehives.map((h) => {
+        const csvRows = cleanedBeehives.map((h) => {
             const sc = statusConfig[h.current_state] ?? statusConfig.active;
             return [h.hive_name ?? '—', h.hive_location, h.hive_type, sc.label, h.owner?.name ?? '—', h.installation_date];
         });
@@ -96,7 +107,8 @@ export default function Beehives({ beehives = [], owners = [], search: initialSe
     };
 
     const handleDelete = (hive: Beehive) => {
-        if (window.confirm(`Delete "${hive.hive_name || hive.hive_location}"? This cannot be undone.`)) {
+        const displayName = formatDisplayText(hive.hive_name) || formatDisplayText(hive.hive_location);
+        if (window.confirm(`Delete "${displayName}"? This cannot be undone.`)) {
             router.delete(`/beehives/${hive.id}`);
         }
     };
@@ -121,9 +133,10 @@ export default function Beehives({ beehives = [], owners = [], search: initialSe
             enableColumnFilter: true,
             size: 200,
             Cell: ({ row }) => {
+                const name = row.original.hive_name;
                 return (
                     <div>
-                        <p className="font-semibold text-sm" style={{ color: '#0d1b2a' }}>{row.original.hive_name || '—'}</p>
+                        <p className="font-semibold text-sm" style={{ color: '#0d1b2a' }}>{name || '—'}</p>
                         <p className="text-xs text-gray-400">{row.original.hive_type}</p>
                     </div>
                 );
@@ -145,14 +158,14 @@ export default function Beehives({ beehives = [], owners = [], search: initialSe
             enableSorting: true,
             enableColumnFilter: true,
             filterVariant: 'select',
-            filterSelectOptions: ['active', 'inactive', 'migrated', 'lost', 'unknown'],
+            filterSelectOptions: ['active', 'inactive', 'migrated', 'lost', 'unknown', 'normal', 'pre_swarm', 'swarm', 'abscondence', 'external_noise', 'pest_disturbance', 'uncertain'],
             size: 140,
             Cell: ({ row }) => {
                 const sc = statusConfig[row.original.current_state] ?? defaultStatusStyle;
                 return (
-                    <span className="text-[10px] font-bold px-2 py-0.5 rounded uppercase tracking-widest whitespace-nowrap"
+                    <span className="text-[10px] font-bold px-2 py-0.5 rounded tracking-widest whitespace-nowrap"
                         style={{ backgroundColor: sc.bg, color: sc.color }}>
-                        {row.original.current_state}
+                        {sc.label}
                     </span>
                 );
             },
@@ -203,13 +216,13 @@ export default function Beehives({ beehives = [], owners = [], search: initialSe
                 <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3">
                     <div className="bg-white rounded-lg border border-gray-200 shadow-sm px-4 py-3">
                         <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-400">Total Hives</p>
-                        <p className="text-2xl font-bold mt-1" style={{ color: '#0d1b2a' }}>{beehives.length}</p>
+                        <p className="text-2xl font-bold mt-1" style={{ color: '#0d1b2a' }}>{cleanedBeehives.length}</p>
                     </div>
                     {statusCounts.map(({ state, count }) => {
                         const sc = statusConfig[state] ?? defaultStatusStyle;
                         return (
                             <div key={state} className="bg-white rounded-lg border border-gray-200 shadow-sm px-4 py-3">
-                                <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-400">{state}</p>
+                                <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-400">{sc.label}</p>
                                 <p className="text-2xl font-bold mt-1" style={{ color: sc.bg === '#0d1b2a' ? '#0d1b2a' : sc.color }}>
                                     {count}
                                 </p>
@@ -224,7 +237,7 @@ export default function Beehives({ beehives = [], owners = [], search: initialSe
                         <h2 className="font-semibold text-sm" style={{ color: '#0d1b2a' }}>Active Monitoring Registry</h2>
                         <div className="flex items-center gap-2">
                             <span className="text-xs text-gray-400">
-                                {initialSearch ? `Results for "${initialSearch}"` : `${beehives.length} hives`}
+                                {initialSearch ? `Results for "${initialSearch}"` : `${cleanedBeehives.length} hives`}
                             </span>
                             <button
                                 onClick={exportCSV}
@@ -237,7 +250,7 @@ export default function Beehives({ beehives = [], owners = [], search: initialSe
 
                     <DataTable
                         columns={columns}
-                        data={beehives}
+                        data={cleanedBeehives}
                         getRowId={(row) => row.id}
                         enableRowActions={true}
                         renderRowActionMenuItems={({ closeMenu, row }) => [
