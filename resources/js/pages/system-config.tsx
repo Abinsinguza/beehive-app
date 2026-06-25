@@ -148,7 +148,7 @@ export default function SystemConfig({ settings }: { settings: Settings }) {
                 {/* Page heading */}
                 <div>
                     <h1 className="text-2xl font-bold" style={{ color: '#0d1b2a' }}>System Settings</h1>
-                    <p className="text-sm text-gray-500 mt-1">Configure swarm detection algorithms and global integration keys.</p>
+                    <p className="text-sm text-gray-400 mt-1">Configure swarm detection algorithms and global integration keys.</p>
                 </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
@@ -242,7 +242,7 @@ export default function SystemConfig({ settings }: { settings: Settings }) {
                         {/* SMS / Notifications — wired to DB ──────────────────────────── */}
                         <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
                             <div className="flex items-center gap-2 mb-1">
-                                <Smartphone className="w-5 h-5 text-gray-500" />
+                                <Smartphone className="w-5 h-5 text-gray-400" />
                                 <h2 className="font-semibold text-base" style={{ color: '#0d1b2a' }}>SMS Notifications</h2>
                             </div>
                             <div className="h-px mb-5" style={{ backgroundColor: '#f5a623' }} />
@@ -257,7 +257,7 @@ export default function SystemConfig({ settings }: { settings: Settings }) {
                                     value={data.sms_server_url}
                                     onChange={(e) => setData('sms_server_url', e.target.value)}
                                     placeholder="https://comms-test.pahappa.net/api/v1/json/"
-                                    className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-700 outline-none placeholder-gray-300"
+                                    className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm outline-none placeholder-gray-300" style={{ color: '#0d1b2a' }}
                                 />
                                 {errors.sms_server_url && <p className="text-xs text-red-500 mt-1">{errors.sms_server_url}</p>}
                             </div>
@@ -271,7 +271,7 @@ export default function SystemConfig({ settings }: { settings: Settings }) {
                                         value={data.sms_username}
                                         onChange={(e) => setData('sms_username', e.target.value)}
                                         placeholder="your-sms-username"
-                                        className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-700 outline-none placeholder-gray-300"
+                                        className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm outline-none placeholder-gray-300" style={{ color: '#0d1b2a' }}
                                     />
                                     {errors.sms_username && <p className="text-xs text-red-500 mt-1">{errors.sms_username}</p>}
                                 </div>
@@ -282,7 +282,7 @@ export default function SystemConfig({ settings }: { settings: Settings }) {
                                         value={data.sms_sender_id}
                                         onChange={(e) => setData('sms_sender_id', e.target.value)}
                                         placeholder="BeeHive"
-                                        className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-700 outline-none placeholder-gray-300"
+                                        className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm outline-none placeholder-gray-300" style={{ color: '#0d1b2a' }}
                                     />
                                     {errors.sms_sender_id && <p className="text-xs text-red-500 mt-1">{errors.sms_sender_id}</p>}
                                 </div>
@@ -299,10 +299,10 @@ export default function SystemConfig({ settings }: { settings: Settings }) {
                                         value={data.sms_api_key}
                                         onChange={(e) => setData('sms_api_key', e.target.value)}
                                         placeholder="••••••••••••••••"
-                                        className="flex-1 border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-700 outline-none placeholder-gray-300"
+                                        className="flex-1 border border-gray-200 rounded-lg px-3 py-2.5 text-sm outline-none placeholder-gray-300" style={{ color: '#0d1b2a' }}
                                     />
                                     <button type="button" onClick={() => setShowApiKey((v) => !v)}
-                                        className="p-2.5 rounded-lg border border-gray-200 text-gray-400 hover:text-gray-600 hover:bg-gray-50 transition-colors">
+                                        className="p-2.5 rounded-lg border border-gray-200 text-gray-400 hover:text-gray-800 hover:bg-gray-50 transition-colors">
                                         {showApiKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                                     </button>
                                 </div>
@@ -319,7 +319,7 @@ export default function SystemConfig({ settings }: { settings: Settings }) {
                                     value={data.sms_template}
                                     onChange={(e) => setData('sms_template', e.target.value)}
                                     rows={5}
-                                    className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-700 outline-none resize-none font-mono"
+                                    className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm outline-none resize-none font-mono" style={{ color: '#0d1b2a' }}
                                 />
                                 {errors.sms_template && <p className="text-xs text-red-500 mt-1">{errors.sms_template}</p>}
 
@@ -331,7 +331,7 @@ export default function SystemConfig({ settings }: { settings: Settings }) {
                                             type="button"
                                             title={desc}
                                             onClick={() => insertWildcard(tag)}
-                                            className="text-[10px] font-mono px-2 py-1 rounded border border-gray-200 text-gray-500 hover:border-orange-300 hover:text-orange-600 hover:bg-orange-50 transition-colors"
+                                            className="text-[10px] font-mono px-2 py-1 rounded border border-gray-200 text-gray-400 hover:border-orange-300 hover:text-orange-600 hover:bg-orange-50 transition-colors"
                                         >
                                             {tag}
                                         </button>
@@ -342,7 +342,7 @@ export default function SystemConfig({ settings }: { settings: Settings }) {
                                 {data.sms_template && (
                                     <div className="mt-3 rounded-lg p-3 border border-dashed border-gray-200" style={{ backgroundColor: '#f8f9fa' }}>
                                         <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1">Preview</p>
-                                        <p className="text-xs text-gray-600 whitespace-pre-line">{previewText}</p>
+                                        <p className="text-xs whitespace-pre-line" style={{ color: '#0d1b2a' }}>{previewText}</p>
                                     </div>
                                 )}
                             </div>
@@ -363,7 +363,7 @@ export default function SystemConfig({ settings }: { settings: Settings }) {
                             <div className="flex flex-col gap-3">
                                 {routes.map((r, i) => (
                                     <div key={r.label} className="flex items-center justify-between gap-2">
-                                        <span className={`text-sm ${r.muted ? 'text-gray-400' : 'text-gray-700'}`}>{r.label}</span>
+                                        <span className={`text-sm ${r.muted ? 'text-gray-400' : ''}`} style={{ color: r.muted ? undefined : '#0d1b2a' }}>{r.label}</span>
                                         <Toggle on={r.enabled} onChange={() => toggleRoute(i)} />
                                     </div>
                                 ))}
@@ -408,7 +408,7 @@ export default function SystemConfig({ settings }: { settings: Settings }) {
                             {processing ? 'Saving…' : 'Save Changes'}
                         </button>
 
-                        <button type="button" className="w-full py-3 rounded-xl text-sm font-bold border border-gray-300 text-gray-700 hover:bg-gray-50 transition-colors">
+                        <button type="button" className="w-full py-3 rounded-xl text-sm font-bold border border-gray-300 text-gray-400 hover:bg-gray-50 transition-colors">
                             Export Configuration
                         </button>
 

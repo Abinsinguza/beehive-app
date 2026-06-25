@@ -177,12 +177,13 @@ function AddHiveModal({ beekeeperId, onClose }: { beekeeperId: string; onClose: 
                                 placeholder="e.g. Hive 21 — Lang"
                                 required
                                 className={[
-                                    'w-full rounded-lg px-3.5 py-2.5 text-sm text-gray-800 placeholder-gray-400',
+                                    'w-full rounded-lg px-3.5 py-2.5 text-sm placeholder-gray-400',
                                     'border outline-none transition-colors',
                                     errors.hive_name
                                         ? 'border-red-400 bg-red-50 focus:border-red-500'
                                         : 'border-gray-300 bg-white focus:border-amber-400 focus:ring-2 focus:ring-amber-100',
                                 ].join(' ')}
+                                style={{ color: '#0d1b2a' }}
                             />
                             {errors.hive_name && (
                                 <p className="text-xs text-red-500 flex items-center gap-1">
@@ -427,7 +428,7 @@ export default function BeekeeperShow({ beekeeper }: { beekeeper: Beekeeper }) {
                 {/* Back */}
                 <button
                     onClick={() => router.visit('/beekeepers')}
-                    className="flex items-center gap-1.5 text-sm text-gray-500 hover:text-gray-800 w-fit"
+                    className="flex items-center gap-1.5 text-sm text-gray-400 hover:text-gray-800 w-fit"
                 >
                     <ChevronLeft className="w-4 h-4" /> Back to Beekeepers
                 </button>
@@ -450,7 +451,7 @@ export default function BeekeeperShow({ beekeeper }: { beekeeper: Beekeeper }) {
                                     <span style={{ color: sc.labelColor }}>{sc.label}</span>
                                 </span>
                             </div>
-                            <div className="flex items-center gap-4 flex-wrap text-xs text-gray-500 mt-0.5">
+                            <div className="flex items-center gap-4 flex-wrap text-xs text-gray-400 mt-0.5">
                                 {beekeeper.email && (
                                     <span className="flex items-center gap-1">
                                         <Mail className="w-3.5 h-3.5" /> {beekeeper.email}
@@ -555,7 +556,7 @@ export default function BeekeeperShow({ beekeeper }: { beekeeper: Beekeeper }) {
                                     <button
                                         onClick={(e) => { e.stopPropagation(); createFolder(hive.id); }}
                                         title="Create / retry recordings folder"
-                                        className="shrink-0 p-1.5 rounded hover:bg-gray-100 text-gray-400 hover:text-gray-600 transition-colors"
+                                        className="shrink-0 p-1.5 rounded hover:bg-gray-100 text-gray-400 hover:text-gray-800 transition-colors"
                                     >
                                         <FolderPlus className="w-3.5 h-3.5" />
                                     </button>

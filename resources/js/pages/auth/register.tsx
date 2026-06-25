@@ -41,8 +41,8 @@ export default function Register() {
                             </svg>
                         </div>
                         <div className="text-center">
-                            <h2 className="text-4xl font-bold text-gray-900 tracking-tight">Create Account</h2>
-                            <p className="text-base text-gray-500 mt-1.5">Join the swarm monitoring network</p>
+                            <h2 className="text-4xl font-bold tracking-tight" style={{ color: '#0d1b2a' }}>Create Account</h2>
+                            <p className="text-base text-gray-400 mt-1.5">Join the swarm monitoring network</p>
                         </div>
                     </div>
 
@@ -61,7 +61,7 @@ export default function Register() {
                                 <>
                                     {/* Full Name */}
                                     <div className="flex flex-col gap-2">
-                                        <label htmlFor="name" className="text-sm font-medium text-gray-700">
+                                        <label htmlFor="name" className="text-sm font-medium" style={{ color: '#0d1b2a' }}>
                                             Full Name
                                         </label>
                                         <div className="relative">
@@ -75,7 +75,7 @@ export default function Register() {
                                                 tabIndex={1}
                                                 autoComplete="name"
                                                 placeholder="Enter your full name"
-                                                className="w-full h-[52px] pl-12 pr-4 text-sm bg-white border border-[#E5E7EB] rounded-xl outline-none transition-all duration-200 text-gray-900 placeholder:text-gray-400 focus:border-[#F59E0B] focus:ring-4 focus:ring-[#F59E0B]/10 focus:scale-[1.01]"
+                                                className="w-full h-[52px] pl-12 pr-4 text-sm bg-white border border-[#E5E7EB] rounded-xl outline-none transition-all duration-200 placeholder:text-gray-400 focus:border-[#F59E0B] focus:ring-4 focus:ring-[#F59E0B]/10 focus:scale-[1.01]" style={{ color: '#0d1b2a' }}
                                             />
                                         </div>
                                         <InputError message={errors.name} />
@@ -83,7 +83,7 @@ export default function Register() {
 
                                     {/* Email */}
                                     <div className="flex flex-col gap-2">
-                                        <label htmlFor="email" className="text-sm font-medium text-gray-700">
+                                        <label htmlFor="email" className="text-sm font-medium" style={{ color: '#0d1b2a' }}>
                                             Email Address
                                         </label>
                                         <div className="relative">
@@ -96,7 +96,7 @@ export default function Register() {
                                                 tabIndex={2}
                                                 autoComplete="email"
                                                 placeholder="you@example.com"
-                                                className="w-full h-[52px] pl-12 pr-4 text-sm bg-white border border-[#E5E7EB] rounded-xl outline-none transition-all duration-200 text-gray-900 placeholder:text-gray-400 focus:border-[#F59E0B] focus:ring-4 focus:ring-[#F59E0B]/10 focus:scale-[1.01]"
+                                                className="w-full h-[52px] pl-12 pr-4 text-sm bg-white border border-[#E5E7EB] rounded-xl outline-none transition-all duration-200 placeholder:text-gray-400 focus:border-[#F59E0B] focus:ring-4 focus:ring-[#F59E0B]/10 focus:scale-[1.01]" style={{ color: '#0d1b2a' }}
                                             />
                                         </div>
                                         <InputError message={errors.email} />
@@ -104,7 +104,7 @@ export default function Register() {
 
                                     {/* Password */}
                                     <div className="flex flex-col gap-2">
-                                        <label htmlFor="password" className="text-sm font-medium text-gray-700">
+                                        <label htmlFor="password" className="text-sm font-medium" style={{ color: '#0d1b2a' }}>
                                             Password
                                         </label>
                                         <div className="relative">
@@ -117,13 +117,13 @@ export default function Register() {
                                                 tabIndex={3}
                                                 autoComplete="new-password"
                                                 placeholder="••••••••"
-                                                className="w-full h-[52px] pl-12 pr-12 text-sm bg-white border border-[#E5E7EB] rounded-xl outline-none transition-all duration-200 text-gray-900 placeholder:text-gray-400 focus:border-[#F59E0B] focus:ring-4 focus:ring-[#F59E0B]/10 focus:scale-[1.01]"
+                                                className="w-full h-[52px] pl-12 pr-12 text-sm bg-white border border-[#E5E7EB] rounded-xl outline-none transition-all duration-200 placeholder:text-gray-400 focus:border-[#F59E0B] focus:ring-4 focus:ring-[#F59E0B]/10 focus:scale-[1.01]" style={{ color: '#0d1b2a' }}
                                             />
                                             <button
                                                 type="button"
                                                 onClick={() => setShowPassword(!showPassword)}
                                                 tabIndex={3}
-                                                className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                                                className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-800 transition-colors"
                                             >
                                                 {showPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                                             </button>
@@ -133,7 +133,7 @@ export default function Register() {
 
                                     {/* Confirm Password */}
                                     <div className="flex flex-col gap-2">
-                                        <label htmlFor="password_confirmation" className="text-sm font-medium text-gray-700">
+                                        <label htmlFor="password_confirmation" className="text-sm font-medium" style={{ color: '#0d1b2a' }}>
                                             Confirm Password
                                         </label>
                                         <div className="relative">
@@ -146,13 +146,13 @@ export default function Register() {
                                                 tabIndex={4}
                                                 autoComplete="new-password"
                                                 placeholder="••••••••"
-                                                className="w-full h-[52px] pl-12 pr-12 text-sm bg-white border border-[#E5E7EB] rounded-xl outline-none transition-all duration-200 text-gray-900 placeholder:text-gray-400 focus:border-[#F59E0B] focus:ring-4 focus:ring-[#F59E0B]/10 focus:scale-[1.01]"
+                                                className="w-full h-[52px] pl-12 pr-12 text-sm bg-white border border-[#E5E7EB] rounded-xl outline-none transition-all duration-200 placeholder:text-gray-400 focus:border-[#F59E0B] focus:ring-4 focus:ring-[#F59E0B]/10 focus:scale-[1.01]" style={{ color: '#0d1b2a' }}
                                             />
                                             <button
                                                 type="button"
                                                 onClick={() => setShowConfirmPassword(!showConfirmPassword)}
                                                 tabIndex={4}
-                                                className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 transition-colors"
+                                                className="absolute right-4 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-800 transition-colors"
                                             >
                                                 {showConfirmPassword ? <EyeOff className="w-5 h-5" /> : <Eye className="w-5 h-5" />}
                                             </button>
@@ -184,7 +184,7 @@ export default function Register() {
                                     </button>
 
                                     {/* Divider + login link */}
-                                    <div className="text-center text-sm text-gray-500 mt-4">
+                                    <div className="text-center text-sm text-gray-400 mt-4">
                                         Already have an account?{' '}
                                         <TextLink
                                             href={login()}
