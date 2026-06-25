@@ -1,5 +1,5 @@
 import { Head, router, useForm, usePage } from '@inertiajs/react';
-import { AlertCircle, Calendar, CheckCircle, ChevronLeft, FolderPlus, Hexagon, KeyRound, Mail, MapPin, Phone, Plus, RefreshCw, X } from 'lucide-react';
+import { AlertCircle, Calendar, CheckCircle, CheckCircle2, ChevronLeft, FolderPlus, Hexagon, KeyRound, Mail, MapPin, Phone, Plus, RefreshCw, X } from 'lucide-react';
 import React, { useEffect, useState } from 'react';
 import AppLayout from '@/layouts/app-layout';
 import { toSentenceCase } from '@/lib/format-text';
@@ -43,79 +43,322 @@ function getInitials(name: string) {
     return name.split(' ').map((n) => n[0]).slice(0, 2).join('').toUpperCase();
 }
 
+// Geocoding function using OpenStreetMap Nominatim
+async function geocodeLocation(location: string): Promise<{ lat: number; lon: number } | null> {
+    try {
+        const response = await fetch(
+            `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(location)}&limit=1`
+        );
+        const data = await response.json();
+        if (data && data.length > 0) {
+            return {
+                lat: parseFloat(data[0].lat),
+                lon: parseFloat(data[0].lon),
+            };
+        }
+        return null;
+    } catch (e) {
+        console.error('Geocoding error:', e);
+        return null;
+    }
+}
+
+// Success Modal Component
+function SuccessModal({ message, onClose }: { message: string; onClose: () => void }) {
+    useEffect(() => {
+        const timer = setTimeout(onClose, 3000);
+        return () => clearTimeout(timer);
+    }, [onClose]);
+
+    return (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center pointer-events-none">
+            <div className="pointer-events-auto bg-white rounded-2xl shadow-2xl p-8 flex flex-col items-center gap-4 max-w-sm">
+                <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center">
+                    <CheckCircle2 className="w-10 h-10 text-green-600" />
+                </div>
+                <div className="text-center">
+                    <h3 className="text-lg font-semibold" style={{ color: '#0d1b2a' }}>Hive Created!</h3>
+                    <p className="text-sm text-gray-600 mt-2">{message}</p>
+                </div>
+                <button
+                    onClick={onClose}
+                    className="mt-4 px-6 py-2 rounded-lg text-sm font-semibold"
+                    style={{ backgroundColor: '#f5a623', color: '#0d1b2a' }}
+                >
+                    Got it!
+                </button>
+            </div>
+        </div>
+    );
+}
+
 // ── Add Hive modal ──────────────────────────────────────────────
 function AddHiveModal({ beekeeperId, onClose }: { beekeeperId: string; onClose: () => void }) {
     const { data, setData, post, processing, reset, errors } = useForm({
         hive_name: '', hive_location: '', hive_type: '', installation_date: '', latitude: '', longitude: '',
     });
+    const [showSuccessModal, setShowSuccessModal] = useState(false);
+    const [successMessage, setSuccessMessage] = useState('');
+    const [isGettingLocation, setIsGettingLocation] = useState(false);
+
+    // Geocode location when it changes
+    useEffect(() => {
+        if (data.hive_location && data.hive_location.length > 3) {
+            const timeoutId = setTimeout(async () => {
+                const coords = await geocodeLocation(data.hive_location);
+                if (coords) {
+                    setData('latitude', coords.lat.toString());
+                    setData('longitude', coords.lon.toString());
+                }
+            }, 1000); // Debounce 1 second
+            return () => clearTimeout(timeoutId);
+        }
+    }, [data.hive_location, setData]);
+
+    const handleUseCurrentLocation = () => {
+        setIsGettingLocation(true);
+        if (!navigator.geolocation) {
+            alert('Geolocation is not supported by your browser');
+            setIsGettingLocation(false);
+            return;
+        }
+
+        navigator.geolocation.getCurrentPosition(
+            (position) => {
+                setData('latitude', position.coords.latitude.toString());
+                setData('longitude', position.coords.longitude.toString());
+                setIsGettingLocation(false);
+            },
+            (error) => {
+                alert(`Error getting location: ${error.message}`);
+                setIsGettingLocation(false);
+            },
+            {
+                enableHighAccuracy: true,
+                timeout: 10000,
+                maximumAge: 0,
+            }
+        );
+    };
 
     const submit = (e: React.FormEvent) => {
         e.preventDefault();
-        post(`/beekeepers/${beekeeperId}/hives`, { onSuccess: () => { reset(); onClose(); } });
+        post(`/beekeepers/${beekeeperId}/hives`, { 
+            onSuccess: (page: any) => { 
+                reset(); 
+                onClose();
+                setSuccessMessage(page.props?.flash?.success || 'Hive created successfully');
+                setShowSuccessModal(true);
+            } 
+        });
     };
 
-    const fields: { label: string; key: keyof typeof data; type: string; placeholder: string; required: boolean }[] = [
-        { label: 'Hive Name',         key: 'hive_name',         type: 'text', placeholder: 'e.g. Hive 21 — Lang', required: true },
-        { label: 'Hive Location',     key: 'hive_location',     type: 'text', placeholder: 'e.g. Mukono',        required: true },
-        { label: 'Hive Type',         key: 'hive_type',         type: 'text', placeholder: 'e.g. Langstroth',    required: true },
-        { label: 'Installation Date', key: 'installation_date', type: 'date', placeholder: '',                   required: true },
-        { label: 'Latitude',          key: 'latitude',          type: 'number', placeholder: 'e.g. 0.3476',       required: false },
-        { label: 'Longitude',         key: 'longitude',         type: 'number', placeholder: 'e.g. 32.5825',      required: false },
-    ];
-
     return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 overflow-hidden">
-            <div className="w-full max-w-md rounded-2xl bg-white shadow-2xl flex flex-col max-h-[85vh]">
-                <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 shrink-0">
-                    <h2 className="text-base font-semibold" style={{ color: '#0d1b2a' }}>Add New Hive</h2>
-                    <button onClick={onClose} className="p-1 rounded hover:bg-gray-100 text-gray-400">
-                        <X className="w-4 h-4" />
-                    </button>
-                </div>
-                <form onSubmit={submit} className="px-6 pb-6 pt-4 flex flex-col gap-4 overflow-y-auto">
-                    {fields.map((f) => (
-                        <div key={f.key} className="flex flex-col gap-1.5">
+        <>
+            <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 overflow-hidden">
+                <div className="w-full max-w-md rounded-2xl bg-white shadow-2xl flex flex-col max-h-[85vh]">
+                    <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100 shrink-0">
+                        <h2 className="text-base font-semibold" style={{ color: '#0d1b2a' }}>Add New Hive</h2>
+                        <button onClick={onClose} className="p-1 rounded hover:bg-gray-100 text-gray-400">
+                            <X className="w-4 h-4" />
+                        </button>
+                    </div>
+                    <form onSubmit={submit} className="px-6 pb-6 pt-4 flex flex-col gap-4 overflow-y-auto">
+                        {/* Hive Name */}
+                        <div className="flex flex-col gap-1.5">
                             <label className="text-sm font-semibold text-gray-700 flex items-center gap-1.5">
-                                {f.label}
-                                {f.required
-                                    ? <span className="text-red-500 font-bold">*</span>
-                                    : <span className="text-xs font-normal text-gray-400">(optional)</span>}
+                                Hive Name
+                                <span className="text-red-500 font-bold">*</span>
                             </label>
                             <input
-                                type={f.type}
-                                value={data[f.key]}
-                                onChange={(e) => setData(f.key, e.target.value)}
-                                placeholder={f.placeholder}
-                                required={f.required}
+                                type="text"
+                                value={data.hive_name}
+                                onChange={(e) => setData('hive_name', e.target.value)}
+                                placeholder="e.g. Hive 21 — Lang"
+                                required
                                 className={[
                                     'w-full rounded-lg px-3.5 py-2.5 text-sm text-gray-800 placeholder-gray-400',
                                     'border outline-none transition-colors',
-                                    errors[f.key]
+                                    errors.hive_name
                                         ? 'border-red-400 bg-red-50 focus:border-red-500'
                                         : 'border-gray-300 bg-white focus:border-amber-400 focus:ring-2 focus:ring-amber-100',
                                 ].join(' ')}
                             />
-                            {errors[f.key] && (
+                            {errors.hive_name && (
                                 <p className="text-xs text-red-500 flex items-center gap-1">
-                                    <span>⚠</span> {errors[f.key]}
+                                    <span>⚠</span> {errors.hive_name}
                                 </p>
                             )}
                         </div>
-                    ))}
-                    <div className="flex justify-end gap-3 pt-1">
-                        <button type="button" onClick={onClose}
-                            className="px-4 py-2 rounded-lg border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-50">
-                            Cancel
-                        </button>
-                        <button type="submit" disabled={processing}
-                            className="px-4 py-2 rounded-lg text-sm font-semibold hover:opacity-90 disabled:opacity-60"
-                            style={{ backgroundColor: '#f5a623', color: '#0d1b2a' }}>
-                            {processing ? 'Adding…' : 'Add Hive'}
-                        </button>
-                    </div>
-                </form>
+
+                        {/* Hive Location */}
+                        <div className="flex flex-col gap-1.5">
+                            <label className="text-sm font-semibold text-gray-700 flex items-center gap-1.5">
+                                Hive Location
+                                <span className="text-red-500 font-bold">*</span>
+                            </label>
+                            <input
+                                type="text"
+                                value={data.hive_location}
+                                onChange={(e) => setData('hive_location', e.target.value)}
+                                placeholder="e.g. Mukono"
+                                required
+                                className={[
+                                    'w-full rounded-lg px-3.5 py-2.5 text-sm text-gray-800 placeholder-gray-400',
+                                    'border outline-none transition-colors',
+                                    errors.hive_location
+                                        ? 'border-red-400 bg-red-50 focus:border-red-500'
+                                        : 'border-gray-300 bg-white focus:border-amber-400 focus:ring-2 focus:ring-amber-100',
+                                ].join(' ')}
+                            />
+                            {errors.hive_location && (
+                                <p className="text-xs text-red-500 flex items-center gap-1">
+                                    <span>⚠</span> {errors.hive_location}
+                                </p>
+                            )}
+                        </div>
+
+                        {/* Hive Type */}
+                        <div className="flex flex-col gap-1.5">
+                            <label className="text-sm font-semibold text-gray-700 flex items-center gap-1.5">
+                                Hive Type
+                                <span className="text-red-500 font-bold">*</span>
+                            </label>
+                            <input
+                                type="text"
+                                value={data.hive_type}
+                                onChange={(e) => setData('hive_type', e.target.value)}
+                                placeholder="e.g. Langstroth"
+                                required
+                                className={[
+                                    'w-full rounded-lg px-3.5 py-2.5 text-sm text-gray-800 placeholder-gray-400',
+                                    'border outline-none transition-colors',
+                                    errors.hive_type
+                                        ? 'border-red-400 bg-red-50 focus:border-red-500'
+                                        : 'border-gray-300 bg-white focus:border-amber-400 focus:ring-2 focus:ring-amber-100',
+                                ].join(' ')}
+                            />
+                            {errors.hive_type && (
+                                <p className="text-xs text-red-500 flex items-center gap-1">
+                                    <span>⚠</span> {errors.hive_type}
+                                </p>
+                            )}
+                        </div>
+
+                        {/* Installation Date */}
+                        <div className="flex flex-col gap-1.5">
+                            <label className="text-sm font-semibold text-gray-700 flex items-center gap-1.5">
+                                Installation Date
+                                <span className="text-red-500 font-bold">*</span>
+                            </label>
+                            <input
+                                type="date"
+                                value={data.installation_date}
+                                onChange={(e) => setData('installation_date', e.target.value)}
+                                required
+                                className={[
+                                    'w-full rounded-lg px-3.5 py-2.5 text-sm text-gray-800 placeholder-gray-400',
+                                    'border outline-none transition-colors',
+                                    errors.installation_date
+                                        ? 'border-red-400 bg-red-50 focus:border-red-500'
+                                        : 'border-gray-300 bg-white focus:border-amber-400 focus:ring-2 focus:ring-amber-100',
+                                ].join(' ')}
+                            />
+                            {errors.installation_date && (
+                                <p className="text-xs text-red-500 flex items-center gap-1">
+                                    <span>⚠</span> {errors.installation_date}
+                                </p>
+                            )}
+                        </div>
+
+                        {/* GPS Coordinates */}
+                        <div className="flex flex-col gap-1.5">
+                            <div className="flex items-center justify-between">
+                                <label className="text-sm font-semibold text-gray-700 flex items-center gap-1.5">
+                                    GPS Coordinates
+                                    <span className="text-xs font-normal text-gray-400">(optional)</span>
+                                </label>
+                                <button
+                                    type="button"
+                                    onClick={handleUseCurrentLocation}
+                                    disabled={isGettingLocation}
+                                    className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-200 text-xs font-medium text-gray-600 hover:bg-gray-50 disabled:opacity-60"
+                                >
+                                    <MapPin className="w-3.5 h-3.5" />
+                                    {isGettingLocation ? 'Getting location…' : 'Use Current Location'}
+                                </button>
+                            </div>
+                            <div className="grid grid-cols-2 gap-3">
+                                <div className="flex flex-col gap-1">
+                                    <span className="text-xs text-gray-500 font-medium">Latitude</span>
+                                    <input
+                                        type="number"
+                                        min="-90" max="90"
+                                        value={data.latitude}
+                                        onChange={(e) => setData('latitude', e.target.value)}
+                                        placeholder="e.g. 0.347596"
+                                        className={[
+                                            'w-full rounded-lg px-3.5 py-2.5 text-sm text-gray-800 placeholder-gray-400',
+                                            'border outline-none transition-colors',
+                                            errors.latitude
+                                                ? 'border-red-400 bg-red-50 focus:border-red-500'
+                                                : 'border-gray-300 bg-white focus:border-amber-400 focus:ring-2 focus:ring-amber-100',
+                                        ].join(' ')}
+                                    />
+                                    {errors.latitude && (
+                                        <p className="text-xs text-red-500 flex items-center gap-1">
+                                            <span>⚠</span> {errors.latitude}
+                                        </p>
+                                    )}
+                                </div>
+                                <div className="flex flex-col gap-1">
+                                    <span className="text-xs text-gray-500 font-medium">Longitude</span>
+                                    <input
+                                        type="number"
+                                        min="-180" max="180"
+                                        value={data.longitude}
+                                        onChange={(e) => setData('longitude', e.target.value)}
+                                        placeholder="e.g. 32.582520"
+                                        className={[
+                                            'w-full rounded-lg px-3.5 py-2.5 text-sm text-gray-800 placeholder-gray-400',
+                                            'border outline-none transition-colors',
+                                            errors.longitude
+                                                ? 'border-red-400 bg-red-50 focus:border-red-500'
+                                                : 'border-gray-300 bg-white focus:border-amber-400 focus:ring-2 focus:ring-amber-100',
+                                        ].join(' ')}
+                                    />
+                                    {errors.longitude && (
+                                        <p className="text-xs text-red-500 flex items-center gap-1">
+                                            <span>⚠</span> {errors.longitude}
+                                        </p>
+                                    )}
+                                </div>
+                            </div>
+                        </div>
+
+                        <div className="flex justify-end gap-3 pt-1">
+                            <button type="button" onClick={onClose}
+                                className="px-4 py-2 rounded-lg border border-gray-200 text-sm font-medium text-gray-600 hover:bg-gray-50">
+                                Cancel
+                            </button>
+                            <button type="submit" disabled={processing}
+                                className="px-4 py-2 rounded-lg text-sm font-semibold hover:opacity-90 disabled:opacity-60"
+                                style={{ backgroundColor: '#f5a623', color: '#0d1b2a' }}>
+                                {processing ? 'Adding…' : 'Add Hive'}
+                            </button>
+                        </div>
+                    </form>
+                </div>
             </div>
-        </div>
+
+            {/* Success Modal */}
+            {showSuccessModal && (
+                <SuccessModal 
+                    message={successMessage} 
+                    onClose={() => setShowSuccessModal(false)} 
+                />
+            )}
+        </>
     );
 }
 
@@ -138,6 +381,15 @@ export default function BeekeeperShow({ beekeeper }: { beekeeper: Beekeeper }) {
         router.post(`/beekeepers/${beekeeper.id}/regenerate-api-key`, {}, {
             preserveScroll: true,
             onFinish: () => setRegenerating(false),
+        });
+    }
+
+    const [assigning, setAssigning] = useState(false);
+    function assignToken() {
+        setAssigning(true);
+        router.post(`/beekeepers/${beekeeper.id}/assign-token`, {}, {
+            preserveScroll: true,
+            onFinish: () => setAssigning(false),
         });
     }
 
@@ -239,9 +491,18 @@ export default function BeekeeperShow({ beekeeper }: { beekeeper: Beekeeper }) {
                         <div className="flex items-center justify-between gap-3">
                             <div className="flex items-center gap-2 min-w-0">
                                 <KeyRound className="w-4 h-4 text-gray-400 shrink-0" />
-                                <p className="text-[11px] font-semibold uppercase tracking-widest text-gray-400 shrink-0">ML API Key</p>
+                                <p className="text-[11px] font-semibold uppercase tracking-widest text-gray-400 shrink-0"> API Key</p>
                                 <span className="text-sm font-mono text-gray-600 truncate">{beekeeper.api_key ?? 'Not set'}</span>
                             </div>
+                            <button
+                                onClick={assignToken}
+                                disabled={assigning}
+                                title="Assign an API token from the ML server"
+                                className="shrink-0 flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold border border-gray-200 hover:bg-gray-50 disabled:opacity-50 transition-colors"
+                            >
+                                <RefreshCw className={`w-3.5 h-3.5 ${assigning ? 'animate-spin' : ''}`} />
+                                {assigning ? 'Assigning…' : 'Assign Token'}
+                            </button>
                             <button
                                 onClick={regenerateApiKey}
                                 disabled={regenerating}

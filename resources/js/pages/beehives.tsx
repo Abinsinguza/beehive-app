@@ -1,6 +1,6 @@
 import { Head, router, useForm } from '@inertiajs/react';
-import { Eye, Pencil, Plus, Trash2, X } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { CheckCircle2, Eye, MapPin, Pencil, Plus, Trash2, X } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
 import { type MRT_ColumnDef } from 'material-react-table';
 import { MenuItem } from '@mui/material';
 import { DataTable } from '@/components/data-table';
@@ -41,11 +41,61 @@ function fmtDate(v: string | null) {
     return new Date(v).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
 }
 
+// Success Modal Component
+function SuccessModal({ message, onClose }: { message: string; onClose: () => void }) {
+    useEffect(() => {
+        const timer = setTimeout(onClose, 3000);
+        return () => clearTimeout(timer);
+    }, [onClose]);
 
+    return (
+        <div className="fixed inset-0 z-[60] flex items-center justify-center pointer-events-none">
+            <div className="pointer-events-auto bg-white rounded-2xl shadow-2xl p-8 flex flex-col items-center gap-4 max-w-sm">
+                <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center">
+                    <CheckCircle2 className="w-10 h-10 text-green-600" />
+                </div>
+                <div className="text-center">
+                    <h3 className="text-lg font-semibold" style={{ color: '#0d1b2a' }}>Hive Created!</h3>
+                    <p className="text-sm text-gray-600 mt-2">{message}</p>
+                </div>
+                <button
+                    onClick={onClose}
+                    className="mt-4 px-6 py-2 rounded-lg text-sm font-semibold"
+                    style={{ backgroundColor: '#f5a623', color: '#0d1b2a' }}
+                >
+                    Got it!
+                </button>
+            </div>
+        </div>
+    );
+}
+
+// Geocoding function using OpenStreetMap Nominatim
+async function geocodeLocation(location: string): Promise<{ lat: number; lon: number } | null> {
+    try {
+        const response = await fetch(
+            `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(location)}&limit=1`
+        );
+        const data = await response.json();
+        if (data && data.length > 0) {
+            return {
+                lat: parseFloat(data[0].lat),
+                lon: parseFloat(data[0].lon),
+            };
+        }
+        return null;
+    } catch (e) {
+        console.error('Geocoding error:', e);
+        return null;
+    }
+}
 
 export default function Beehives({ beehives = [], owners = [], search: initialSearch = '' }: { beehives?: Beehive[]; owners?: Owner[]; search?: string }) {
     const [showModal, setShowModal] = useState(false);
     const [editTarget, setEditTarget] = useState<Beehive | null>(null);
+    const [showSuccessModal, setShowSuccessModal] = useState(false);
+    const [successMessage, setSuccessMessage] = useState('');
+    const [isGettingLocation, setIsGettingLocation] = useState(false);
 
     // Clean the beehives data on load
     const cleanedBeehives = useMemo(() => {
@@ -75,9 +125,56 @@ export default function Beehives({ beehives = [], owners = [], search: initialSe
         longitude:         '',
     });
 
+    // Geocode location when it changes
+    useEffect(() => {
+        if (data.hive_location && data.hive_location.length > 3) {
+            const timeoutId = setTimeout(async () => {
+                const coords = await geocodeLocation(data.hive_location);
+                if (coords) {
+                    setData('latitude', coords.lat.toString());
+                    setData('longitude', coords.lon.toString());
+                }
+            }, 1000); // Debounce 1 second
+            return () => clearTimeout(timeoutId);
+        }
+    }, [data.hive_location, setData]);
+
+    const handleUseCurrentLocation = () => {
+        setIsGettingLocation(true);
+        if (!navigator.geolocation) {
+            alert('Geolocation is not supported by your browser');
+            setIsGettingLocation(false);
+            return;
+        }
+
+        navigator.geolocation.getCurrentPosition(
+            (position) => {
+                setData('latitude', position.coords.latitude.toString());
+                setData('longitude', position.coords.longitude.toString());
+                setIsGettingLocation(false);
+            },
+            (error) => {
+                alert(`Error getting location: ${error.message}`);
+                setIsGettingLocation(false);
+            },
+            {
+                enableHighAccuracy: true,
+                timeout: 10000,
+                maximumAge: 0,
+            }
+        );
+    };
+
     const submit = (e: React.FormEvent) => {
         e.preventDefault();
-        post('/beehives', { onSuccess: () => { reset(); setShowModal(false); } });
+        post('/beehives', { 
+            onSuccess: (page: any) => { 
+                reset(); 
+                setShowModal(false);
+                setSuccessMessage(page.props?.flash?.success || 'Hive created successfully');
+                setShowSuccessModal(true);
+            } 
+        });
     };
 
     const filteredHives = cleanedBeehives;
@@ -329,13 +426,13 @@ export default function Beehives({ beehives = [], owners = [], search: initialSe
                             <div className="flex flex-col gap-1.5">
                                 <label className="text-sm font-semibold text-gray-700">
                                     Hive Name <span className="text-red-500">*</span>
-                                    <span className="ml-2 text-xs font-normal text-gray-400">Friendly name e.g. "Hive #1"</span>
+                                
                                 </label>
                                 <input
                                     type="text"
                                     value={data.hive_name}
                                     onChange={(e) => setData('hive_name', e.target.value)}
-                                    placeholder='e.g. Hive #1'
+                                    placeholder='enter Hive Name (e.g. "Hive 1")'
                                     required
                                     className="w-full border border-gray-300 rounded-lg px-3.5 py-2.5 text-sm text-gray-800 placeholder-gray-400 outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-100"
                                 />
@@ -360,7 +457,7 @@ export default function Beehives({ beehives = [], owners = [], search: initialSe
                             <div className="flex flex-col gap-1.5">
                                 <label className="text-sm font-semibold text-gray-700">
                                     Hive Type <span className="text-red-500">*</span>
-                                    <span className="ml-2 text-xs font-normal text-gray-400">e.g. "Langstroth", "Kenyan Top Bar", "Warre"</span>
+                                   
                                 </label>
                                 <select
                                     value={data.hive_type}
@@ -397,15 +494,25 @@ export default function Beehives({ beehives = [], owners = [], search: initialSe
 
                             {/* GPS Coordinates */}
                             <div className="flex flex-col gap-1.5">
-                                <label className="text-sm font-semibold text-gray-700">
-                                    GPS Coordinates <span className="text-xs font-normal text-gray-400">(optional — up to 6 decimal places)</span>
-                                </label>
+                                <div className="flex items-center justify-between">
+                                    <label className="text-sm font-semibold text-gray-700">
+                                        GPS Coordinates
+                                    </label>
+                                    <button
+                                        type="button"
+                                        onClick={handleUseCurrentLocation}
+                                        disabled={isGettingLocation}
+                                        className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-200 text-xs font-medium text-gray-600 hover:bg-gray-50 disabled:opacity-60"
+                                    >
+                                        <MapPin className="w-3.5 h-3.5" />
+                                        {isGettingLocation ? 'Getting location…' : 'Use Current Location'}
+                                    </button>
+                                </div>
                                 <div className="grid grid-cols-2 gap-3">
                                     <div className="flex flex-col gap-1">
                                         <span className="text-xs text-gray-500 font-medium">Latitude</span>
                                         <input
                                             type="number"
-                                            step="0.000001"
                                             min="-90" max="90"
                                             value={data.latitude}
                                             onChange={(e) => setData('latitude', e.target.value)}
@@ -418,7 +525,6 @@ export default function Beehives({ beehives = [], owners = [], search: initialSe
                                         <span className="text-xs text-gray-500 font-medium">Longitude</span>
                                         <input
                                             type="number"
-                                            step="0.000001"
                                             min="-180" max="180"
                                             value={data.longitude}
                                             onChange={(e) => setData('longitude', e.target.value)}
@@ -449,6 +555,14 @@ export default function Beehives({ beehives = [], owners = [], search: initialSe
 
             {/* Edit Hive Modal */}
             {editTarget && <EditHiveModal hive={editTarget} owners={owners} onClose={() => setEditTarget(null)} />}
+
+            {/* Success Modal */}
+            {showSuccessModal && (
+                <SuccessModal 
+                    message={successMessage} 
+                    onClose={() => setShowSuccessModal(false)} 
+                />
+            )}
         </>
     );
 }

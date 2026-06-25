@@ -129,7 +129,7 @@ function AddBeekeeperModal({ onClose }: { onClose: () => void }) {
                 {/* API Key — generated, not typed */}
                 <div className="flex flex-col gap-1.5">
                     <label className="text-sm font-semibold text-gray-700 flex items-center gap-1.5">
-                        API Key
+                        Data Server Access token 
                         <span className="text-red-500 font-bold">*</span>
                     </label>
                     <div className="flex gap-2">
