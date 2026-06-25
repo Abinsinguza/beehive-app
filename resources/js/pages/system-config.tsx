@@ -1,121 +1,39 @@
-import { Head, useForm, usePage } from '@inertiajs/react';
-import { AlertOctagon, CheckCircle, Eye, EyeOff, Key, MessageSquare, Server, Smartphone, X } from 'lucide-react';
-import { useRef, useState } from 'react';
+import { Head, usePage } from '@inertiajs/react';
+import { CheckCircle, X } from 'lucide-react';
+import { useState } from 'react';
+import { MlServerConfigForm } from '@/components/system-config/ml-server-config-form';
+import type { MlServerSettings } from '@/components/system-config/ml-server-config-form';
+import { SmsNotificationsForm } from '@/components/system-config/sms-notifications-form';
+import type { SmsSettings } from '@/components/system-config/sms-notifications-form';
+import { Toggle } from '@/components/system-config/toggle';
 
-type Settings = {
-    sms_server_url: string;
-    sms_username:   string;
-    sms_api_key:    string;
-    sms_sender_id:  string;
-    sms_template:   string;
-    ml_server_name: string | null;
-    ml_server_url:  string | null;
-    ml_admin_key:   string | null;
-    ml_description: string | null;
-    ml_is_active:   boolean;
-    ml_admin_key_id: string | null;
-};
-
-const WILDCARDS = [
-    { tag: '#beeHive',      desc: 'Hive ID'           },
-    { tag: '#beekeeper',    desc: 'Beekeeper name'     },
-    { tag: '#alertMessage', desc: 'Advisory message'   },
-    { tag: '#hiveLocation', desc: 'Hive location'      },
-    { tag: '#alertType',    desc: 'Alert severity'     },
-    { tag: '#prediction',   desc: 'ML prediction'      },
-    { tag: '#timestamp',    desc: 'Date & time'        },
-    { tag: '#confidence',   desc: 'Confidence score'   },
-];
-
-const PREVIEW_MAP: Record<string, string> = {
-    '#beeHive':      'BH0042',
-    '#beekeeper':    'John Ssekandi',
-    '#alertMessage': 'Inspect hive immediately — colony collapse risk detected.',
-    '#hiveLocation': 'North Field, Sector B',
-    '#alertType':    'Critical',
-    '#prediction':   'Swarm',
-    '#timestamp':    '2026-04-23 14:32',
-    '#confidence':   '96.2%',
-};
+type Settings = SmsSettings & MlServerSettings;
 
 const alertRoutes = [
-    { label: 'Critical Swarm Events',  enabled: true,  muted: false },
-    { label: 'Temperature Anomalies',  enabled: true,  muted: false },
-    { label: 'Low Battery Warning',    enabled: false, muted: true  },
-    { label: 'Maintenance Reminders',  enabled: false, muted: false },
-    { label: 'Daily Digest Reports',   enabled: true,  muted: false },
+    { label: 'Critical Swarm Events', enabled: true, muted: false },
+    { label: 'Temperature Anomalies', enabled: true, muted: false },
+    { label: 'Low Battery Warning', enabled: false, muted: true },
+    { label: 'Maintenance Reminders', enabled: false, muted: false },
+    { label: 'Daily Digest Reports', enabled: true, muted: false },
 ];
 
-function Toggle({ on, onChange }: { on: boolean; onChange: () => void }) {
-    return (
-        <button
-            type="button"
-            onClick={onChange}
-            className="relative inline-flex w-10 h-5 rounded-full transition-colors shrink-0"
-            style={{ backgroundColor: on ? '#f5a623' : '#d1d5db' }}
-        >
-            <span
-                className="absolute top-0.5 left-0.5 w-4 h-4 rounded-full bg-white shadow transition-transform"
-                style={{ transform: on ? 'translateX(20px)' : 'translateX(0)' }}
-            />
-        </button>
-    );
-}
-
 export default function SystemConfig({ settings }: { settings: Settings }) {
-    const { props } = usePage<{ flash?: { success?: string; error?: string } }>();
+    const { props } = usePage<{
+        flash?: { success?: string; error?: string };
+    }>();
     const flash = props.flash;
 
-    // ── SMS form (persisted to DB) ───────────────────────────────────────────
-    const textareaRef = useRef<HTMLTextAreaElement>(null);
-    const { data, setData, post, processing, errors } = useForm({
-        sms_server_url: settings?.sms_server_url ?? '',
-        sms_username:   settings?.sms_username   ?? '',
-        sms_api_key:    settings?.sms_api_key    ?? '',
-        sms_sender_id:  settings?.sms_sender_id  ?? '',
-        sms_template:   settings?.sms_template   ?? '',
-        ml_server_name: settings?.ml_server_name ?? '',
-        ml_server_url:  settings?.ml_server_url  ?? '',
-        ml_admin_key:   settings?.ml_admin_key   ?? '',
-        ml_description: settings?.ml_description ?? '',
-        ml_is_active:   settings?.ml_is_active   ?? true,
-        ml_admin_key_id: settings?.ml_admin_key_id ?? '',
-    });
-
-    const [showMlAdminKey, setShowMlAdminKey] = useState(false);
-
-    const [showApiKey, setShowApiKey] = useState(false);
     const [flashDismissed, setFlashDismissed] = useState(false);
-
-    const insertWildcard = (tag: string) => {
-        const el = textareaRef.current;
-        if (!el) return;
-        const start = el.selectionStart ?? data.sms_template.length;
-        const end   = el.selectionEnd   ?? data.sms_template.length;
-        const next  = data.sms_template.slice(0, start) + tag + data.sms_template.slice(end);
-        setData('sms_template', next);
-        requestAnimationFrame(() => {
-            el.focus();
-            el.setSelectionRange(start + tag.length, start + tag.length);
-        });
-    };
-
-    const previewText = Object.entries(PREVIEW_MAP).reduce(
-        (txt, [key, val]) => txt.replaceAll(key, val),
-        data.sms_template,
-    );
-
-    const submit = (e: React.FormEvent) => {
-        e.preventDefault();
-        setFlashDismissed(false);
-        post('/system-config');
-    };
 
     // ── Local-only UI state ──────────────────────────────────────────────────
     const [routes, setRoutes] = useState(alertRoutes.map((r) => ({ ...r })));
 
     const toggleRoute = (i: number) =>
-        setRoutes((prev) => prev.map((r, idx) => idx === i ? { ...r, enabled: !r.enabled } : r));
+        setRoutes((prev) =>
+            prev.map((r, idx) =>
+                idx === i ? { ...r, enabled: !r.enabled } : r,
+            ),
+        );
 
     const showFlash = !flashDismissed && (flash?.success || flash?.error);
 
@@ -123,301 +41,176 @@ export default function SystemConfig({ settings }: { settings: Settings }) {
         <>
             <Head title="System Settings" />
 
-            <form onSubmit={submit} className="p-6 flex flex-col gap-5" style={{ backgroundColor: '#f8f9fa' }}>
-
+            <div
+                className="flex flex-col gap-5 p-6"
+                style={{ backgroundColor: '#f8f9fa' }}
+            >
                 {/* Flash banner */}
                 {showFlash && (
                     <div
-                        className="flex items-center justify-between gap-3 px-4 py-3 rounded-xl text-sm font-medium"
+                        className="flex items-center justify-between gap-3 rounded-xl px-4 py-3 text-sm font-medium"
                         style={{
-                            backgroundColor: flash?.success ? '#ecfdf5' : '#fef2f2',
-                            color:           flash?.success ? '#065f46'  : '#991b1b',
-                            border:          flash?.success ? '1px solid #a7f3d0' : '1px solid #fecaca',
+                            backgroundColor: flash?.success
+                                ? '#ecfdf5'
+                                : '#fef2f2',
+                            color: flash?.success ? '#065f46' : '#991b1b',
+                            border: flash?.success
+                                ? '1px solid #a7f3d0'
+                                : '1px solid #fecaca',
                         }}
                     >
                         <div className="flex items-center gap-2">
-                            <CheckCircle className="w-4 h-4 shrink-0" />
+                            <CheckCircle className="h-4 w-4 shrink-0" />
                             <span>{flash?.success ?? flash?.error}</span>
                         </div>
-                        <button type="button" onClick={() => setFlashDismissed(true)} className="p-0.5 rounded hover:opacity-70">
-                            <X className="w-4 h-4" />
+                        <button
+                            type="button"
+                            onClick={() => setFlashDismissed(true)}
+                            className="rounded p-0.5 hover:opacity-70"
+                        >
+                            <X className="h-4 w-4" />
                         </button>
                     </div>
                 )}
 
                 {/* Page heading */}
                 <div>
-                    <h1 className="text-2xl font-bold" style={{ color: '#0d1b2a' }}>System Settings</h1>
-                    <p className="text-sm text-gray-400 mt-1">Configure swarm detection algorithms and global integration keys.</p>
+                    <h1
+                        className="text-2xl font-bold"
+                        style={{ color: '#0d1b2a' }}
+                    >
+                        System Settings
+                    </h1>
+                    <p className="mt-1 text-sm text-gray-400">
+                        Configure swarm detection algorithms and global
+                        integration keys.
+                    </p>
                 </div>
 
-                <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
+                <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
                     {/* ── Left column ─────────────────────────────────────────────────── */}
-                    <div className="lg:col-span-2 flex flex-col gap-5">
-                        {/* ML Server Settings — wired to DB ────────────────────────────── */}
-                        <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
-                            <div className="flex items-center gap-2 mb-1">
-                                <AlertOctagon className="w-5 h-5 text-gray-500" />
-                                <h2 className="font-semibold text-base" style={{ color: '#0d1b2a' }}>ML Server Configuration</h2>
-                            </div>
-                            <div className="h-px mb-5" style={{ backgroundColor: '#f5a623' }} />
-
-                            {/* ML Server Name */}
-                            <div className="mb-4">
-                                <label className="text-[11px] font-semibold uppercase tracking-widest text-gray-400 block mb-1.5">
-                                    ML Server Name
-                                </label>
-                                <input
-                                    type="text"
-                                    value={data.ml_server_name}
-                                    onChange={(e) => setData('ml_server_name', e.target.value)}
-                                    placeholder="My ML Server"
-                                    className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-700 outline-none placeholder-gray-300"
-                                />
-                                {errors.ml_server_name && <p className="text-xs text-red-500 mt-1">{errors.ml_server_name}</p>}
-                            </div>
-
-                            {/* ML Server URL */}
-                            <div className="mb-4">
-                                <label className="text-[11px] font-semibold uppercase tracking-widest text-gray-400 block mb-1.5">
-                                    <Server className="inline w-3 h-3 mr-1" />ML Server URL
-                                </label>
-                                <input
-                                    type="url"
-                                    value={data.ml_server_url}
-                                    onChange={(e) => setData('ml_server_url', e.target.value)}
-                                    placeholder="https://ml-server.example.com"
-                                    className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-700 outline-none placeholder-gray-300"
-                                />
-                                {errors.ml_server_url && <p className="text-xs text-red-500 mt-1">{errors.ml_server_url}</p>}
-                            </div>
-
-                            {/* ML Admin Key */}
-                            <div className="mb-4">
-                                <label className="text-[11px] font-semibold uppercase tracking-widest text-gray-400 block mb-1.5">
-                                    <Key className="inline w-3 h-3 mr-1" />ML Admin Key
-                                </label>
-                                <div className="flex items-center gap-2">
-                                    <input
-                                        type={showMlAdminKey ? 'text' : 'password'}
-                                        value={data.ml_admin_key}
-                                        onChange={(e) => setData('ml_admin_key', e.target.value)}
-                                        placeholder="••••••••••••••••"
-                                        className="flex-1 border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-700 outline-none placeholder-gray-300"
-                                    />
-                                    <button type="button" onClick={() => setShowMlAdminKey((v) => !v)}
-                                        className="p-2.5 rounded-lg border border-gray-200 text-gray-400 hover:text-gray-600 hover:bg-gray-50 transition-colors">
-                                        {showMlAdminKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                                    </button>
-                                </div>
-                                {errors.ml_admin_key && <p className="text-xs text-red-500 mt-1">{errors.ml_admin_key}</p>}
-                            </div>
-
-                            {/* ML Description */}
-                            <div className="mb-4">
-                                <label className="text-[11px] font-semibold uppercase tracking-widest text-gray-400 block mb-1.5">
-                                    Description
-                                </label>
-                                <textarea
-                                    value={data.ml_description}
-                                    onChange={(e) => setData('ml_description', e.target.value)}
-                                    placeholder="Description of this ML server"
-                                    className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-700 outline-none placeholder-gray-300"
-                                    rows={3}
-                                />
-                                {errors.ml_description && <p className="text-xs text-red-500 mt-1">{errors.ml_description}</p>}
-                            </div>
-
-                            {/* ML Is Active */}
-                            <div className="mb-5">
-                                <label className="text-[11px] font-semibold uppercase tracking-widest text-gray-400 block mb-1.5">
-                                    Is Active
-                                </label>
-                                <Toggle on={data.ml_is_active} onChange={() => setData('ml_is_active', !data.ml_is_active)} />
-                            </div>
-                            {/* Hidden field for ML Admin Key ID */}
-                            <input type="hidden" value={data.ml_admin_key_id} />
-                        </div>
-
-                        {/* SMS / Notifications — wired to DB ──────────────────────────── */}
-                        <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
-                            <div className="flex items-center gap-2 mb-1">
-                                <Smartphone className="w-5 h-5 text-gray-400" />
-                                <h2 className="font-semibold text-base" style={{ color: '#0d1b2a' }}>SMS Notifications</h2>
-                            </div>
-                            <div className="h-px mb-5" style={{ backgroundColor: '#f5a623' }} />
-
-                            {/* Server URL */}
-                            <div className="mb-4">
-                                <label className="text-[11px] font-semibold uppercase tracking-widest text-gray-400 block mb-1.5">
-                                    <Server className="inline w-3 h-3 mr-1" />SMS Server URL
-                                </label>
-                                <input
-                                    type="url"
-                                    value={data.sms_server_url}
-                                    onChange={(e) => setData('sms_server_url', e.target.value)}
-                                    placeholder="https://comms-test.pahappa.net/api/v1/json/"
-                                    className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm outline-none placeholder-gray-300" style={{ color: '#0d1b2a' }}
-                                />
-                                {errors.sms_server_url && <p className="text-xs text-red-500 mt-1">{errors.sms_server_url}</p>}
-                            </div>
-
-                            {/* Username + Sender ID */}
-                            <div className="grid grid-cols-2 gap-4 mb-4">
-                                <div>
-                                    <label className="text-[11px] font-semibold uppercase tracking-widest text-gray-400 block mb-1.5">Username</label>
-                                    <input
-                                        type="text"
-                                        value={data.sms_username}
-                                        onChange={(e) => setData('sms_username', e.target.value)}
-                                        placeholder="your-sms-username"
-                                        className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm outline-none placeholder-gray-300" style={{ color: '#0d1b2a' }}
-                                    />
-                                    {errors.sms_username && <p className="text-xs text-red-500 mt-1">{errors.sms_username}</p>}
-                                </div>
-                                <div>
-                                    <label className="text-[11px] font-semibold uppercase tracking-widest text-gray-400 block mb-1.5">Sender ID</label>
-                                    <input
-                                        type="text"
-                                        value={data.sms_sender_id}
-                                        onChange={(e) => setData('sms_sender_id', e.target.value)}
-                                        placeholder="BeeHive"
-                                        className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm outline-none placeholder-gray-300" style={{ color: '#0d1b2a' }}
-                                    />
-                                    {errors.sms_sender_id && <p className="text-xs text-red-500 mt-1">{errors.sms_sender_id}</p>}
-                                </div>
-                            </div>
-
-                            {/* API Key */}
-                            <div className="mb-5">
-                                <label className="text-[11px] font-semibold uppercase tracking-widest text-gray-400 block mb-1.5">
-                                    <Key className="inline w-3 h-3 mr-1" />API Key
-                                </label>
-                                <div className="flex items-center gap-2">
-                                    <input
-                                        type={showApiKey ? 'text' : 'password'}
-                                        value={data.sms_api_key}
-                                        onChange={(e) => setData('sms_api_key', e.target.value)}
-                                        placeholder="••••••••••••••••"
-                                        className="flex-1 border border-gray-200 rounded-lg px-3 py-2.5 text-sm outline-none placeholder-gray-300" style={{ color: '#0d1b2a' }}
-                                    />
-                                    <button type="button" onClick={() => setShowApiKey((v) => !v)}
-                                        className="p-2.5 rounded-lg border border-gray-200 text-gray-400 hover:text-gray-800 hover:bg-gray-50 transition-colors">
-                                        {showApiKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                                    </button>
-                                </div>
-                                {errors.sms_api_key && <p className="text-xs text-red-500 mt-1">{errors.sms_api_key}</p>}
-                            </div>
-
-                            {/* SMS Template */}
-                            <div>
-                                <label className="text-[11px] font-semibold uppercase tracking-widest text-gray-400 block mb-1.5">
-                                    <MessageSquare className="inline w-3 h-3 mr-1" />SMS Template
-                                </label>
-                                <textarea
-                                    ref={textareaRef}
-                                    value={data.sms_template}
-                                    onChange={(e) => setData('sms_template', e.target.value)}
-                                    rows={5}
-                                    className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm outline-none resize-none font-mono" style={{ color: '#0d1b2a' }}
-                                />
-                                {errors.sms_template && <p className="text-xs text-red-500 mt-1">{errors.sms_template}</p>}
-
-                                {/* Wildcard chips */}
-                                <div className="mt-2 flex flex-wrap gap-1.5">
-                                    {WILDCARDS.map(({ tag, desc }) => (
-                                        <button
-                                            key={tag}
-                                            type="button"
-                                            title={desc}
-                                            onClick={() => insertWildcard(tag)}
-                                            className="text-[10px] font-mono px-2 py-1 rounded border border-gray-200 text-gray-400 hover:border-orange-300 hover:text-orange-600 hover:bg-orange-50 transition-colors"
-                                        >
-                                            {tag}
-                                        </button>
-                                    ))}
-                                </div>
-
-                                {/* Preview */}
-                                {data.sms_template && (
-                                    <div className="mt-3 rounded-lg p-3 border border-dashed border-gray-200" style={{ backgroundColor: '#f8f9fa' }}>
-                                        <p className="text-[10px] font-bold uppercase tracking-widest text-gray-400 mb-1">Preview</p>
-                                        <p className="text-xs whitespace-pre-line" style={{ color: '#0d1b2a' }}>{previewText}</p>
-                                    </div>
-                                )}
-                            </div>
-                        </div>
-
+                    <div className="flex flex-col gap-5 lg:col-span-2">
+                        <MlServerConfigForm settings={settings} />
+                        <SmsNotificationsForm settings={settings} />
                     </div>
 
                     {/* ── Right column ────────────────────────────────────────────────── */}
                     <div className="flex flex-col gap-4">
-
                         {/* Alert Routing */}
-                        <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-5">
-                            <div className="flex items-center gap-2 mb-1">
+                        <div className="rounded-xl border border-gray-200 bg-white p-5 shadow-sm">
+                            <div className="mb-1 flex items-center gap-2">
                                 <span className="text-lg">🔔</span>
-                                <h2 className="font-semibold text-base" style={{ color: '#0d1b2a' }}>Alert Routing</h2>
+                                <h2
+                                    className="text-base font-semibold"
+                                    style={{ color: '#0d1b2a' }}
+                                >
+                                    Alert Routing
+                                </h2>
                             </div>
-                            <div className="h-px mb-4" style={{ backgroundColor: '#f5a623' }} />
+                            <div
+                                className="mb-4 h-px"
+                                style={{ backgroundColor: '#f5a623' }}
+                            />
                             <div className="flex flex-col gap-3">
                                 {routes.map((r, i) => (
-                                    <div key={r.label} className="flex items-center justify-between gap-2">
-                                        <span className={`text-sm ${r.muted ? 'text-gray-400' : ''}`} style={{ color: r.muted ? undefined : '#0d1b2a' }}>{r.label}</span>
-                                        <Toggle on={r.enabled} onChange={() => toggleRoute(i)} />
+                                    <div
+                                        key={r.label}
+                                        className="flex items-center justify-between gap-2"
+                                    >
+                                        <span
+                                            className={`text-sm ${r.muted ? 'text-gray-400' : ''}`}
+                                            style={{
+                                                color: r.muted
+                                                    ? undefined
+                                                    : '#0d1b2a',
+                                            }}
+                                        >
+                                            {r.label}
+                                        </span>
+                                        <Toggle
+                                            on={r.enabled}
+                                            onChange={() => toggleRoute(i)}
+                                        />
                                     </div>
                                 ))}
                             </div>
                         </div>
 
                         {/* System Health */}
-                        <div className="rounded-xl p-5 flex flex-col gap-4" style={{ backgroundColor: '#0d1b2a' }}>
-                            <p className="text-[10px] font-bold uppercase tracking-widest" style={{ color: '#f5a623' }}>System Health</p>
+                        <div
+                            className="flex flex-col gap-4 rounded-xl p-5"
+                            style={{ backgroundColor: '#0d1b2a' }}
+                        >
+                            <p
+                                className="text-[10px] font-bold tracking-widest uppercase"
+                                style={{ color: '#f5a623' }}
+                            >
+                                System Health
+                            </p>
                             <div className="flex flex-col gap-3">
                                 <div>
-                                    <div className="flex items-center justify-between text-xs mb-1">
-                                        <span className="text-slate-400 uppercase tracking-widest text-[10px] font-semibold">Database Latency</span>
-                                        <span className="text-white font-bold">12ms</span>
+                                    <div className="mb-1 flex items-center justify-between text-xs">
+                                        <span className="text-[10px] font-semibold tracking-widest text-slate-400 uppercase">
+                                            Database Latency
+                                        </span>
+                                        <span className="font-bold text-white">
+                                            12ms
+                                        </span>
                                     </div>
-                                    <div className="w-full h-1.5 rounded-full bg-slate-700">
-                                        <div className="h-1.5 rounded-full" style={{ width: '15%', backgroundColor: '#f5a623' }} />
+                                    <div className="h-1.5 w-full rounded-full bg-slate-700">
+                                        <div
+                                            className="h-1.5 rounded-full"
+                                            style={{
+                                                width: '15%',
+                                                backgroundColor: '#f5a623',
+                                            }}
+                                        />
                                     </div>
                                 </div>
                                 <div>
-                                    <div className="flex items-center justify-between text-xs mb-1">
-                                        <span className="text-slate-400 uppercase tracking-widest text-[10px] font-semibold">Buffer Capacity</span>
-                                        <span className="text-white font-bold">84%</span>
+                                    <div className="mb-1 flex items-center justify-between text-xs">
+                                        <span className="text-[10px] font-semibold tracking-widest text-slate-400 uppercase">
+                                            Buffer Capacity
+                                        </span>
+                                        <span className="font-bold text-white">
+                                            84%
+                                        </span>
                                     </div>
-                                    <div className="w-full h-1.5 rounded-full bg-slate-700">
-                                        <div className="h-1.5 rounded-full" style={{ width: '84%', backgroundColor: '#f5a623' }} />
+                                    <div className="h-1.5 w-full rounded-full bg-slate-700">
+                                        <div
+                                            className="h-1.5 rounded-full"
+                                            style={{
+                                                width: '84%',
+                                                backgroundColor: '#f5a623',
+                                            }}
+                                        />
                                     </div>
                                 </div>
                             </div>
-                            <span className="self-start text-[10px] font-bold px-2 py-1 rounded uppercase tracking-widest" style={{ backgroundColor: '#f5a623', color: '#0d1b2a' }}>
+                            <span
+                                className="self-start rounded px-2 py-1 text-[10px] font-bold tracking-widest uppercase"
+                                style={{
+                                    backgroundColor: '#f5a623',
+                                    color: '#0d1b2a',
+                                }}
+                            >
                                 Operational
                             </span>
                         </div>
 
-                        {/* Save Changes — submits SMS settings */}
                         <button
-                            type="submit"
-                            disabled={processing}
-                            className="w-full py-3 rounded-xl text-sm font-bold hover:opacity-90 transition-opacity disabled:opacity-60"
-                            style={{ backgroundColor: '#f5a623', color: '#0d1b2a' }}
+                            type="button"
+                            className="w-full rounded-xl border border-gray-300 py-3 text-sm font-bold text-gray-400 transition-colors hover:bg-gray-50"
                         >
-                            {processing ? 'Saving…' : 'Save Changes'}
-                        </button>
-
-                        <button type="button" className="w-full py-3 rounded-xl text-sm font-bold border border-gray-300 text-gray-400 hover:bg-gray-50 transition-colors">
                             Export Configuration
                         </button>
 
-                        <p className="text-center text-[10px] text-gray-400 uppercase tracking-widest">
+                        <p className="text-center text-[10px] tracking-widest text-gray-400 uppercase">
                             System Version: 2.4.0-Stable
                         </p>
                     </div>
                 </div>
-            </form>
+            </div>
         </>
     );
 }

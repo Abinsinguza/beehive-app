@@ -38,7 +38,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::delete('advisory-items/{advisoryItem}', [AdvisoryController::class, 'destroyItem'])->name('advisory-items.destroy');
     Route::resource('inferences', InferenceController::class)->only(['index', 'store']);
     Route::get('system-config',  [SystemConfigController::class, 'index'])->name('system-config');
-    Route::post('system-config', [SystemConfigController::class, 'update'])->name('system-config.update');
+    Route::post('system-config/sms', [SystemConfigController::class, 'updateSms'])->name('system-config.sms.update');
+    Route::post('system-config/ml',  [SystemConfigController::class, 'updateMl'])->name('system-config.ml.update');
     Route::get('audio-recordings', [AudioSourceController::class, 'index'])->name('audio-recordings.index');
     Route::post('audio-recordings', [AudioSourceController::class, 'store'])->name('audio-recordings.store');
     Route::inertia('database-schema', 'database-schema')->name('database-schema');

@@ -71,7 +71,7 @@ function SuccessModal({ message, onClose }: { message: string; onClose: () => vo
     }, [onClose]);
 
     return (
-        <div className="fixed inset-0 z-[60] flex items-center justify-center pointer-events-none">
+        <div className="fixed inset-0 z-60 flex items-center justify-center pointer-events-none">
             <div className="pointer-events-auto bg-white rounded-2xl shadow-2xl p-8 flex flex-col items-center gap-4 max-w-sm">
                 <div className="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center">
                     <CheckCircle2 className="w-10 h-10 text-green-600" />
