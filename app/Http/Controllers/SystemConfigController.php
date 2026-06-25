@@ -64,7 +64,7 @@ class SystemConfigController extends Controller
         ]);
     }
 
-    public function update(Request $request)
+    public function updateSms(Request $request)
     {
         $validated = $request->validate([
             'sms_server_url' => ['required', 'url'],
@@ -72,6 +72,18 @@ class SystemConfigController extends Controller
             'sms_api_key'    => ['required', 'string', 'max:255'],
             'sms_sender_id'  => ['required', 'string', 'max:50'],
             'sms_template'   => ['required', 'string'],
+        ]);
+
+        foreach ($validated as $key => $value) {
+            SystemSetting::set($key, $value);
+        }
+
+        return redirect()->route('system-config')->with('success', 'SMS notification settings saved.');
+    }
+
+    public function updateMl(Request $request)
+    {
+        $validated = $request->validate([
             'ml_server_name' => ['nullable', 'string', 'max:255'],
             'ml_server_url'  => ['nullable', 'url'],
             'ml_admin_key'   => ['nullable', 'string', 'max:255'],
@@ -79,14 +91,6 @@ class SystemConfigController extends Controller
             'ml_is_active'   => ['nullable', 'boolean'],
             'ml_admin_key_id' => ['nullable', 'string', 'max:255'],
         ]);
-
-        // Save SMS config locally
-        $smsConfig = [
-            'sms_server_url', 'sms_username', 'sms_api_key', 'sms_sender_id', 'sms_template'
-        ];
-        foreach ($smsConfig as $key) {
-            SystemSetting::set($key, $validated[$key]);
-        }
 
         // Store ML server details temporarily in session
         if (!empty($validated['ml_server_url'])) {
@@ -107,7 +111,7 @@ class SystemConfigController extends Controller
                         'description' => $validated['ml_description'] ?? '',
                         'is_active'   => $validated['ml_is_active'] ?? true,
                     ]);
-                
+
                 if ($response->successful()) {
                     $responseData = $response->json();
                     // Store the admin key ID in session if returned from ML server
@@ -123,6 +127,6 @@ class SystemConfigController extends Controller
             }
         }
 
-        return redirect()->route('system-config')->with('success', 'Settings saved.');
+        return redirect()->route('system-config')->with('success', 'ML server settings saved.');
     }
 }
