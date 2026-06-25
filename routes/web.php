@@ -28,6 +28,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::patch('beekeepers/{beekeeper}/restore',  [BeekeeperController::class, 'restore'])->name('beekeepers.restore');
     Route::post('beekeepers/{beekeeper}/hives',     [BeekeeperController::class, 'storeHive'])->name('beekeepers.hives.store');
     Route::post('beekeepers/{beekeeper}/regenerate-api-key', [BeekeeperController::class, 'regenerateApiKey'])->name('beekeepers.regenerate-api-key');
+    Route::post('beekeepers/{beekeeper}/assign-token', [BeekeeperController::class, 'assignToken'])->name('beekeepers.assign-token');
     Route::post('api-keys/generate', [BeekeeperController::class, 'generateApiKey'])->name('api-keys.generate');
     Route::resource('beehives', BeehiveController::class);
     Route::post('beehives/{beehive}/recordings-folder', [BeehiveController::class, 'createRecordingsFolder'])->name('beehives.recordings-folder');

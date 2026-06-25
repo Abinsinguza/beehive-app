@@ -8,6 +8,12 @@ type Settings = {
     sms_api_key:    string;
     sms_sender_id:  string;
     sms_template:   string;
+    ml_server_name: string | null;
+    ml_server_url:  string | null;
+    ml_admin_key:   string | null;
+    ml_description: string | null;
+    ml_is_active:   boolean;
+    ml_admin_key_id: string | null;
 };
 
 const WILDCARDS = [
@@ -68,7 +74,15 @@ export default function SystemConfig({ settings }: { settings: Settings }) {
         sms_api_key:    settings?.sms_api_key    ?? '',
         sms_sender_id:  settings?.sms_sender_id  ?? '',
         sms_template:   settings?.sms_template   ?? '',
+        ml_server_name: settings?.ml_server_name ?? '',
+        ml_server_url:  settings?.ml_server_url  ?? '',
+        ml_admin_key:   settings?.ml_admin_key   ?? '',
+        ml_description: settings?.ml_description ?? '',
+        ml_is_active:   settings?.ml_is_active   ?? true,
+        ml_admin_key_id: settings?.ml_admin_key_id ?? '',
     });
+
+    const [showMlAdminKey, setShowMlAdminKey] = useState(false);
 
     const [showApiKey, setShowApiKey] = useState(false);
     const [flashDismissed, setFlashDismissed] = useState(false);
@@ -138,9 +152,92 @@ export default function SystemConfig({ settings }: { settings: Settings }) {
                 </div>
 
                 <div className="grid grid-cols-1 lg:grid-cols-3 gap-5">
-
                     {/* ── Left column ─────────────────────────────────────────────────── */}
                     <div className="lg:col-span-2 flex flex-col gap-5">
+                        {/* ML Server Settings — wired to DB ────────────────────────────── */}
+                        <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">
+                            <div className="flex items-center gap-2 mb-1">
+                                <AlertOctagon className="w-5 h-5 text-gray-500" />
+                                <h2 className="font-semibold text-base" style={{ color: '#0d1b2a' }}>ML Server Configuration</h2>
+                            </div>
+                            <div className="h-px mb-5" style={{ backgroundColor: '#f5a623' }} />
+
+                            {/* ML Server Name */}
+                            <div className="mb-4">
+                                <label className="text-[11px] font-semibold uppercase tracking-widest text-gray-400 block mb-1.5">
+                                    ML Server Name
+                                </label>
+                                <input
+                                    type="text"
+                                    value={data.ml_server_name}
+                                    onChange={(e) => setData('ml_server_name', e.target.value)}
+                                    placeholder="My ML Server"
+                                    className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-700 outline-none placeholder-gray-300"
+                                />
+                                {errors.ml_server_name && <p className="text-xs text-red-500 mt-1">{errors.ml_server_name}</p>}
+                            </div>
+
+                            {/* ML Server URL */}
+                            <div className="mb-4">
+                                <label className="text-[11px] font-semibold uppercase tracking-widest text-gray-400 block mb-1.5">
+                                    <Server className="inline w-3 h-3 mr-1" />ML Server URL
+                                </label>
+                                <input
+                                    type="url"
+                                    value={data.ml_server_url}
+                                    onChange={(e) => setData('ml_server_url', e.target.value)}
+                                    placeholder="https://ml-server.example.com"
+                                    className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-700 outline-none placeholder-gray-300"
+                                />
+                                {errors.ml_server_url && <p className="text-xs text-red-500 mt-1">{errors.ml_server_url}</p>}
+                            </div>
+
+                            {/* ML Admin Key */}
+                            <div className="mb-4">
+                                <label className="text-[11px] font-semibold uppercase tracking-widest text-gray-400 block mb-1.5">
+                                    <Key className="inline w-3 h-3 mr-1" />ML Admin Key
+                                </label>
+                                <div className="flex items-center gap-2">
+                                    <input
+                                        type={showMlAdminKey ? 'text' : 'password'}
+                                        value={data.ml_admin_key}
+                                        onChange={(e) => setData('ml_admin_key', e.target.value)}
+                                        placeholder="••••••••••••••••"
+                                        className="flex-1 border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-700 outline-none placeholder-gray-300"
+                                    />
+                                    <button type="button" onClick={() => setShowMlAdminKey((v) => !v)}
+                                        className="p-2.5 rounded-lg border border-gray-200 text-gray-400 hover:text-gray-600 hover:bg-gray-50 transition-colors">
+                                        {showMlAdminKey ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                                    </button>
+                                </div>
+                                {errors.ml_admin_key && <p className="text-xs text-red-500 mt-1">{errors.ml_admin_key}</p>}
+                            </div>
+
+                            {/* ML Description */}
+                            <div className="mb-4">
+                                <label className="text-[11px] font-semibold uppercase tracking-widest text-gray-400 block mb-1.5">
+                                    Description
+                                </label>
+                                <textarea
+                                    value={data.ml_description}
+                                    onChange={(e) => setData('ml_description', e.target.value)}
+                                    placeholder="Description of this ML server"
+                                    className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-700 outline-none placeholder-gray-300"
+                                    rows={3}
+                                />
+                                {errors.ml_description && <p className="text-xs text-red-500 mt-1">{errors.ml_description}</p>}
+                            </div>
+
+                            {/* ML Is Active */}
+                            <div className="mb-5">
+                                <label className="text-[11px] font-semibold uppercase tracking-widest text-gray-400 block mb-1.5">
+                                    Is Active
+                                </label>
+                                <Toggle on={data.ml_is_active} onChange={() => setData('ml_is_active', !data.ml_is_active)} />
+                            </div>
+                            {/* Hidden field for ML Admin Key ID */}
+                            <input type="hidden" value={data.ml_admin_key_id} />
+                        </div>
 
                         {/* SMS / Notifications — wired to DB ──────────────────────────── */}
                         <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-6">

@@ -19,7 +19,7 @@ return [
     ],
 
     'ml_auth' => [
-        'base_url'  => env('ML_AUTH_BASE_URL', 'http://196.43.168.57:8085'),
+        'base_url'  => env('ML_AUTH_BASE_URL'),
         'admin_key' => env('ML_ADMIN_KEY'),
     ],
 

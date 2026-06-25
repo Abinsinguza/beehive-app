@@ -50,13 +50,46 @@ class BeehiveController extends Controller
             'longitude'         => ['nullable', 'numeric', 'between:-180,180'],
         ]);
 
-        Beehive::create([
+        // Create the hive locally first
+        $beehive = Beehive::create([
             ...$validated,
             'current_state' => 'unknown',
             'is_deleted'    => false,
         ]);
 
-        return redirect()->back()->with('success', 'Hive added successfully');
+        // Load the owner to get the api_key
+        $beehive->load('owner');
+        $owner = $beehive->owner;
+        $apiKey = $owner?->api_key;
+        $mlServerUrl = \Illuminate\Support\Facades\Session::get('ml_server_url') ?? config('services.ml_auth.base_url');
+
+        // Try to create the recordings folder on the ML server
+        $folderCreated = false;
+        $errorMessage = null;
+
+        if ($apiKey) {
+            try {
+                $response = Http::withHeaders(['x-api-key' => $apiKey])
+                    ->timeout(15)
+                    ->post(rtrim($mlServerUrl, '/') . "/recordings/hives/{$beehive->hive_name}");
+
+                if ($response->successful()) {
+                    $folderCreated = true;
+                } else {
+                    $errorMessage = $response->json('detail.0.msg') ?? 'Failed to create recordings folder.';
+                }
+            } catch (ConnectionException $e) {
+                $errorMessage = 'The ML server did not respond in time. It may be down — please try again shortly.';
+            }
+        } else {
+            $errorMessage = "This beekeeper has no API key configured.";
+        }
+
+        if (!$folderCreated) {
+            return redirect()->back()->with('success', "Hive added successfully, but {$errorMessage} You can try again later from the hive details page.");
+        }
+
+        return redirect()->back()->with('success', 'Hive added successfully and recordings folder created.');
     }
 
     public function show(Beehive $beehive, Request $request)
@@ -170,6 +203,7 @@ class BeehiveController extends Controller
     {
         $beehive->load('owner');
         $apiKey = $beehive->owner?->api_key;
+        $mlServerUrl = \Illuminate\Support\Facades\Session::get('ml_server_url') ?? config('services.ml_auth.base_url');
 
         if (! $apiKey) {
             return redirect()->back()->with('error', "This hive's owner has no API key configured.");
@@ -178,7 +212,7 @@ class BeehiveController extends Controller
         try {
             $response = Http::withHeaders(['x-api-key' => $apiKey])
                 ->timeout(15)
-                ->post(rtrim(config('services.ml_auth.base_url'), '/') . "/recordings/hives/{$beehive->hive_name}");
+                ->post(rtrim($mlServerUrl, '/') . "/recordings/hives/{$beehive->hive_name}");
         } catch (ConnectionException $e) {
             return redirect()->back()->with('error', 'The ML server did not respond in time. It may be down — please try again shortly.');
         }

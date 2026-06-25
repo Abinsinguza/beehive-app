@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\StoreBeekeeperRequest;
 use App\Http\Requests\UpdateBeekeeperRequest;
 use App\Models\User;
+use App\Models\Beehive;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Http;
@@ -33,33 +34,21 @@ class BeekeeperController extends Controller
     {
         $validated = $request->validated();
 
-        try {
-            $response = Http::timeout(15)->post(rtrim(config('services.ml_auth.base_url'), '/') . '/auth/register', [
-                'full_name'  => $validated['full_name'],
-                'email'      => $validated['email'],
-                'password'   => $validated['password'],
-                'phone'      => $validated['phone'],
-                'address'    => $validated['address'] ?? null,
-                'role'       => 'farmer',
-                'server_url' => $validated['server_url'],
-                'api_key'    => $validated['api_key'],
-            ]);
-        } catch (ConnectionException $e) {
-            return redirect()->back()->withErrors(['email' => 'The ML server did not respond in time. It may be down — please try again shortly.']);
-        }
+        // Generate a random API key for the new beekeeper
+        $apiKey = $this->requestApiKey($validated['full_name']);
 
-        if (! $response->successful()) {
-            return redirect()->back()->withErrors(['email' => $response->json('detail.0.msg') ?? 'Failed to register beekeeper on the ML server.']);
-        }
+        User::create([
+            'full_name' => $validated['full_name'],
+            'email'     => $validated['email'] ?? null,
+            'phone'     => $validated['phone'],
+            'address'   => $validated['address'] ?? null,
+            'password_hash' => bcrypt($validated['password']),
+            'role'      => 'farmer',
+            'server_url' => $validated['server_url'],
+            'api_key'   => $apiKey,
+        ]);
 
-        $accessToken = $response->json('access_token');
-        $userId      = $response->json('user.user_id');
-
-        if ($accessToken && $userId) {
-            User::where('user_id', $userId)->update(['ml_access_token' => $accessToken]);
-        }
-
-        return redirect()->back()->with('success', 'Beekeeper added successfully');
+        return redirect()->back()->with('success', "Beekeeper added successfully with API key: {$apiKey}");
     }
 
     public function show(User $beekeeper)
@@ -82,50 +71,24 @@ class BeekeeperController extends Controller
     public function generateApiKey(Request $request)
     {
         $request->validate(['client_name' => ['required', 'string', 'max:150']]);
-
         $key = $this->requestApiKey($request->input('client_name'));
-
-        if ($key instanceof \Illuminate\Http\RedirectResponse) {
-            return $key;
-        }
-
         return redirect()->back()->with('generated_api_key', $key);
     }
 
     public function regenerateApiKey(User $beekeeper)
     {
         $key = $this->requestApiKey($beekeeper->full_name);
-
-        if ($key instanceof \Illuminate\Http\RedirectResponse) {
-            return $key;
-        }
-
         $beekeeper->update(['api_key' => $key]);
-
-        return redirect()->back()->with('success', "New API key generated for {$beekeeper->full_name}.");
+        return redirect()->back()->with('success', "New API key generated for {$beekeeper->full_name}: {$key}");
     }
 
     /**
-     * Mint a fresh api_key from the ML server's admin endpoint. Returns the key string,
-     * or a redirect response if the call failed.
+     * Generate a random API key locally.
      */
-    private function requestApiKey(string $clientName): string|\Illuminate\Http\RedirectResponse
+    private function requestApiKey(string $clientName): string
     {
-        try {
-            $response = Http::withHeaders(['x-admin-key' => config('services.ml_auth.admin_key')])
-                ->timeout(15)
-                ->post(rtrim(config('services.ml_auth.base_url'), '/') . '/admin/keys', [
-                    'client_name' => $clientName,
-                ]);
-        } catch (ConnectionException $e) {
-            return redirect()->back()->with('error', 'The ML server did not respond in time. It may be down — please try again shortly.');
-        }
-
-        if (! $response->successful()) {
-            return redirect()->back()->with('error', $response->json('detail.0.msg') ?? 'Failed to generate API key.');
-        }
-
-        return $response->json();
+        // Generate a random API key (40 characters)
+        return strtoupper(substr(str_shuffle(str_repeat('0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ', 4)), 0, 40));
     }
 
     public function storeHive(Request $request, User $beekeeper)
@@ -139,30 +102,47 @@ class BeekeeperController extends Controller
             'longitude'         => ['nullable', 'numeric', 'between:-180,180'],
         ]);
 
-        if (! $beekeeper->ml_access_token) {
-            return redirect()->back()->withErrors(['hive_name' => 'This beekeeper has no ML server session. Re-register them to obtain one.']);
+        // Create the hive locally first
+        $beehive = Beehive::create([
+            'owner_id'          => $beekeeper->id,
+            'hive_name'         => $validated['hive_name'],
+            'hive_location'     => $validated['hive_location'],
+            'hive_type'         => $validated['hive_type'],
+            'installation_date' => $validated['installation_date'],
+            'latitude'          => $validated['latitude'] ?? null,
+            'longitude'         => $validated['longitude'] ?? null,
+            'current_state'     => 'unknown',
+        ]);
+
+        // Try to create the recordings folder on the ML server
+        $folderCreated = false;
+        $errorMessage = null;
+        $apiKey = $beekeeper->api_key;
+        $mlServerUrl = \Illuminate\Support\Facades\Session::get('ml_server_url') ?? config('services.ml_auth.base_url');
+
+        if ($apiKey) {
+            try {
+                $response = Http::withHeaders(['x-api-key' => $apiKey])
+                    ->timeout(15)
+                    ->post(rtrim($mlServerUrl, '/') . "/recordings/hives/{$beehive->hive_name}");
+
+                if ($response->successful()) {
+                    $folderCreated = true;
+                } else {
+                    $errorMessage = $response->json('detail.0.msg') ?? 'Failed to create recordings folder.';
+                }
+            } catch (ConnectionException $e) {
+                $errorMessage = 'The ML server did not respond in time. It may be down — please try again shortly.';
+            }
+        } else {
+            $errorMessage = "This beekeeper has no API key configured.";
         }
 
-        try {
-            $response = Http::withToken($beekeeper->ml_access_token)
-                ->timeout(15)
-                ->post(rtrim(config('services.ml_auth.base_url'), '/') . '/hives', [
-                    ...$validated,
-                    'owner_id' => $beekeeper->id,
-                ]);
-        } catch (ConnectionException $e) {
-            return redirect()->back()->withErrors(['hive_name' => 'The ML server did not respond in time. It may be down — please try again shortly.']);
+        if (!$folderCreated) {
+            return redirect()->back()->with('success', "Hive added successfully, but {$errorMessage} You can try again later from the hive details page.");
         }
 
-        if (! $response->successful()) {
-            return redirect()->back()->withErrors(['hive_name' => $response->json('detail.0.msg') ?? 'Failed to register hive on the ML server.']);
-        }
-
-        if ($response->json('folder_created') === false) {
-            return redirect()->back()->with('error', "Hive added, but its recordings folder could not be created: {$response->json('folder_creation_error')}. Use \"Create folder\" on the hive to retry.");
-        }
-
-        return redirect()->back()->with('success', 'Hive added successfully');
+        return redirect()->back()->with('success', 'Hive added successfully and recordings folder created.');
     }
 
     public function update(UpdateBeekeeperRequest $request, User $beekeeper)
@@ -204,5 +184,37 @@ class BeekeeperController extends Controller
         $beekeeper->update(['role' => 'farmer']);
 
         return redirect()->back()->with('success', 'Beekeeper access restored.');
+    }
+
+    public function assignToken(User $beekeeper)
+    {
+        $mlServerUrl = \Illuminate\Support\Facades\Session::get('ml_server_url');
+        $mlAdminKey = \Illuminate\Support\Facades\Session::get('ml_admin_key');
+
+        if (!$mlServerUrl || !$mlAdminKey) {
+            return redirect()->back()->with('error', 'ML server not configured. Please set ML server URL and admin key in System Settings.');
+        }
+
+        try {
+            $response = Http::withHeaders(['x-admin-key' => $mlAdminKey])
+                ->timeout(15)
+                ->post(rtrim($mlServerUrl, '/') . '/admin/keys', [
+                    'client_name' => $beekeeper->full_name,
+                ]);
+        } catch (ConnectionException $e) {
+            return redirect()->back()->with('error', 'The ML server did not respond in time. It may be down — please try again shortly.');
+        }
+
+        if (!$response->successful()) {
+            return redirect()->back()->with('error', $response->json('detail.0.msg') ?? 'Failed to generate API key on ML server.');
+        }
+
+        $apiKey = $response->body();
+        $beekeeper->update([
+            'server_url' => $mlServerUrl,
+            'api_key' => $apiKey,
+        ]);
+
+        return redirect()->back()->with('success', 'API token assigned to beekeeper successfully.');
     }
 }

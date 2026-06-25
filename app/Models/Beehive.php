@@ -16,6 +16,7 @@ class Beehive extends Model
     protected $keyType = 'string';
 
     protected $fillable = [
+        'hive_id',
         'owner_id',
         'hive_name',
         'hive_location',
@@ -24,6 +25,7 @@ class Beehive extends Model
         'current_state',
         'latitude',
         'longitude',
+        'is_deleted',
     ];
 
     protected $casts = [
