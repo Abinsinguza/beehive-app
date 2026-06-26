@@ -19,8 +19,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('analytics', [InferenceController::class, 'store'])->name('analytics.store');
     Route::get('system-logs', [SystemLogsController::class, 'index'])->name('system-logs');
     Route::get('alerts', [AlertsController::class, 'index'])->name('alerts.index');
-    Route::post('alerts', [AlertsController::class, 'store'])->name('alerts.store');
-    Route::patch('alerts/{alert}/notify', [AlertsController::class, 'notify'])->name('alerts.notify');
    // Route::inertia('beekeepers', 'beekeepers')->name('beekeepers');
     //Route::inertia('beehives', 'beehives')->name('beehives');
     Route::resource('beekeepers', BeekeeperController::class);
@@ -38,12 +36,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::delete('advisory-items/{advisoryItem}', [AdvisoryController::class, 'destroyItem'])->name('advisory-items.destroy');
     Route::resource('inferences', InferenceController::class)->only(['index', 'store']);
     Route::get('system-config',  [SystemConfigController::class, 'index'])->name('system-config');
-    Route::post('system-config/sms', [SystemConfigController::class, 'updateSms'])->name('system-config.sms.update');
-    Route::post('system-config/ml',  [SystemConfigController::class, 'updateMl'])->name('system-config.ml.update');
+    Route::post('system-config/ml', [SystemConfigController::class, 'updateMl'])->name('system-config.ml.update');
     Route::get('audio-recordings', [AudioSourceController::class, 'index'])->name('audio-recordings.index');
     Route::post('audio-recordings', [AudioSourceController::class, 'store'])->name('audio-recordings.store');
     Route::inertia('database-schema', 'database-schema')->name('database-schema');
-    Route::inertia('notifications', 'notifications')->name('notifications');
     Route::inertia('help', 'help')->name('help');
 });
 

@@ -2,7 +2,6 @@
 
 namespace App\Http\Middleware;
 
-use App\Models\Beehive;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 
@@ -29,14 +28,6 @@ class HandleInertiaRequests extends Middleware
                 'error'             => $request->session()->get('error'),
                 'generated_api_key' => $request->session()->get('generated_api_key'),
             ],
-            // Global search data — shared on every page for the header search
-            'searchData' => $request->user() ? [
-                'beehives' => Beehive::select('hive_id', 'hive_name', 'hive_location', 'hive_type', 'current_state')->get(),
-                'alerts'   => \App\Models\Alerts::select('alert_id', 'severity_level', 'alert_timestamp')
-                                ->latest('alert_timestamp')
-                                ->limit(50)
-                                ->get(),
-            ] : ['beehives' => [], 'alerts' => []],
         ];
     }
 }

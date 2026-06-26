@@ -1,10 +1,10 @@
 import { Head, router, useForm } from '@inertiajs/react';
-import AppLayout from '@/layouts/app-layout';
-import React, { useState, useMemo } from 'react';
 import { FileBarChart2, FlaskConical, Hexagon, X } from 'lucide-react';
-import { type MRT_ColumnDef } from 'material-react-table';
+import type {MRT_ColumnDef} from 'material-react-table';
+import React, { useState, useMemo } from 'react';
 import { DataTable } from '@/components/data-table';
-import { toSentenceCase } from '@/lib/format-text';
+import AppLayout from '@/layouts/app-layout';
+import { toSentenceCase, formatDateTime } from '@/lib/format-text';
 
 type Beehive = {
     hive_id: string;
@@ -78,14 +78,20 @@ function donutMeta(state: string) {
 
 function polar(cx: number, cy: number, r: number, deg: number) {
     const rad = ((deg - 90) * Math.PI) / 180;
+
     return { x: cx + r * Math.cos(rad), y: cy + r * Math.sin(rad) };
 }
 function donutArc(cx: number, cy: number, outerR: number, innerR: number, startDeg: number, endDeg: number) {
     const gap = 2; const s = startDeg + gap / 2; const e = endDeg - gap / 2;
-    if (e <= s) return '';
+
+    if (e <= s) {
+return '';
+}
+
     const o1 = polar(cx, cy, outerR, s), o2 = polar(cx, cy, outerR, e);
     const i1 = polar(cx, cy, innerR, e), i2 = polar(cx, cy, innerR, s);
     const large = e - s > 180 ? 1 : 0;
+
     return [
         `M ${o1.x.toFixed(2)} ${o1.y.toFixed(2)}`,
         `A ${outerR} ${outerR} 0 ${large} 1 ${o2.x.toFixed(2)} ${o2.y.toFixed(2)}`,
@@ -103,8 +109,10 @@ function HiveStatusDonut({ categories }: { categories: HiveCategories }) {
         const sweep = total > 0 ? (count / total) * 360 : 0;
         const path  = donutArc(cx, cy, outerR, innerR, cursor, cursor + sweep);
         cursor += sweep;
+
         return { key, path };
     });
+
     return (
         <svg viewBox="0 0 160 160" className="w-full h-full">
             {total === 0
@@ -142,6 +150,7 @@ function GrowthLineChart({ data }: { data: GrowthPoint[] }) {
             {/* Grid lines + Y labels */}
             {gridLines.map((g) => {
                 const y = padY + innerH - g * innerH;
+
                 return (
                     <g key={g}>
                         <line x1={padX} y1={y} x2={width - padX} y2={y} stroke="#f1f5f9" strokeWidth={1} />
@@ -208,6 +217,7 @@ function ConfidenceLatencyChart({ data }: { data: ConfidencePoint[] }) {
             {/* Grid lines + confidence % labels */}
             {gridLines.map((g) => {
                 const y = padY + innerH - g * innerH;
+
                 return (
                     <g key={g}>
                         <line x1={padX} y1={y} x2={width - padX} y2={y} stroke="#f1f5f9" strokeWidth={1} />
@@ -269,6 +279,7 @@ function ConfidenceLatencyChart({ data }: { data: ConfidencePoint[] }) {
                 const boxX = Math.min(Math.max(px - boxW / 2, 2), width - boxW - 2);
                 const boxY = 2;
                 const d = data[hovered];
+
                 return (
                     <foreignObject x={boxX} y={boxY} width={boxW} height={boxH} style={{ pointerEvents: 'none' }}>
                         <div className="bg-gray-900 text-white text-[10px] leading-snug rounded-lg p-2 shadow-lg">
@@ -300,26 +311,27 @@ function stateStyle(state: string) {
     return STATE_COLORS[state] ?? { bg: '#f1f5f9', text: '#64748b' };
 }
 
-function fmtDate(val: string | null) {
-    if (!val) return '—';
-    return new Date(val).toLocaleString('en-GB', {
-        day: '2-digit', month: 'short', year: 'numeric',
-        hour: '2-digit', minute: '2-digit',
-    });
-}
-
 function fmtScore(val: number) {
     return `${(val * 100).toFixed(1)}%`;
 }
 
 function scoreColor(val: number) {
-    if (val >= 0.8) return '#16a34a';
-    if (val >= 0.6) return '#d97706';
+    if (val >= 0.8) {
+return '#16a34a';
+}
+
+    if (val >= 0.6) {
+return '#d97706';
+}
+
     return '#dc2626';
 }
 
 function shortId(id: string | null) {
-    if (!id) return '—';
+    if (!id) {
+return '—';
+}
+
     return id.slice(0, 8) + '…';
 }
 
@@ -357,7 +369,7 @@ export default function Inferences({
             header: 'Analyzed At',
             enableSorting: true,
             enableColumnFilter: false,
-            Cell: ({ row }) => fmtDate(row.original.analyzed_at),
+            Cell: ({ row }) => formatDateTime(row.original.analyzed_at),
         },
         {
             id: 'hive',
@@ -366,6 +378,7 @@ export default function Inferences({
             enableColumnFilter: true,
             Cell: ({ row }) => {
                 const r = row.original;
+
                 return r.beehive ? (
                     <div>
                         <p className="font-semibold whitespace-nowrap" style={{ color: '#0d1b2a' }}>
@@ -402,6 +415,7 @@ export default function Inferences({
             filterSelectOptions: ['', 'normal', 'pre_swarm', 'swarm', 'abscondence', 'external_noise', 'pest_disturbance', 'uncertain'],
             Cell: ({ row }) => {
                 const style = stateStyle(row.original.hive_state);
+
                 return (
                     <span
                         className="text-[10px] font-bold px-2 py-0.5 rounded tracking-widest whitespace-nowrap"
@@ -450,7 +464,7 @@ export default function Inferences({
             header: 'Created At',
             enableSorting: true,
             enableColumnFilter: false,
-            Cell: ({ row }) => fmtDate(row.original.created_at),
+            Cell: ({ row }) => formatDateTime(row.original.created_at),
         },
     ], []);
 
@@ -485,8 +499,8 @@ export default function Inferences({
                 r.hive_state,
                 fmtScore(r.confidence_score),
                 r.inference_latency_ms ?? '',
-                fmtDate(r.analyzed_at),
-                fmtDate(r.created_at),
+                formatDateTime(r.analyzed_at),
+                formatDateTime(r.created_at),
             ].join(',')
         );
         const blob = new Blob([[header, ...csvRows].join('\n')], { type: 'text/csv' });
@@ -500,7 +514,9 @@ export default function Inferences({
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
         post('/analytics', {
-            onSuccess: () => { reset(); setShowModal(false); },
+            onSuccess: () => {
+ reset(); setShowModal(false); 
+},
         });
     };
 
@@ -862,7 +878,9 @@ export default function Inferences({
                     />
                     <select
                         value={stateFilter}
-                        onChange={(e) => { setStateFilter(e.target.value); applyFilters({ state: e.target.value }); }}
+                        onChange={(e) => {
+ setStateFilter(e.target.value); applyFilters({ state: e.target.value }); 
+}}
                         className="border border-gray-200 rounded-lg px-4 py-2.5 text-sm bg-white outline-none focus:border-amber-400"
                         style={{ color: '#0d1b2a' }}
                     >
@@ -873,7 +891,9 @@ export default function Inferences({
                     </select>
                     {(search || stateFilter) && (
                         <button
-                            onClick={() => { setSearch(''); setStateFilter(''); applyFilters({ search: '', state: '' }); }}
+                            onClick={() => {
+ setSearch(''); setStateFilter(''); applyFilters({ search: '', state: '' }); 
+}}
                             className="text-xs text-gray-400 hover:text-gray-800 underline"
                         >
                             Clear filters

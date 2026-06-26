@@ -1,11 +1,11 @@
 import { Form, Head } from '@inertiajs/react';
+import { Mail, Lock, User, Eye, EyeOff, Loader2 } from 'lucide-react';
+import { useState } from 'react';
 import InputError from '@/components/input-error';
 import TextLink from '@/components/text-link';
-import { useState } from 'react';
-import { Mail, Lock, User, Eye, EyeOff, Loader2 } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import { login } from '@/routes';
 import { store } from '@/routes/register';
-import { cn } from '@/lib/utils';
 
 export default function Register() {
     const [showPassword, setShowPassword] = useState(false);

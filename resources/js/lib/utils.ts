@@ -17,6 +17,25 @@ export const formatDisplayText = (value: string | number | null | undefined): st
 };
 
 /**
+ * Builds a CSV file from headers + rows and triggers a browser download.
+ */
+export function exportToCsv(
+    filename: string,
+    headers: string[],
+    rows: (string | number | null | undefined)[][]
+): void {
+    const escape = (v: string | number | null | undefined) => `"${String(v ?? '').replace(/"/g, '""')}"`;
+    const csv = [headers, ...rows].map((r) => r.map(escape).join(',')).join('\r\n');
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
+}
+
+/**
  * Helper to safely get nested property value using dot notation
  * @param obj Object to get value from
  * @param path Dot notation path (e.g., "owner.name")
@@ -24,7 +43,10 @@ export const formatDisplayText = (value: string | number | null | undefined): st
  */
 function getNestedValue(obj: any, path: string): any {
     return path.split(".").reduce((current, key) => {
-        if (current == null) return undefined;
+        if (current == null) {
+return undefined;
+}
+
         return current[key];
     }, obj);
 }
@@ -42,6 +64,7 @@ function setNestedValue(obj: any, path: string, value: any): void {
         if (current[key] == null) {
             current[key] = {};
         }
+
         return current[key];
     }, obj);
     target[lastKey] = value;
@@ -62,11 +85,13 @@ export const cleanDataArray = <T extends Record<string, any>>(
         const cleanedItem = JSON.parse(JSON.stringify(item)); // Deep copy to avoid mutating original
         fieldsToClean.forEach(field => {
             const value = getNestedValue(cleanedItem, field);
+
             if (value != null) {
                 const cleanedValue = formatDisplayText(value);
                 setNestedValue(cleanedItem, field, cleanedValue);
             }
         });
+
         return cleanedItem as T;
     });
 };
