@@ -1,15 +1,19 @@
-import React, { useEffect, useMemo, type ReactNode } from 'react';
 import { createTheme, ThemeProvider } from '@mui/material/styles';
+import { AdapterDayjs } from '@mui/x-date-pickers/AdapterDayjs';
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import {
     MaterialReactTable,
-    useMaterialReactTable,
-    type MRT_ColumnDef,
-    type MRT_SortingState,
-    type MRT_ColumnFiltersState,
-    type MRT_VisibilityState,
-    type MRT_RowSelectionState,
-    type MRT_PaginationState,
+    useMaterialReactTable
+    
+    
+    
+    
+    
+    
 } from 'material-react-table';
+import type {MRT_ColumnDef, MRT_SortingState, MRT_ColumnFiltersState, MRT_VisibilityState, MRT_RowSelectionState, MRT_PaginationState} from 'material-react-table';
+import React, { useMemo } from 'react';
+import type {ReactNode} from 'react';
 
 const theme = createTheme({
     components: {
@@ -59,16 +63,18 @@ export function DataTable<T extends Record<string, any>>({
 }) {
     return (
         <ThemeProvider theme={theme}>
-            <DataTableInner
-                columns={columns}
-                data={data}
-                getRowId={getRowId}
-                enableRowActions={enableRowActions}
-                renderRowActionMenuItems={renderRowActionMenuItems}
-                renderDetailPanel={renderDetailPanel}
-                initialColumnVisibility={initialColumnVisibility}
-                {...rest}
-            />
+            <LocalizationProvider dateAdapter={AdapterDayjs}>
+                <DataTableInner
+                    columns={columns}
+                    data={data}
+                    getRowId={getRowId}
+                    enableRowActions={enableRowActions}
+                    renderRowActionMenuItems={renderRowActionMenuItems}
+                    renderDetailPanel={renderDetailPanel}
+                    initialColumnVisibility={initialColumnVisibility}
+                    {...rest}
+                />
+            </LocalizationProvider>
         </ThemeProvider>
     );
 }
@@ -101,9 +107,17 @@ function DataTableInner<T extends Record<string, any>>({
 
     // Jump back to page 1 whenever filters/search narrow the result set,
     // otherwise the current page can land past the end and render as empty.
-    useEffect(() => {
-        setPagination((p) => (p.pageIndex === 0 ? p : { ...p, pageIndex: 0 }));
-    }, [columnFilters, globalFilter]);
+    const resetToFirstPage = () => setPagination((p) => (p.pageIndex === 0 ? p : { ...p, pageIndex: 0 }));
+
+    const handleColumnFiltersChange: typeof setColumnFilters = (updater) => {
+        setColumnFilters(updater);
+        resetToFirstPage();
+    };
+
+    const handleGlobalFilterChange: typeof setGlobalFilter = (updater) => {
+        setGlobalFilter(updater);
+        resetToFirstPage();
+    };
 
     const tableData = useMemo(() => data, [data]);
 
@@ -112,9 +126,11 @@ function DataTableInner<T extends Record<string, any>>({
         data: tableData,
         getRowId,
         enableSorting: true,
-        enableColumnFilters: true,
+        enableColumnFilters: false,
         enableColumnActions: true,
         enableHiding: true,
+        enableGlobalFilter: false,
+        displayColumnDefOptions: { 'mrt-row-expand': { visibleInShowHideMenu: false } },
         enableRowSelection: false,
         enableMultiRowSelection: false,
         enableRowActions,
@@ -131,6 +147,7 @@ function DataTableInner<T extends Record<string, any>>({
         enableRowNumbers: false,
         enableStickyHeader: true,
         enableStickyFooter: false,
+        enableDensityToggle: false,
         muiTableBodyRowProps: () => ({
             onClick: undefined,
             onDoubleClick: undefined,
@@ -153,10 +170,10 @@ function DataTableInner<T extends Record<string, any>>({
             ...(rest.state || {}),
         },
         onSortingChange: setSorting,
-        onColumnFiltersChange: setColumnFilters,
+        onColumnFiltersChange: handleColumnFiltersChange,
         onColumnVisibilityChange: setColumnVisibility,
         onRowSelectionChange: setRowSelection,
-        onGlobalFilterChange: setGlobalFilter,
+        onGlobalFilterChange: handleGlobalFilterChange,
         onPaginationChange: setPagination,
         ...rest,
     });

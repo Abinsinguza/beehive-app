@@ -11,9 +11,9 @@ import {
     Video,
 } from 'lucide-react';
 import { useMemo, useState } from 'react';
-import { dashboard } from '@/routes';
-import { formatDisplayText, cleanDataArray } from '@/lib/utils';
 import { toSentenceCase } from '@/lib/format-text';
+import { formatDisplayText, cleanDataArray } from '@/lib/utils';
+import { dashboard } from '@/routes';
 
 type Stats = {
     total_hives: number;
@@ -71,8 +71,15 @@ function getDayLabel() {
 
 function getTimeGreeting() {
     const hour = new Date().getHours();
-    if (hour < 12) return 'Good morning';
-    if (hour < 18) return 'Good afternoon';
+
+    if (hour < 12) {
+return 'Good morning';
+}
+
+    if (hour < 18) {
+return 'Good afternoon';
+}
+
     return 'Good evening';
 }
 
@@ -97,52 +104,84 @@ function stateMeta(state: string) {
 }
 
 const SEVERITY_DOT: Record<string, string> = {
-    critical: '#dc2626', high: '#dc2626',
-    medium: '#f59e0b', low: '#3b82f6',
+    critical: '#dc2626', warning: '#f59e0b', info: '#3b82f6',
 };
-function severityDot(s: string) { return SEVERITY_DOT[s?.toLowerCase()] ?? '#94a3b8'; }
+function severityDot(s: string) {
+ return SEVERITY_DOT[s?.toLowerCase()] ?? '#94a3b8'; 
+}
 
 const SEVERITY_BADGE: Record<string, { bg: string; text: string; label: string }> = {
     critical: { bg: '#fee2e2', text: '#b91c1c', label: 'Critical' },
-    high:     { bg: '#fee2e2', text: '#b91c1c', label: 'High'     },
-    medium:   { bg: '#fef3c7', text: '#b45309', label: 'Medium'   },
-    low:      { bg: '#eff6ff', text: '#1d4ed8', label: 'Low'      },
+    warning:  { bg: '#fef3c7', text: '#b45309', label: 'Warning'  },
+    info:     { bg: '#eff6ff', text: '#1d4ed8', label: 'Info'     },
 };
 function severityBadge(s: string) {
     return SEVERITY_BADGE[s?.toLowerCase()] ?? { bg: '#f1f5f9', text: '#64748b', label: s };
 }
 
 function timeAgo(iso: string | null) {
-    if (!iso) return '';
+    if (!iso) {
+return '';
+}
+
     const d = new Date(iso);
     const now = new Date();
     const diff = Math.floor((now.getTime() - d.getTime()) / 1000);
-    if (diff < 60)   return 'Just now';
-    if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
-    if (diff < 86400) return d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
+
+    if (diff < 60)   {
+return 'Just now';
+}
+
+    if (diff < 3600) {
+return `${Math.floor(diff / 60)}m ago`;
+}
+
+    if (diff < 86400) {
+return d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
+}
+
     return 'Yesterday ' + d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false });
 }
 
 function relativeAgo(iso: string | null) {
-    if (!iso) return '';
+    if (!iso) {
+return '';
+}
+
     const diff = Math.floor((Date.now() - new Date(iso).getTime()) / 1000);
-    if (diff < 60)    return 'Just now';
-    if (diff < 3600)  return `${Math.floor(diff / 60)}min ago`;
-    if (diff < 86400) return `${Math.floor(diff / 3600)}hrs ago`;
+
+    if (diff < 60)    {
+return 'Just now';
+}
+
+    if (diff < 3600)  {
+return `${Math.floor(diff / 60)}min ago`;
+}
+
+    if (diff < 86400) {
+return `${Math.floor(diff / 3600)}hrs ago`;
+}
+
     return `${Math.floor(diff / 86400)}d ago`;
 }
 
 // ── Donut chart ──────────────────────────────────────────────────
 function polar(cx: number, cy: number, r: number, deg: number) {
     const rad = ((deg - 90) * Math.PI) / 180;
+
     return { x: cx + r * Math.cos(rad), y: cy + r * Math.sin(rad) };
 }
 function donutArc(cx: number, cy: number, outerR: number, innerR: number, startDeg: number, endDeg: number) {
     const gap = 2; const s = startDeg + gap / 2; const e = endDeg - gap / 2;
-    if (e <= s) return '';
+
+    if (e <= s) {
+return '';
+}
+
     const o1 = polar(cx, cy, outerR, s), o2 = polar(cx, cy, outerR, e);
     const i1 = polar(cx, cy, innerR, e), i2 = polar(cx, cy, innerR, s);
     const large = e - s > 180 ? 1 : 0;
+
     return [
         `M ${o1.x.toFixed(2)} ${o1.y.toFixed(2)}`,
         `A ${outerR} ${outerR} 0 ${large} 1 ${o2.x.toFixed(2)} ${o2.y.toFixed(2)}`,
@@ -162,7 +201,9 @@ const DONUT_COLORS: Record<string, string> = {
     uncertain:        '#64748b',
     unknown:          '#94a3b8',
 };
-function donutColor(state: string) { return DONUT_COLORS[state] ?? '#94a3b8'; }
+function donutColor(state: string) {
+ return DONUT_COLORS[state] ?? '#94a3b8'; 
+}
 
 function DonutChart({ categories }: { categories: HiveCategories }) {
     const entries = Object.entries(categories);
@@ -173,8 +214,10 @@ function DonutChart({ categories }: { categories: HiveCategories }) {
         const sweep = total > 0 ? (count / total) * 360 : 0;
         const path  = donutArc(cx, cy, outerR, innerR, cursor, cursor + sweep);
         cursor += sweep;
+
         return { key, path };
     });
+
     return (
         <svg viewBox="0 0 160 160" className="w-full h-full">
             {total === 0
@@ -327,6 +370,7 @@ export default function Dashboard({
                                 <div className="divide-y divide-gray-100">
                                     {cleanedHives.map((hive) => {
                                         const meta = stateMeta(hive.hive_state);
+
                                         return (
                                             <div key={hive.id}
                                                 className="flex items-center gap-3 px-5 py-3 hover:bg-gray-50 cursor-pointer transition-colors"
@@ -408,6 +452,7 @@ export default function Dashboard({
                                         const badge = severityBadge(a.severity_level);
                                         const dot   = severityDot(a.severity_level);
                                         const status = a.action_status;
+
                                         return (
                                             <div key={a.id} className="flex items-start gap-3 px-5 py-3">
                                                 <span className="w-2 h-2 rounded-full shrink-0 mt-1.5" style={{ backgroundColor: dot }} />
@@ -475,6 +520,7 @@ export default function Dashboard({
                                         <div key={d.label} className="flex-1 flex items-end justify-center gap-1 h-full relative z-10">
                                             {recording_states.map((s) => {
                                                 const count = Number(d[s]) || 0;
+
                                                 return (
                                                     <div
                                                         key={s}

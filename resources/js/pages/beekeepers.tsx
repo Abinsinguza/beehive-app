@@ -1,11 +1,11 @@
 import { Head, router, useForm } from '@inertiajs/react';
-import { Download, Edit2, Eye, UserPlus, X } from 'lucide-react';
+import { Ban, Download, Edit2, Eye, RotateCcw, Search, UserPlus, X } from 'lucide-react';
+import { MRT_ShowHideColumnsButton, MRT_ToggleFullScreenButton  } from 'material-react-table';
+import type {MRT_ColumnDef} from 'material-react-table';
 import { useEffect, useMemo, useState } from 'react';
-import { type MRT_ColumnDef } from 'material-react-table';
-import { MenuItem } from '@mui/material';
 import { DataTable } from '@/components/data-table';
-import { cleanDataArray, formatDisplayText } from '@/lib/utils';
 import { toTitleCase } from '@/lib/format-text';
+import { cleanDataArray, exportToCsv } from '@/lib/utils';
 
 type Beekeeper = {
     user_id: string;
@@ -16,11 +16,6 @@ type Beekeeper = {
     status?: string;
     beehives_count?: number;
     created_at?: string;
-};
-
-const roleColors: Record<string, { bg: string; color: string }> = {
-    Administrator: { bg: '#0d1b2a', color: '#ffffff' },
-    Beekeeper:     { bg: '#f1f5f9', color: '#374151' },
 };
 
 const statusConfig: Record<string, { dot: string; label: string; labelColor: string }> = {
@@ -36,13 +31,22 @@ function getInitials(full_name: string) {
 }
 
 function getRole(bk: Beekeeper): string {
-    if (bk.email?.includes('swarmintel')) return 'Administrator';
+    if (bk.email?.includes('swarmintel')) {
+return 'Administrator';
+}
+
     return 'Beekeeper';
 }
 
 function getStatus(bk: Beekeeper): string {
-    if (bk.status) return bk.status;
-    if (bk.email) return 'active';
+    if (bk.status) {
+return bk.status;
+}
+
+    if (bk.email) {
+return 'active';
+}
+
     return 'pending';
 }
 
@@ -55,18 +59,26 @@ function AddBeekeeperModal({ onClose }: { onClose: () => void }) {
 
     const submit = (e: React.FormEvent) => {
         e.preventDefault();
-        post('/beekeepers', { onSuccess: () => { reset(); onClose(); } });
+        post('/beekeepers', { onSuccess: () => {
+ reset(); onClose(); 
+} });
     };
 
     const generateApiKey = () => {
-        if (!data.full_name.trim()) return;
+        if (!data.full_name.trim()) {
+return;
+}
+
         setGenerating(true);
         router.post('/api-keys/generate', { client_name: data.full_name }, {
             preserveState: true,
             preserveScroll: true,
             onSuccess: (page) => {
                 const key = (page.props.flash as { generated_api_key?: string } | undefined)?.generated_api_key;
-                if (key) setData('api_key', key);
+
+                if (key) {
+setData('api_key', key);
+}
             },
             onFinish: () => setGenerating(false),
         });
@@ -222,6 +234,7 @@ function EditBeekeeperModal({ beekeeper, onClose }: { beekeeper: Beekeeper; onCl
 function ModalShell({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
     useEffect(() => {
         document.body.classList.add('overflow-hidden');
+
         return () => document.body.classList.remove('overflow-hidden');
     }, []);
 
@@ -274,6 +287,21 @@ export default function Beekeepers({
         ]);
     }, [beekeepers]);
 
+    const [search, setSearch] = useState('');
+    const filteredBeekeepers = useMemo(() => {
+        const q = search.trim().toLowerCase();
+
+        if (!q) {
+return cleanedBeekeepers;
+}
+
+        return cleanedBeekeepers.filter((bk) =>
+            bk.full_name?.toLowerCase().includes(q) ||
+            bk.email?.toLowerCase().includes(q) ||
+            bk.phone?.toLowerCase().includes(q)
+        );
+    }, [cleanedBeekeepers, search]);
+
     const [showAddModal, setShowAddModal] = useState(false);
     const [editTarget, setEditTarget]     = useState<Beekeeper | null>(null);
     const [revokeTarget, setRevokeTarget]     = useState<Beekeeper | null>(null);
@@ -282,7 +310,10 @@ export default function Beekeepers({
     // Revoke logic
     const { patch: revokePatch, processing: revoking } = useForm({});
     const confirmRevoke = () => {
-        if (!revokeTarget) return;
+        if (!revokeTarget) {
+return;
+}
+
         revokePatch('/beekeepers/' + revokeTarget.user_id + '/revoke', {
             onSuccess: () => setRevokeTarget(null),
         });
@@ -291,7 +322,10 @@ export default function Beekeepers({
     // Restore logic
     const { patch: restorePatch, processing: restoring } = useForm({});
     const confirmRestore = () => {
-        if (!restoreTarget) return;
+        if (!restoreTarget) {
+return;
+}
+
         restorePatch('/beekeepers/' + restoreTarget.user_id + '/restore', {
             onSuccess: () => setRestoreTarget(null),
         });
@@ -299,7 +333,7 @@ export default function Beekeepers({
 
     const exportCSV = () => {
         const headers = ['Name', 'Email', 'Phone', 'Role', 'Status', 'Hives', 'Address', 'Sign Up Date'];
-        const rows = cleanedBeekeepers.map((bk) => [
+        const rows = filteredBeekeepers.map((bk) => [
             bk.full_name,
             bk.email ?? '',
             bk.phone,
@@ -309,17 +343,7 @@ export default function Beekeepers({
             bk.address ?? '',
             bk.created_at ? new Date(bk.created_at).toLocaleDateString() : '',
         ]);
-
-        const escape = (val: string) => `"${val.replace(/"/g, '""')}"`;
-        const csv = [headers, ...rows].map((row) => row.map(escape).join(',')).join('\r\n');
-
-        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-        const url  = URL.createObjectURL(blob);
-        const a    = document.createElement('a');
-        a.href     = url;
-        a.download = 'beekeepers.csv';
-        a.click();
-        URL.revokeObjectURL(url);
+        exportToCsv('beekeepers.csv', headers, rows);
     };
 
     const columns = useMemo<MRT_ColumnDef<Beekeeper>[]>(() => [
@@ -343,6 +367,7 @@ export default function Beekeepers({
             size: 180,
             Cell: ({ row }) => {
                 const bk = row.original;
+
                 return (
                     <div className="flex items-center gap-3">
                         <div
@@ -370,6 +395,7 @@ export default function Beekeepers({
             Cell: ({ row }) => {
                 const status = getStatus(row.original);
                 const sc = statusConfig[status] ?? statusConfig.active;
+
                 return (
                     <div className="flex items-center gap-1.5">
                         <span className="w-2 h-2 rounded-full shrink-0" style={{ backgroundColor: sc.dot }} />
@@ -386,9 +412,10 @@ export default function Beekeepers({
             size: 70,
             Cell: ({ cell }) => {
                 const count = cell.getValue<number>() ?? 0;
+
                 return (
                     <span
-                        className="inline-flex items-center justify-center min-w-[1.75rem] h-6 px-2 rounded text-xs font-bold"
+                        className="inline-flex items-center justify-center min-w-7 h-6 px-2 rounded text-xs font-bold"
                         style={{ backgroundColor: '#fef3c7', color: '#92400e' }}
                     >
                         {count}
@@ -400,6 +427,7 @@ export default function Beekeepers({
 
     const renderDetailPanel = ({ row }: { row: any }) => {
         const bk = row.original as Beekeeper;
+
         return (
             <div className="px-4 py-3 bg-gray-50 border-t border-gray-100">
                 <div className="grid grid-cols-2 gap-4">
@@ -492,61 +520,65 @@ export default function Beekeepers({
 
                 {/* Table */}
                 <div className="bg-white rounded-xl border border-gray-200 shadow-sm">
-                    <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
-                        <button onClick={exportCSV} className="flex items-center gap-1.5 text-xs font-semibold text-gray-400 hover:text-gray-700 transition-colors">
-                            <Download className="w-3.5 h-3.5" /> Export CSV
-                        </button>
-                    </div>
                     <DataTable
                         columns={columns}
-                        data={cleanedBeekeepers}
+                        data={filteredBeekeepers}
                         getRowId={(row) => row.user_id}
                         enableRowActions={true}
                         renderDetailPanel={renderDetailPanel}
-                        renderRowActionMenuItems={({ closeMenu, row }) => [
-                            <MenuItem
-                                key="view"
-                                onClick={() => {
-                                    closeMenu();
-                                    router.visit(`/beekeepers/${row.original.user_id}`);
-                                }}
-                            >
-                                <Eye className="mr-2" />
-                                View
-                            </MenuItem>,
-                            <MenuItem
-                                key="edit"
-                                onClick={() => {
-                                    setEditTarget(row.original);
-                                    closeMenu();
-                                }}
-                            >
-                                <Edit2 className="mr-2" />
-                                Edit
-                            </MenuItem>,
-                            getStatus(row.original) === 'revoked' ? (
-                                <MenuItem
-                                    key="restore"
-                                    onClick={() => {
-                                        setRestoreTarget(row.original);
-                                        closeMenu();
-                                    }}
+                        renderTopToolbarCustomActions={() => (
+                            <div className="relative">
+                                <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                                <input
+                                    type="text"
+                                    placeholder="Search name, email or phone…"
+                                    value={search}
+                                    onChange={(e) => setSearch(e.target.value)}
+                                    className="bg-gray-50 border border-gray-200 rounded-lg pl-10 pr-3 py-2 text-sm outline-none focus:border-gray-400 transition-colors"
+                                    style={{ color: '#0d1b2a' }}
+                                />
+                            </div>
+                        )}
+                        renderToolbarInternalActions={({ table }: { table: any }) => (
+                            <>
+                                <MRT_ShowHideColumnsButton table={table} />
+                                <MRT_ToggleFullScreenButton table={table} />
+                                <button onClick={exportCSV} className="flex items-center gap-1.5 text-xs font-semibold text-gray-400 hover:text-gray-700 transition-colors px-3">
+                                    <Download className="w-3.5 h-3.5" /> Export CSV
+                                </button>
+                            </>
+                        )}
+                        renderRowActions={({ row }: { row: any }) => (
+                            <div className="flex items-center gap-1">
+                                <button
+                                    onClick={() => router.visit(`/beekeepers/${row.original.user_id}`)}
+                                    className="p-1.5 rounded hover:bg-blue-50 text-gray-400 hover:text-blue-500 transition-colors" title="View"
                                 >
-                                    Restore
-                                </MenuItem>
-                            ) : (
-                                <MenuItem
-                                    key="revoke"
-                                    onClick={() => {
-                                        setRevokeTarget(row.original);
-                                        closeMenu();
-                                    }}
-                                    sx={{ color: '#f97316' }}
+                                    <Eye className="w-4 h-4" />
+                                </button>
+                                <button
+                                    onClick={() => setEditTarget(row.original)}
+                                    className="p-1.5 rounded hover:bg-amber-50 text-gray-400 hover:text-amber-600 transition-colors" title="Edit"
                                 >
-                                    Revoke
-                                </MenuItem>
-                            ),
-                        ]}
+                                    <Edit2 className="w-4 h-4" />
+                                </button>
+                                {getStatus(row.original) === 'revoked' ? (
+                                    <button
+                                        onClick={() => setRestoreTarget(row.original)}
+                                        className="p-1.5 rounded hover:bg-green-50 text-gray-400 hover:text-green-600 transition-colors" title="Restore"
+                                    >
+                                        <RotateCcw className="w-4 h-4" />
+                                    </button>
+                                ) : (
+                                    <button
+                                        onClick={() => setRevokeTarget(row.original)}
+                                        className="p-1.5 rounded hover:bg-orange-50 text-gray-400 hover:text-orange-500 transition-colors" title="Revoke"
+                                    >
+                                        <Ban className="w-4 h-4" />
+                                    </button>
+                                )}
+                            </div>
+                        )}
                     />
                 </div>
             </div>

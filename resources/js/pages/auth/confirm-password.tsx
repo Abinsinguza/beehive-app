@@ -1,9 +1,9 @@
 import { Form, Head } from '@inertiajs/react';
-import InputError from '@/components/input-error';
-import { useState } from 'react';
 import { Lock, Eye, EyeOff, Loader2 } from 'lucide-react';
-import { store } from '@/routes/password/confirm';
+import { useState } from 'react';
+import InputError from '@/components/input-error';
 import { cn } from '@/lib/utils';
+import { store } from '@/routes/password/confirm';
 
 export default function ConfirmPassword() {
     const [showPassword, setShowPassword] = useState(false);

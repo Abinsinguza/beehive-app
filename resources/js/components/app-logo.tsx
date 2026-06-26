@@ -1,12 +1,12 @@
-import BeeLogoIcon from '@/components/bee-logo-icon';
+import beeLogo from '../../images/bee.png';
 
 export default function AppLogo() {
     return (
-        <>
-            <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-gradient-to-br from-amber-400 to-orange-500 shadow-sm">
-                <BeeLogoIcon className="size-5 fill-current text-white" />
+        <div className="flex items-center gap-2">
+            <div className="flex aspect-square size-8 items-center justify-center rounded-lg bg-linear-to-br from-amber-400 to-orange-500 shadow-sm">
+                <img src={beeLogo} alt="BSADS" className="size-4 object-contain" />
             </div>
-            <div className="ml-2 grid flex-1 text-left text-sm">
+            <div className="grid flex-1 text-left text-sm">
                 <span className="truncate leading-tight font-bold tracking-tight text-sidebar-foreground">
                     BSADS
                 </span>
@@ -14,6 +14,6 @@ export default function AppLogo() {
                     Beekeeping System
                 </span>
             </div>
-        </>
+        </div>
     );
 }

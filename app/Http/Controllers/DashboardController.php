@@ -36,7 +36,7 @@ class DashboardController extends Controller
         $recordingsToday = AudioSource::whereDate('created_at', $today)->count();
         $recordingsYest  = AudioSource::whereDate('created_at', Carbon::yesterday()->toDateString())->count();
         $needAttention   = Alerts::whereNotIn('action_status', ['resolved', 'dismissed'])
-                                 ->whereIn('severity_level', ['critical', 'high'])
+                                 ->whereIn('severity_level', ['critical', 'warning'])
                                  ->count();
 
         // ── Top 5 most recently updated hives with latest inference (LATERAL join) ───────

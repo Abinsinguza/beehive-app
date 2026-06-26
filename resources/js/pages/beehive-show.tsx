@@ -1,10 +1,10 @@
 import { Head, router } from '@inertiajs/react';
 import { Activity, AlertTriangle, Calendar, ChevronLeft, ClipboardList, Droplets, Leaf, LayoutGrid, Link2, MapPin, Mic, Play, Plug, Thermometer } from 'lucide-react';
+import type {MRT_ColumnDef} from 'material-react-table';
 import React, { useState, useMemo } from 'react';
-import AppLayout from '@/layouts/app-layout';
 import { DataTable } from '@/components/data-table';
-import { type MRT_ColumnDef } from 'material-react-table';
-import { toSentenceCase } from '@/lib/format-text';
+import AppLayout from '@/layouts/app-layout';
+import { toSentenceCase, formatDate } from '@/lib/format-text';
 
 type Beehive = {
     id: string;
@@ -88,20 +88,20 @@ const stateColors: Record<string, string> = {
     unknown:          '#94a3b8',
 };
 
-const severityDot: Record<string, string> = {
-    Critical: '#ef4444',
-    Warning:  '#f59e0b',
-    Info:     '#22c55e',
+const severityDotColors: Record<string, string> = {
+    critical: '#ef4444',
+    warning:  '#f59e0b',
+    info:     '#22c55e',
 };
-
-function fmt(dateStr: string | null | undefined): string {
-    if (!dateStr) return '—';
-    const d = new Date(dateStr);
-    return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric' });
+function severityDot(s: string | null | undefined) {
+    return severityDotColors[s?.toLowerCase() ?? ''] ?? '#94a3b8';
 }
 
 function fmtTime(dateStr: string | null | undefined): string {
-    if (!dateStr) return '—';
+    if (!dateStr) {
+return '—';
+}
+
     const d = new Date(dateStr);
     const today = new Date();
     const isToday = d.toDateString() === today.toDateString();
@@ -109,9 +109,16 @@ function fmtTime(dateStr: string | null | undefined): string {
     yesterday.setDate(today.getDate() - 1);
     const isYesterday = d.toDateString() === yesterday.toDateString();
     const time = d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
-    if (isToday) return `Today ${time}`;
-    if (isYesterday) return `Yesterday ${time}`;
-    return fmt(dateStr);
+
+    if (isToday) {
+return `Today ${time}`;
+}
+
+    if (isYesterday) {
+return `Yesterday ${time}`;
+}
+
+    return formatDate(dateStr);
 }
 
 function filename(url: string): string {
@@ -135,7 +142,6 @@ export default function BeehiveShow({
     audioSources: AudioPaginator;
     dataSource: DataSource;
 }) {
-    const stateBadgeColor = stateColors[beehive.current_state] ?? '#94a3b8';
     const isRisk = ['swarm', 'pre_swarm', 'abscondment', 'missing_queen', 'pest_infested'].includes(beehive.current_state);
     const [tab, setTab] = useState<'overview' | 'data-source'>('overview');
 
@@ -154,9 +160,10 @@ export default function BeehiveShow({
             header: 'File',
             Cell: ({ row }) => {
                 const audio = row.original;
+
                 return (
                     <div>
-                        <p className="font-medium truncate max-w-[160px]" style={{ color: '#0d1b2a' }}>{filename(audio.source_url)}</p>
+                        <p className="font-medium truncate max-w-40" style={{ color: '#0d1b2a' }}>{filename(audio.source_url)}</p>
                         <p className="text-gray-400">
                             {audio.file_format.toUpperCase()}
                             {audio.duration_seconds ? ` · ${audio.duration_seconds}s` : ''}
@@ -175,6 +182,7 @@ export default function BeehiveShow({
             header: 'ML Detected',
             Cell: ({ row }) => {
                 const stateColor = row.original.detected_state ? (stateColors[row.original.detected_state] ?? '#94a3b8') : null;
+
                 return row.original.detected_state ? (
                     <span className="font-semibold" style={{ color: stateColor ?? undefined }}>
                         {row.original.detected_state}
@@ -219,7 +227,10 @@ export default function BeehiveShow({
     ], []);
 
     function fmtTimeFull(dateStr: string | null | undefined): string {
-        if (!dateStr) return 'Never synced';
+        if (!dateStr) {
+return 'Never synced';
+}
+
         return `Last synced ${fmtTime(dateStr)}`;
     }
 
@@ -261,7 +272,7 @@ export default function BeehiveShow({
                                     <MapPin className="w-3.5 h-3.5" /> {beehive.hive_location}
                                 </span>
                                 <span className="flex items-center gap-1">
-                                    <Calendar className="w-3.5 h-3.5" /> Installed {fmt(beehive.installation_date)}
+                                    <Calendar className="w-3.5 h-3.5" /> Installed {formatDate(beehive.installation_date)}
                                 </span>
                             </div>
                         </div>
@@ -363,7 +374,7 @@ export default function BeehiveShow({
                                 {recentAdvisories.map((adv) => (
                                     <div key={adv.advisory_id} className="flex items-start gap-2.5">
                                         <span className="w-2 h-2 rounded-full mt-1 shrink-0"
-                                            style={{ backgroundColor: severityDot[adv.severity] ?? '#94a3b8' }} />
+                                            style={{ backgroundColor: severityDot(adv.severity) }} />
                                         <div>
                                             <p className="text-sm" style={{ color: '#0d1b2a' }}>{adv.condition_label ?? adv.advisory_text ?? '—'}</p>
                                             <p className="text-xs text-gray-400 mt-0.5">
@@ -463,7 +474,7 @@ export default function BeehiveShow({
                                     : '—',
                             },
                             { label: 'Owner',             value: beehive.owner?.name ?? '—' },
-                            { label: 'Installation date', value: fmt(beehive.installation_date) },
+                            { label: 'Installation date', value: formatDate(beehive.installation_date) },
                             { label: 'Current state',     value: beehive.current_state },
                         ].map((row) => (
                             <div key={row.label} className="flex items-start py-3 gap-4">

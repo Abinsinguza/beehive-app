@@ -50,15 +50,18 @@ async function geocodeLocation(location: string): Promise<{ lat: number; lon: nu
             `https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(location)}&limit=1`
         );
         const data = await response.json();
+
         if (data && data.length > 0) {
             return {
                 lat: parseFloat(data[0].lat),
                 lon: parseFloat(data[0].lon),
             };
         }
+
         return null;
     } catch (e) {
         console.error('Geocoding error:', e);
+
         return null;
     }
 }
@@ -67,6 +70,7 @@ async function geocodeLocation(location: string): Promise<{ lat: number; lon: nu
 function SuccessModal({ message, onClose }: { message: string; onClose: () => void }) {
     useEffect(() => {
         const timer = setTimeout(onClose, 3000);
+
         return () => clearTimeout(timer);
     }, [onClose]);
 
@@ -106,20 +110,24 @@ function AddHiveModal({ beekeeperId, onClose }: { beekeeperId: string; onClose: 
         if (data.hive_location && data.hive_location.length > 3) {
             const timeoutId = setTimeout(async () => {
                 const coords = await geocodeLocation(data.hive_location);
+
                 if (coords) {
                     setData('latitude', coords.lat.toString());
                     setData('longitude', coords.lon.toString());
                 }
             }, 1000); // Debounce 1 second
+
             return () => clearTimeout(timeoutId);
         }
     }, [data.hive_location, setData]);
 
     const handleUseCurrentLocation = () => {
         setIsGettingLocation(true);
+
         if (!navigator.geolocation) {
             alert('Geolocation is not supported by your browser');
             setIsGettingLocation(false);
+
             return;
         }
 
@@ -285,13 +293,13 @@ function AddHiveModal({ beekeeperId, onClose }: { beekeeperId: string; onClose: 
                                     disabled={isGettingLocation}
                                     className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-gray-200 text-xs font-medium text-gray-600 hover:bg-gray-50 disabled:opacity-60"
                                 >
-                                    <MapPin className="w-3.5 h-3.5" />
+                                    <MapPin className="w-3.5 h-3.5, color: '#f97316'   " />
                                     {isGettingLocation ? 'Getting location…' : 'Use Current Location'}
                                 </button>
                             </div>
                             <div className="grid grid-cols-2 gap-3">
                                 <div className="flex flex-col gap-1">
-                                    <span className="text-xs text-gray-500 font-medium">Latitude</span>
+                                    <span className="text-xs text-orange-500 font-medium">Latitude</span>
                                     <input
                                         type="number"
                                         min="-90" max="90"
@@ -313,7 +321,7 @@ function AddHiveModal({ beekeeperId, onClose }: { beekeeperId: string; onClose: 
                                     )}
                                 </div>
                                 <div className="flex flex-col gap-1">
-                                    <span className="text-xs text-gray-500 font-medium">Longitude</span>
+                                    <span className="text-xs text-orange-500 font-medium">Longitude</span>
                                     <input
                                         type="number"
                                         min="-180" max="180"
@@ -369,8 +377,9 @@ export default function BeekeeperShow({ beekeeper }: { beekeeper: Beekeeper }) {
 
     const { props } = usePage<{ flash?: { success?: string; error?: string } }>();
     const flash = props.flash;
-    const [flashDismissed, setFlashDismissed] = useState(false);
-    useEffect(() => { setFlashDismissed(false); }, [flash?.success, flash?.error]);
+    const [dismissedFlash, setDismissedFlash] = useState<string | null>(null);
+    const currentFlash = flash?.success ?? flash?.error ?? null;
+    const flashDismissed = dismissedFlash !== null && dismissedFlash === currentFlash;
 
     function createFolder(hiveId: string) {
         router.post(`/beehives/${hiveId}/recordings-folder`, {}, { preserveScroll: true });
@@ -407,7 +416,7 @@ export default function BeekeeperShow({ beekeeper }: { beekeeper: Beekeeper }) {
                             <CheckCircle className="w-4 h-4 shrink-0" />
                             <span>{flash.success}</span>
                         </div>
-                        <button onClick={() => setFlashDismissed(true)} className="p-0.5 rounded hover:opacity-70">
+                        <button onClick={() => setDismissedFlash(currentFlash)} className="p-0.5 rounded hover:opacity-70">
                             <X className="w-4 h-4" />
                         </button>
                     </div>
@@ -419,7 +428,7 @@ export default function BeekeeperShow({ beekeeper }: { beekeeper: Beekeeper }) {
                             <AlertCircle className="w-4 h-4 shrink-0" />
                             <span>{flash.error}</span>
                         </div>
-                        <button onClick={() => setFlashDismissed(true)} className="p-0.5 rounded hover:opacity-70">
+                        <button onClick={() => setDismissedFlash(currentFlash)} className="p-0.5 rounded hover:opacity-70">
                             <X className="w-4 h-4" />
                         </button>
                     </div>
@@ -554,7 +563,9 @@ export default function BeekeeperShow({ beekeeper }: { beekeeper: Beekeeper }) {
                                         {toSentenceCase(hive.current_state)}
                                     </span>
                                     <button
-                                        onClick={(e) => { e.stopPropagation(); createFolder(hive.id); }}
+                                        onClick={(e) => {
+ e.stopPropagation(); createFolder(hive.id); 
+}}
                                         title="Create / retry recordings folder"
                                         className="shrink-0 p-1.5 rounded hover:bg-gray-100 text-gray-400 hover:text-gray-800 transition-colors"
                                     >
