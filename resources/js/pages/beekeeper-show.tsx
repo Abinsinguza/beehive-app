@@ -302,7 +302,7 @@ function AddHiveModal({ beekeeperId, onClose }: { beekeeperId: string; onClose: 
                                     <span className="text-xs text-orange-500 font-medium">Latitude</span>
                                     <input
                                         type="number"
-                                        min="-90" max="90"
+                                        min="-90" max="90" step="any"
                                         value={data.latitude}
                                         onChange={(e) => setData('latitude', e.target.value)}
                                         placeholder="e.g. 0.347596"
@@ -324,7 +324,7 @@ function AddHiveModal({ beekeeperId, onClose }: { beekeeperId: string; onClose: 
                                     <span className="text-xs text-orange-500 font-medium">Longitude</span>
                                     <input
                                         type="number"
-                                        min="-180" max="180"
+                                        min="-180" max="180" step="any"
                                         value={data.longitude}
                                         onChange={(e) => setData('longitude', e.target.value)}
                                         placeholder="e.g. 32.582520"

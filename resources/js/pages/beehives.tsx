@@ -547,7 +547,7 @@ return;
                                         <span className="text-xs text-orange-400 font-medium">Latitude</span>
                                         <input
                                             type="number"
-                                            min="-90" max="90"
+                                            min="-90" max="90" step="any"
                                             value={data.latitude}
                                             onChange={(e) => setData('latitude', e.target.value)}
                                             placeholder="e.g. 0.347596"
@@ -559,7 +559,7 @@ return;
                                         <span className="text-xs text-orange-400 font-medium">Longitude</span>
                                         <input
                                             type="number"
-                                            min="-180" max="180"
+                                            min="-180" max="180" step="any"
                                             value={data.longitude}
                                             onChange={(e) => setData('longitude', e.target.value)}
                                             placeholder="e.g. 32.582520"
@@ -663,7 +663,7 @@ return '';
                 </div>
                 <form onSubmit={submit} className="p-6 flex flex-col gap-4">
                     <div>
-                        <label className="text-xs font-semibold uppercase tracking-widest text-gray-400 block mb-1.5">Owner</label>
+                        <label className="text-xs font-semibold uppercase tracking-widest block mb-1.5" style={{ color: '#f97316' }}>Owner</label>
                         <select value={data.owner_id} onChange={(e) => setData('owner_id', e.target.value)}
                             className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm outline-none bg-white" required style={{ color: '#0d1b2a' }}>
                             <option value="" disabled>Select a beekeeper</option>
@@ -672,27 +672,27 @@ return '';
                         {errors.owner_id && <p className="text-xs text-red-500 mt-1">{errors.owner_id}</p>}
                     </div>
                     <div>
-                        <label className="text-xs font-semibold uppercase tracking-widest text-gray-400 block mb-1.5">Location</label>
+                        <label className="text-xs font-semibold uppercase tracking-widest block mb-1.5" style={{ color: '#f97316' }}>Location</label>
                         <input type="text" value={data.hive_location} onChange={(e) => setData('hive_location', e.target.value)}
                             placeholder="e.g. North Field, Sector B"
                             className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm outline-none placeholder-gray-300" required style={{ color: '#0d1b2a' }} />
                         {errors.hive_location && <p className="text-xs text-red-500 mt-1">{errors.hive_location}</p>}
                     </div>
                     <div>
-                        <label className="text-xs font-semibold uppercase tracking-widest text-gray-400 block mb-1.5">Hive Type</label>
+                        <label className="text-xs font-semibold uppercase tracking-widest block mb-1.5" style={{ color: '#f97316' }}>Hive Type</label>
                         <input type="text" value={data.hive_type} onChange={(e) => setData('hive_type', e.target.value)}
                             placeholder="e.g. Langstroth, Top-bar"
                             className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm outline-none placeholder-gray-300" required style={{ color: '#0d1b2a' }} />
                         {errors.hive_type && <p className="text-xs text-red-500 mt-1">{errors.hive_type}</p>}
                     </div>
                     <div>
-                        <label className="text-xs font-semibold uppercase tracking-widest text-gray-400 block mb-1.5">Installation Date</label>
+                        <label className="text-xs font-semibold uppercase tracking-widest block mb-1.5" style={{ color: '#f97316' }}>Installation Date</label>
                         <input type="date" value={data.installation_date ? new Date(data.installation_date).toISOString().split('T')[0] : ''} onChange={(e) => setData('installation_date', e.target.value)}
                             className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm outline-none" required style={{ color: '#0d1b2a' }} />
                         {errors.installation_date && <p className="text-xs text-red-500 mt-1">{errors.installation_date}</p>}
                     </div>
                     <div>
-                        <label className="text-xs font-semibold uppercase tracking-widest text-gray-400 block mb-1.5">Current State</label>
+                        <label className="text-xs font-semibold uppercase tracking-widest block mb-1.5" style={{ color: '#f97316' }}>Current State</label>
                         <select value={data.current_state} onChange={(e) => setData('current_state', e.target.value)}
                             className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm outline-none bg-white" required style={{ color: '#0d1b2a' }}>
                             <option value="">Select state</option>

@@ -384,63 +384,19 @@ return false;
 
                     {/* Filters */}
                     <div className="flex items-center gap-3 flex-wrap">
-                        <div className="relative">
-                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                            <input
-                                type="text"
-                                placeholder="Search hive, beekeeper or description…"
-                                value={search}
-                                onChange={(e) => setSearch(e.target.value)}
-                                className="border border-gray-300 rounded-lg pl-10 pr-3 py-2 text-sm bg-white"
-                            />
-                        </div>
-                        <select
-                            value={selectedHiveId}
-                            onChange={(e) => setSelectedHiveId(e.target.value)}
-                            className="border border-gray-300 rounded-lg p-2 text-sm bg-white"
+                        <button
+                            onClick={exportLog}
+                            className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold hover:opacity-90 transition-opacity ml-auto"
+                            style={{ backgroundColor: '#f5a623', color: '#0d1b2a' }}
                         >
-                            <option value="all">All Hives</option>
-                            {hiveList?.map((hive) => (
-                                <option key={hive.hive_id} value={hive.hive_id}>
-                                    {hive.hive_name || `Hive #${hive.hive_id}`}
-                                </option>
-                            ))}
-                        </select>
-                        <select
-                            value={selectedBeekeeperId}
-                            onChange={(e) => setSelectedBeekeeperId(e.target.value)}
-                            className="border border-gray-300 rounded-lg p-2 text-sm bg-white"
+                            <Download className="w-4 h-4" /> Export Log
+                        </button>
+                        <button
+                            onClick={generateReport}
+                            className="px-4 py-2 rounded-lg text-sm font-semibold border border-gray-300 text-gray-400 hover:bg-gray-50 transition-colors"
                         >
-                            <option value="all">All Beekeepers</option>
-                            {beekeeperList?.map((beekeeper) => (
-                                <option key={beekeeper.id} value={beekeeper.id}>
-                                    {toTitleCase(beekeeper.name)}
-                                </option>
-                            ))}
-                        </select>
-                        <select value={severityFilter} onChange={(e) => setSeverityFilter(e.target.value)}
-                            className="border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none bg-white" style={{ color: '#0d1b2a' }}>
-                            <option>All Levels</option>
-                            <option>Critical</option>
-                            <option>Warning</option>
-                            <option>Info</option>
-                        </select>
-
-                        <div className="ml-auto flex items-center gap-3">
-                            <button
-                                onClick={exportLog}
-                                className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold hover:opacity-90 transition-opacity"
-                                style={{ backgroundColor: '#f5a623', color: '#0d1b2a' }}
-                            >
-                                <Download className="w-4 h-4" /> Export Log
-                            </button>
-                            <button
-                                onClick={generateReport}
-                                className="px-4 py-2 rounded-lg text-sm font-semibold border border-gray-300 text-gray-400 hover:bg-gray-50 transition-colors"
-                            >
-                                Generate Report
-                            </button>
-                        </div>
+                            Generate Report
+                        </button>
                     </div>
 
                     {/* Cards row */}
@@ -467,7 +423,49 @@ return false;
                                 getRowId={(row) => row.alertObj.alert_id}
                                 renderDetailPanel={renderDetailPanel}
                                 renderTopToolbarCustomActions={() => (
-                                    <span className="font-semibold text-sm" style={{ color: '#0d1b2a' }}>All Alert Logs</span>
+                                    <div className="flex items-center gap-3 flex-wrap">
+                                        <div className="relative">
+                                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                                            <input
+                                                type="text"
+                                                placeholder="Search hive, beekeeper or description…"
+                                                value={search}
+                                                onChange={(e) => setSearch(e.target.value)}
+                                                className="border border-gray-300 rounded-lg pl-10 pr-3 py-2 text-sm bg-white"
+                                            />
+                                        </div>
+                                        <select
+                                            value={selectedHiveId}
+                                            onChange={(e) => setSelectedHiveId(e.target.value)}
+                                            className="border border-gray-300 rounded-lg p-2 text-sm bg-white"
+                                        >
+                                            <option value="all">All Hives</option>
+                                            {hiveList?.map((hive) => (
+                                                <option key={hive.hive_id} value={hive.hive_id}>
+                                                    {hive.hive_name || `Hive #${hive.hive_id}`}
+                                                </option>
+                                            ))}
+                                        </select>
+                                        <select
+                                            value={selectedBeekeeperId}
+                                            onChange={(e) => setSelectedBeekeeperId(e.target.value)}
+                                            className="border border-gray-300 rounded-lg p-2 text-sm bg-white"
+                                        >
+                                            <option value="all">All Beekeepers</option>
+                                            {beekeeperList?.map((beekeeper) => (
+                                                <option key={beekeeper.id} value={beekeeper.id}>
+                                                    {toTitleCase(beekeeper.name)}
+                                                </option>
+                                            ))}
+                                        </select>
+                                        <select value={severityFilter} onChange={(e) => setSeverityFilter(e.target.value)}
+                                            className="border border-gray-200 rounded-lg px-3 py-2 text-sm outline-none bg-white" style={{ color: '#0d1b2a' }}>
+                                            <option>All Levels</option>
+                                            <option>Critical</option>
+                                            <option>Warning</option>
+                                            <option>Info</option>
+                                        </select>
+                                    </div>
                                 )}
                                 renderEmptyRowsFallback={() => (
                                     <div className="px-4 py-16 text-center">

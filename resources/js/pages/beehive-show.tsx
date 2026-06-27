@@ -1,5 +1,5 @@
 import { Head, router } from '@inertiajs/react';
-import { Activity, AlertTriangle, Calendar, ChevronLeft, ClipboardList, Droplets, Leaf, LayoutGrid, Link2, MapPin, Mic, Play, Plug, Thermometer } from 'lucide-react';
+import { Activity, AlertTriangle, Calendar, ChevronLeft, ClipboardList, Droplets, Leaf, LayoutGrid, Link2, MapPin, Mic, Plug, Thermometer } from 'lucide-react';
 import type {MRT_ColumnDef} from 'material-react-table';
 import React, { useState, useMemo } from 'react';
 import { DataTable } from '@/components/data-table';
@@ -146,15 +146,6 @@ export default function BeehiveShow({
     const [tab, setTab] = useState<'overview' | 'data-source'>('overview');
 
     const audioColumns = useMemo<MRT_ColumnDef<AudioSource>[]>(() => [
-        {
-            id: 'play',
-            header: '',
-            Cell: () => (
-                <button className="w-7 h-7 rounded-full flex items-center justify-center shrink-0 border border-gray-200 hover:bg-gray-100">
-                    <Play className="w-3 h-3 text-gray-400" />
-                </button>
-            ),
-        },
         {
             id: 'file',
             header: 'File',
