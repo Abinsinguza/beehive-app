@@ -1,10 +1,11 @@
 import { Head, router } from '@inertiajs/react';
-import { AlertCircle, AlertTriangle, Download, Info } from 'lucide-react';
-import React, { useState, useMemo } from 'react';
-import { type MRT_ColumnDef } from 'material-react-table';
-import AppLayout from '@/layouts/app-layout';
+import { AlertCircle, AlertTriangle, Download, Info, Search } from 'lucide-react';
+import type {MRT_ColumnDef} from 'material-react-table';
+import React, { useState, useMemo, useEffect } from 'react';
 import { DataTable } from '@/components/data-table';
-import { toSentenceCase, toTitleCase } from '@/lib/format-text';
+import AppLayout from '@/layouts/app-layout';
+import { toSentenceCase, toTitleCase, formatDate, formatTime } from '@/lib/format-text';
+import { exportToCsv } from '@/lib/utils';
 
 interface Log {
     log_id: string;
@@ -32,7 +33,7 @@ interface Props {
     logs: Paginator;
     stats: { total: number; errors: number; warnings: number; info: number };
     eventTypes: string[];
-    filters: { level: string; eventType: string };
+    filters: { level: string; eventType: string; search: string };
 }
 
 const levelConfig: Record<string, { badge: string; dot: string; icon: React.ReactNode; label: string }> = {
@@ -56,25 +57,27 @@ const levelConfig: Record<string, { badge: string; dot: string; icon: React.Reac
     },
 };
 
-function fmt(iso: string) {
-    const d = new Date(iso);
-    return {
-        date: d.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }),
-        time: d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
-    };
-}
-
-function getPageNumbers(current: number, last: number): (number | '…')[] {
-    if (last <= 7) return Array.from({ length: last }, (_, i) => i + 1);
-    if (current <= 4) return [1, 2, 3, 4, 5, '…', last];
-    if (current >= last - 3) return [1, '…', last - 4, last - 3, last - 2, last - 1, last];
-    return [1, '…', current - 1, current, current + 1, '…', last];
-}
-
 export default function SystemLogs({ logs, stats, eventTypes, filters }: Props) {
     const [level, setLevel]           = useState(filters.level);
     const [eventType, setEventType]   = useState(filters.eventType);
-    const [expanded, setExpanded]     = useState<string | null>(null);
+    const [search, setSearch]         = useState(filters.search);
+
+    function applyFilters(overrides: Partial<{ level: string; eventType: string; search: string }> = {}) {
+        router.get('/system-logs', {
+            level:      overrides.level      ?? level,
+            event_type: overrides.eventType  ?? eventType,
+            search:     overrides.search     ?? search,
+        }, { preserveScroll: true, preserveState: true });
+    }
+
+    // Debounce search. Intentionally only depends on `search` — the other filters
+    // (level/eventType) already call applyFilters directly on change.
+    useEffect(() => {
+        const t = setTimeout(() => applyFilters({ search }), 350);
+
+        return () => clearTimeout(t);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [search]);
 
     const columns = useMemo<MRT_ColumnDef<Log>[]>(() => [
         {
@@ -84,7 +87,9 @@ export default function SystemLogs({ logs, stats, eventTypes, filters }: Props) 
             enableColumnFilter: false,
             size: 120,
             Cell: ({ row }) => {
-                const { date, time } = fmt(row.original.created_at);
+                const date = formatDate(row.original.created_at);
+                const time = formatTime(row.original.created_at, true);
+
                 return (
                     <div>
                         <span className="block font-mono" style={{ color: '#0d1b2a' }}>{time}</span>
@@ -103,6 +108,7 @@ export default function SystemLogs({ logs, stats, eventTypes, filters }: Props) 
             size: 100,
             Cell: ({ row }) => {
                 const cfg = levelConfig[row.original.level] ?? levelConfig.info;
+
                 return (
                     <span
                         className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold tracking-wider ${cfg.badge}`}
@@ -135,6 +141,7 @@ export default function SystemLogs({ logs, stats, eventTypes, filters }: Props) 
 
     const renderDetailPanel = ({ row }: { row: any }) => {
         const log = row.original as Log;
+
         return (
             <div className="px-4 py-3 bg-gray-50 border-t border-gray-100">
                 <div className="grid grid-cols-2 gap-4">
@@ -164,28 +171,8 @@ export default function SystemLogs({ logs, stats, eventTypes, filters }: Props) 
         );
     };
 
-    function applyFilters(overrides: Partial<{ level: string; eventType: string }> = {}) {
-        router.get('/system-logs', {
-            level:      overrides.level      ?? level,
-            event_type: overrides.eventType  ?? eventType,
-        }, { preserveScroll: true, preserveState: true });
-    }
-
-    function goToPage(url: string | null) {
-        if (url) router.visit(url, { preserveScroll: true });
-    }
-
-    function goToPageNum(page: number) {
-        router.get('/system-logs', {
-            level,
-            event_type: eventType,
-            page,
-        }, { preserveScroll: true, preserveState: true });
-    }
-
     function exportCsv() {
         const headers = ['Time', 'Level', 'Event Type', 'Message', 'Hive', 'User'];
-        const escape  = (v: string) => `"${String(v ?? '').replace(/"/g, '""')}"`;
         const rows    = logs.data.map((l) => [
             new Date(l.created_at).toLocaleString('en-GB'),
             l.level,
@@ -194,19 +181,9 @@ export default function SystemLogs({ logs, stats, eventTypes, filters }: Props) 
             l.hive_name ?? '',
             l.user_name ?? '',
         ]);
-        const csv  = [headers, ...rows].map((r) => r.map(escape).join(',')).join('\r\n');
-        const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
-        const url  = URL.createObjectURL(blob);
-        const a    = document.createElement('a');
-        a.href     = url;
-        a.download = 'system-logs.csv';
-        a.click();
-        URL.revokeObjectURL(url);
+        exportToCsv('system-logs.csv', headers, rows);
     }
 
-    const from  = (logs.current_page - 1) * logs.per_page + 1;
-    const to    = Math.min(logs.current_page * logs.per_page, logs.total);
-    const pages = getPageNumbers(logs.current_page, logs.last_page);
 
     return (
         <>
@@ -286,10 +263,24 @@ export default function SystemLogs({ logs, stats, eventTypes, filters }: Props) 
 
                     {/* Filter bar */}
                     <div className="bg-white rounded-xl border border-gray-200 shadow-sm px-4 py-3 flex flex-wrap items-center gap-3">
+                        <div className="relative">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                            <input
+                                type="text"
+                                placeholder="Search messages…"
+                                value={search}
+                                onChange={(e) => setSearch(e.target.value)}
+                                className="text-sm rounded-lg border border-gray-200 bg-gray-50 pl-10 pr-3 py-2 outline-none focus:border-gray-400 transition-colors"
+                                style={{ color: '#0d1b2a' }}
+                            />
+                        </div>
+
                         <select
                             className="text-sm rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 outline-none focus:border-gray-400 transition-colors"
                             value={level}
-                            onChange={e => { setLevel(e.target.value); applyFilters({ level: e.target.value }); }}
+                            onChange={e => {
+ setLevel(e.target.value); applyFilters({ level: e.target.value }); 
+}}
                             style={{ color: '#0d1b2a' }}
                         >
                             <option value="">All Levels</option>
@@ -301,7 +292,9 @@ export default function SystemLogs({ logs, stats, eventTypes, filters }: Props) 
                         <select
                             className="text-sm rounded-lg border border-gray-200 bg-gray-50 px-3 py-2 outline-none focus:border-gray-400 transition-colors"
                             value={eventType}
-                            onChange={e => { setEventType(e.target.value); applyFilters({ eventType: e.target.value }); }}
+                            onChange={e => {
+ setEventType(e.target.value); applyFilters({ eventType: e.target.value }); 
+}}
                             style={{ color: '#0d1b2a' }}
                         >
                             <option value="">All Event Types</option>

@@ -1,11 +1,11 @@
 import { Head, useForm } from '@inertiajs/react';
 import { ClipboardList, Edit2, MessageSquareWarning, Plus, Search, Trash2, X } from 'lucide-react';
+import type {MRT_ColumnDef} from 'material-react-table';
 import React, { useState, useMemo } from 'react';
-import { type MRT_ColumnDef } from 'material-react-table';
 import { DataTable } from '@/components/data-table';
 import AppLayout from '@/layouts/app-layout';
-import { formatDisplayText, cleanDataArray } from '@/lib/utils';
-import { toSentenceCase } from '@/lib/format-text';
+import { toSentenceCase, formatDate } from '@/lib/format-text';
+import { cleanDataArray } from '@/lib/utils';
 
 type Template = {
     template_id: number;
@@ -49,9 +49,7 @@ type ActionItem = {
 
 const severityConfig: Record<string, { label: string; bg: string; color: string }> = {
     info:     { label: 'Info',     bg: '#f1f5f9', color: '#64748b' },
-    low:      { label: 'Low',      bg: '#f0fdf4', color: '#16a34a' },
-    medium:   { label: 'Medium',   bg: '#fffbeb', color: '#d97706' },
-    high:     { label: 'High',     bg: '#fff7ed', color: '#f5a623' },
+    warning:  { label: 'Warning',  bg: '#fffbeb', color: '#d97706' },
     critical: { label: 'Critical', bg: '#0d1b2a', color: '#ffffff' },
 };
 
@@ -63,11 +61,6 @@ const priorityConfig: Record<string, { label: string; bg: string; color: string 
 
 function fmtPct(v: number | null) {
     return v == null ? '—' : `${(v * 100).toFixed(0)}%`;
-}
-
-function fmtDate(v: string | null) {
-    if (!v) return '—';
-    return new Date(v).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
 }
 
 export default function Advisories({
@@ -87,6 +80,9 @@ export default function Advisories({
     const [editItem, setEditItem] = useState<Advisory | null>(null);
     const [deleteItem, setDeleteItem] = useState<Advisory | null>(null);
 
+    // Templates tab filters
+    const [templateSearch, setTemplateSearch] = useState('');
+
     // Advisories tab filters
     const [advisorySearch, setAdvisorySearch] = useState('');
     const [advisoryHiveState, setAdvisoryHiveState] = useState('All');
@@ -97,6 +93,18 @@ export default function Advisories({
     const cleanedTemplates = useMemo(() => {
         return cleanDataArray(templates, ['hive_state', 'advisory_type', 'description']);
     }, [templates]);
+
+    const filteredTemplates = useMemo(() => {
+        const q = templateSearch.trim().toLowerCase();
+
+        if (!q) {
+return cleanedTemplates;
+}
+
+        return cleanedTemplates.filter((t) =>
+            `${t.hive_state} ${t.advisory_type} ${t.description ?? ''}`.toLowerCase().includes(q)
+        );
+    }, [cleanedTemplates, templateSearch]);
 
     const cleanedAdvisories = useMemo(() => {
         return cleanDataArray(advisories, ['template.hive_state', 'action_title', 'action_description']);
@@ -115,14 +123,28 @@ export default function Advisories({
         return cleanedAdvisories.filter((a) => {
             if (advisorySearch.trim()) {
                 const haystack = `${a.action_title} ${a.action_description}`.toLowerCase();
-                if (!haystack.includes(advisorySearch.trim().toLowerCase())) return false;
+
+                if (!haystack.includes(advisorySearch.trim().toLowerCase())) {
+return false;
+}
             }
-            if (advisoryHiveState !== 'All' && a.template?.hive_state !== advisoryHiveState) return false;
-            if (advisoryPriority !== 'All' && a.priority_level !== advisoryPriority) return false;
+
+            if (advisoryHiveState !== 'All' && a.template?.hive_state !== advisoryHiveState) {
+return false;
+}
+
+            if (advisoryPriority !== 'All' && a.priority_level !== advisoryPriority) {
+return false;
+}
+
             if (advisoryStatus !== 'All') {
                 const wantActive = advisoryStatus === 'Active';
-                if (a.is_active !== wantActive) return false;
+
+                if (a.is_active !== wantActive) {
+return false;
+}
             }
+
             return true;
         });
     }, [cleanedAdvisories, advisorySearch, advisoryHiveState, advisoryPriority, advisoryStatus]);
@@ -143,16 +165,24 @@ export default function Advisories({
 
     const submit = (e: React.FormEvent) => {
         e.preventDefault();
-        post('/advisories', { onSuccess: () => { reset(); setShowModal(false); } });
+        post('/advisories', { onSuccess: () => {
+ reset(); setShowModal(false); 
+} });
     };
 
     const { delete: destroy, processing: deleting } = useForm({});
     const confirmDeleteTemplate = () => {
-        if (!deleteTemplate) return;
+        if (!deleteTemplate) {
+return;
+}
+
         destroy(`/advisories/${deleteTemplate.template_id}`, { onSuccess: () => setDeleteTemplate(null) });
     };
     const confirmDeleteItem = () => {
-        if (!deleteItem) return;
+        if (!deleteItem) {
+return;
+}
+
         destroy(`/advisory-items/${deleteItem.advisory_id}`, { onSuccess: () => setDeleteItem(null) });
     };
 
@@ -194,14 +224,13 @@ export default function Advisories({
             filterVariant: 'select',
             filterSelectOptions: [
                 { text: 'Info', value: 'info' },
-                { text: 'Low', value: 'low' },
-                { text: 'Medium', value: 'medium' },
-                { text: 'High', value: 'high' },
+                { text: 'Warning', value: 'warning' },
                 { text: 'Critical', value: 'critical' },
             ],
             size: 100,
             Cell: ({ cell }) => {
-                const sc = severityConfig[cell.getValue<string>()] ?? severityConfig.medium;
+                const sc = severityConfig[cell.getValue<string>()] ?? severityConfig.warning;
+
                 return (
                     <span className="text-[10px] font-bold px-2.5 py-1 rounded tracking-widest"
                         style={{ backgroundColor: sc.bg, color: sc.color }}>
@@ -233,6 +262,7 @@ export default function Advisories({
 
     const renderTemplateDetailPanel = ({ row }: { row: any }) => {
         const tpl = row.original as Template;
+
         return (
             <div className="px-4 py-3 bg-gray-50 border-t border-gray-100">
                 <div className="grid grid-cols-2 gap-4">
@@ -246,7 +276,7 @@ export default function Advisories({
                     </div>
                     <div>
                         <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-400 mb-1">Created</p>
-                        <p className="text-sm" style={{ color: '#0d1b2a' }}>{fmtDate(tpl.created_at)}</p>
+                        <p className="text-sm" style={{ color: '#0d1b2a' }}>{formatDate(tpl.created_at)}</p>
                     </div>
                 </div>
             </div>
@@ -284,6 +314,7 @@ export default function Advisories({
             enableColumnFilter: false,
             Cell: ({ cell }) => {
                 const pc = priorityConfig[cell.getValue<string>()] ?? priorityConfig.medium;
+
                 return (
                     <span className="text-[10px] font-bold px-2.5 py-1 rounded tracking-widest"
                         style={{ backgroundColor: pc.bg, color: pc.color }}>
@@ -329,6 +360,7 @@ export default function Advisories({
 
     const renderAdvisoryDetailPanel = ({ row }: { row: any }) => {
         const adv = row.original as Advisory;
+
         return (
             <div className="px-4 py-3 bg-gray-50 border-t border-gray-100">
                 <div className="grid grid-cols-2 gap-4">
@@ -346,7 +378,7 @@ export default function Advisories({
                     </div>
                     <div>
                         <p className="text-[10px] font-semibold uppercase tracking-widest text-gray-400 mb-1">Created</p>
-                        <p className="text-sm" style={{ color: '#0d1b2a' }}>{fmtDate(adv.created_at)}</p>
+                        <p className="text-sm" style={{ color: '#0d1b2a' }}>{formatDate(adv.created_at)}</p>
                     </div>
                 </div>
             </div>
@@ -387,8 +419,20 @@ export default function Advisories({
                     )}
                 </div>
 
-                {/* Tabs */}
-                <div className="flex items-center gap-1 bg-white rounded-xl border border-gray-200 shadow-sm p-1 w-fit">
+                {/* Search + Tabs */}
+                <div className="flex items-center gap-3 flex-wrap">
+                    <div className="relative">
+                        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                        <input
+                            type="text"
+                            value={tab === 'templates' ? templateSearch : advisorySearch}
+                            onChange={(e) => tab === 'templates' ? setTemplateSearch(e.target.value) : setAdvisorySearch(e.target.value)}
+                            placeholder={tab === 'templates' ? 'Search labels…' : 'Search for Action Titles...'}
+                            className="border border-gray-200 rounded-lg pl-9 pr-3 py-2 text-sm outline-none focus:border-[#f5a623] focus:ring-2 focus:ring-[#f5a623]/20 w-64"
+                            style={{ color: '#0d1b2a' }}
+                        />
+                    </div>
+                    <div className="flex items-center gap-1 bg-white rounded-xl border border-gray-200 shadow-sm p-1 w-fit">
                     <button
                         onClick={() => setTab('templates')}
                         className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold transition-colors"
@@ -413,6 +457,7 @@ export default function Advisories({
                             {cleanedAdvisories.length}
                         </span>
                     </button>
+                    </div>
                 </div>
 
                 {/* ── Templates tab ── */}
@@ -427,7 +472,7 @@ export default function Advisories({
                         <div className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
                             <DataTable
                                 columns={templateColumns}
-                                data={cleanedTemplates}
+                                data={filteredTemplates}
                                 getRowId={(row) => String(row.template_id)}
                                 renderDetailPanel={renderTemplateDetailPanel}
                                 renderTopToolbarCustomActions={() => (
@@ -459,17 +504,6 @@ export default function Advisories({
                                 renderDetailPanel={renderAdvisoryDetailPanel}
                                 renderTopToolbarCustomActions={() => (
                                     <div className="flex items-center gap-3 flex-wrap py-1">
-                                        <div className="relative">
-                                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-                                            <input
-                                                type="text"
-                                                value={advisorySearch}
-                                                onChange={(e) => setAdvisorySearch(e.target.value)}
-                                                placeholder="Search for Action Titles..."
-                                                className="border border-gray-200 rounded-lg pl-9 pr-3 py-2 text-sm outline-none focus:border-[#f5a623] focus:ring-2 focus:ring-[#f5a623]/20 w-64"
-                                                style={{ color: '#0d1b2a' }}
-                                            />
-                                        </div>
                                         <select
                                             value={advisoryHiveState}
                                             onChange={(e) => setAdvisoryHiveState(e.target.value)}
@@ -557,11 +591,9 @@ export default function Advisories({
                                 <select value={data.severity} onChange={(e) => setData('severity', e.target.value)}
                                     className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm outline-none bg-white transition-all focus:border-[#f5a623] focus:ring-2 focus:ring-[#f5a623]/20 required" style={{ color: '#0d1b2a' }}>
                                     <option value="">Select severity</option>
-                                    <option value="info">Info</option>
-                                    <option value="low">Low</option>
-                                    <option value="medium">Medium</option>
-                                    <option value="high">High</option>
                                     <option value="critical">Critical</option>
+                                    <option value="warning">Warning</option>
+                                    <option value="info">Info</option>
                                 </select>
                                 {errors.severity && <p className="text-xs text-red-500 mt-1">{errors.severity}</p>}
                             </div>
@@ -682,11 +714,9 @@ function EditTemplateModal({ template, onClose }: { template: Template; onClose:
                         <label className="text-xs font-semibold uppercase tracking-widest text-gray-400 block mb-1.5">Severity</label>
                         <select value={data.severity} onChange={(e) => setData('severity', e.target.value)}
                             className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-700 outline-none bg-white transition-all focus:border-[#f5a623] focus:ring-2 focus:ring-[#f5a623]/20" required>
-                            <option value="info">Info</option>
-                            <option value="low">Low</option>
-                            <option value="medium">Medium</option>
-                            <option value="high">High</option>
                             <option value="critical">Critical</option>
+                            <option value="warning">Warning</option>
+                            <option value="info">Info</option>
                         </select>
                         {errors.severity && <p className="text-xs text-red-500 mt-1">{errors.severity}</p>}
                     </div>
@@ -733,6 +763,7 @@ function AdvisoryItemModal({ templates, item, onClose }: { templates: Template[]
 
     const submit = (e: React.FormEvent) => {
         e.preventDefault();
+
         if (item) {
             patch(`/advisory-items/${item.advisory_id}`, { onSuccess: () => onClose() });
         } else {

@@ -1,23 +1,21 @@
-import { Head, router, useForm } from '@inertiajs/react';
+import { Head, router } from '@inertiajs/react';
 import {
     CheckCircle2,
     Circle,
     ExternalLink,
     Mic,
-    Play,
     RefreshCw,
     Search,
     X,
     XCircle,
 } from 'lucide-react';
-import React, { useEffect, useMemo, useRef, useState } from 'react';
-import AppLayout from '@/layouts/app-layout';
-import { type MRT_ColumnDef, type MRT_PaginationState } from 'material-react-table';
-import { MenuItem } from '@mui/material';
-import { DataTable } from '@/components/data-table';
+import type {MRT_ColumnDef, MRT_PaginationState} from 'material-react-table';
+import React, { useEffect, useMemo, useState } from 'react';
 import { toast } from 'sonner';
-import { formatDisplayText, cleanDataArray } from '@/lib/utils';
+import { DataTable } from '@/components/data-table';
+import AppLayout from '@/layouts/app-layout';
 import { toSentenceCase } from '@/lib/format-text';
+import { cleanDataArray } from '@/lib/utils';
 
 type HiveRef   = { hive_id: string; hive_name: string; hive_location: string };
 type Recording = {
@@ -89,13 +87,20 @@ function statusCfg(s: string) {
 }
 
 function formatDuration(secs: number | null) {
-    if (secs === null) return '—';
+    if (secs === null) {
+return '—';
+}
+
     return `${Math.round(secs)}s`;
 }
 
 function formatDate(iso: string | null) {
-    if (!iso) return '—';
+    if (!iso) {
+return '—';
+}
+
     const d = new Date(iso);
+
     return d.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }) + ' ' +
            d.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', hour12: false });
 }
@@ -105,147 +110,14 @@ function truncatePath(url: string, max = 28) {
     const last  = parts[parts.length - 1] ?? url;
     const dir   = parts.length > 1 ? parts.slice(0, -1).join('/') + '/' : '';
     const full  = dir + last;
+
     return full.length > max ? full.substring(0, max) + '…' : full;
 }
 
 
 
-// ── Add recording modal ──────────────────────────────────────────
-function AddRecordingModal({ hives, onClose }: { hives: HiveRef[]; onClose: () => void }) {
-    const { data, setData, post, processing, reset, errors } = useForm({
-        hive_id: '', source_url: '', file_format: 'WAV',
-        duration_seconds: '', captured_at: '', status: 'pending',
-    });
-
-    const submit = (e: React.FormEvent) => {
-        e.preventDefault();
-        post('/audio-recordings', { onSuccess: () => { reset(); onClose(); } });
-    };
-
-    const overlayRef = useRef<HTMLDivElement>(null);
-
-    return (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4"
-             ref={overlayRef}
-             onClick={(e) => e.target === overlayRef.current && onClose()}>
-            <div className="bg-white rounded-2xl shadow-xl w-full max-w-md p-6 flex flex-col gap-5">
-                <div className="flex items-center justify-between">
-                    <h2 className="text-base font-bold" style={{ color: '#0d1b2a' }}>Add Recording</h2>
-                    <button onClick={onClose} className="text-gray-400 hover:text-gray-600 transition-colors">
-                        <X className="w-5 h-5" />
-                    </button>
-                </div>
-
-                <form onSubmit={submit} className="flex flex-col gap-4">
-                    {/* Hive */}
-                    <div className="flex flex-col gap-1.5">
-                        <label className="text-sm font-semibold" style={{ color: '#0d1b2a' }}>
-                            Hive <span className="text-red-500">*</span>
-                        </label>
-                        <select
-                            value={data.hive_id}
-                            onChange={(e) => setData('hive_id', e.target.value)}
-                            className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-100"
-                            style={{ color: '#0d1b2a', borderColor: errors.hive_id ? '#f87171' : '#d1d5db' }}
-                            required>
-                            <option value="">Select hive…</option>
-                            {hives.map((h) => (
-                                <option key={h.hive_id} value={h.hive_id}>{h.hive_name} — {h.hive_location}</option>
-                            ))}
-                        </select>
-                        {errors.hive_id && <p className="text-xs text-red-500">{errors.hive_id}</p>}
-                    </div>
-
-                    {/* Source URL */}
-                    <div className="flex flex-col gap-1.5">
-                        <label className="text-sm font-semibold" style={{ color: '#0d1b2a' }}>
-                            Source file path <span className="text-red-500">*</span>
-                        </label>
-                        <input
-                            type="text"
-                            value={data.source_url}
-                            onChange={(e) => setData('source_url', e.target.value)}
-                            placeholder="e.g. recordings/hive1/rec_001.wav"
-                            className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-100"
-                            style={{ color: '#0d1b2a', borderColor: errors.source_url ? '#f87171' : '#d1d5db' }}
-                            required />
-                        {errors.source_url && <p className="text-xs text-red-500">{errors.source_url}</p>}
-                    </div>
-
-                    {/* Format + Duration */}
-                    <div className="grid grid-cols-2 gap-3">
-                        <div className="flex flex-col gap-1.5">
-                            <label className="text-sm font-semibold" style={{ color: '#0d1b2a' }}>
-                                Format <span className="text-red-500">*</span>
-                            </label>
-                            <select
-                                value={data.file_format}
-                                onChange={(e) => setData('file_format', e.target.value)}
-                                className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-100" style={{ color: '#0d1b2a' }}
-                                required>
-                                {['WAV', 'MP3', 'FLAC', 'OGG', 'AAC'].map((f) => (
-                                    <option key={f} value={f}>{f}</option>
-                                ))}
-                            </select>
-                        </div>
-                        <div className="flex flex-col gap-1.5">
-                            <label className="text-sm font-semibold" style={{ color: '#0d1b2a' }}>Duration (s)</label>
-                            <input
-                                type="number"
-                                value={data.duration_seconds}
-                                onChange={(e) => setData('duration_seconds', e.target.value)}
-                                placeholder="e.g. 30"
-                                min="0"
-                                className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-100" style={{ color: '#0d1b2a' }} />
-                        </div>
-                    </div>
-
-                    {/* Captured at */}
-                    <div className="flex flex-col gap-1.5">
-                        <label className="text-sm font-semibold" style={{ color: '#0d1b2a' }}>
-                            Captured at <span className="text-gray-400 text-xs font-normal">(optional)</span>
-                        </label>
-                        <input
-                            type="datetime-local"
-                            value={data.captured_at}
-                            onChange={(e) => setData('captured_at', e.target.value)}
-                            className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-100" style={{ color: '#0d1b2a' }} />
-                    </div>
-
-                    {/* Status */}
-                    <div className="flex flex-col gap-1.5">
-                        <label className="text-sm font-semibold" style={{ color: '#0d1b2a' }}>Status <span className="text-red-500">*</span></label>
-                        <select
-                            value={data.status}
-                            onChange={(e) => setData('status', e.target.value)}
-                            className="w-full border rounded-lg px-3 py-2 text-sm focus:outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-100" style={{ color: '#0d1b2a' }}
-                            required>
-                            <option value="pending">Pending</option>
-                            <option value="processed">Processed</option>
-                            <option value="failed">Failed</option>
-                        </select>
-                    </div>
-
-                    <div className="flex gap-3 pt-1">
-                        <button type="button" onClick={onClose}
-                            className="flex-1 py-2.5 rounded-xl border border-gray-200 text-sm font-semibold text-gray-400 hover:bg-gray-50 transition-colors">
-                            Cancel
-                        </button>
-                        <button type="submit" disabled={processing}
-                            className="flex-1 py-2.5 rounded-xl text-sm font-semibold text-white transition-opacity hover:opacity-90 disabled:opacity-60"
-                            style={{ backgroundColor: '#0d1b2a' }}>
-                            {processing ? 'Saving…' : 'Add Recording'}
-                        </button>
-                    </div>
-                </form>
-            </div>
-        </div>
-    );
-}
-
 // ── Main component ───────────────────────────────────────────────
 export default function AudioRecordings({ recordings, stats, formats, hives, filters }: Props) {
-    const [showAdd, setShowAdd]     = useState(false);
     const [search, setSearch]       = useState(filters.search);
     const [status, setStatus]       = useState(filters.status);
     const [format, setFormat]       = useState(filters.format);
@@ -268,11 +140,6 @@ export default function AudioRecordings({ recordings, stats, formats, hives, fil
         ]);
     }, [hives]);
 
-    // Format detected_state for display
-    const formatDetectedState = (state: string | null) => {
-        return state ? formatDisplayText(state) : null;
-    };
-
     function handleRefresh() {
         setIsRefreshing(true);
         router.reload({
@@ -286,23 +153,27 @@ export default function AudioRecordings({ recordings, stats, formats, hives, fil
 
     // Only keep pagination state controlled (for server-side pagination)
 
-    // Debounce search
-    useEffect(() => {
-        const t = setTimeout(() => applyFilters({ search }), 350);
-        return () => clearTimeout(t);
-    }, [search]);
-
     function applyFilters(overrides: Record<string, string> = {}) {
         const params = {
-            search: overrides.search  ?? search,
-            status: overrides.status  ?? status,
-            format: overrides.format  ?? format,
-            hive:   overrides.hive    ?? hive,
+            search:   overrides.search  ?? search,
+            status:   overrides.status  ?? status,
+            format:   overrides.format  ?? format,
+            hive:     overrides.hive    ?? hive,
+            per_page: String(pagination.pageSize),
         };
         // strip empty
         const q = Object.fromEntries(Object.entries(params).filter(([, v]) => v !== ''));
         router.get('/audio-recordings', q, { preserveState: true, replace: true });
     }
+
+    // Debounce search. Intentionally only depends on `search` — the other filters
+    // (status/format/hive) already call applyFilters directly on change.
+    useEffect(() => {
+        const t = setTimeout(() => applyFilters({ search }), 350);
+
+        return () => clearTimeout(t);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [search]);
 
     function clearFilters() {
         setSearch(''); setStatus(''); setFormat(''); setHive('');
@@ -320,19 +191,6 @@ export default function AudioRecordings({ recordings, stats, formats, hives, fil
     // Define MRT Columns
     const columns = useMemo<MRT_ColumnDef<Recording>[]>(() => [
         {
-            id: 'play',
-            header: '',
-            enableSorting: false,
-            enableColumnFilter: false,
-            enableHiding: false,
-            size: 60,
-            Cell: () => (
-                <button className="w-7 h-7 rounded-full flex items-center justify-center border border-gray-200 hover:border-amber-400 hover:bg-amber-50 transition-colors">
-                    <Play className="w-3 h-3 text-gray-400 ml-0.5" />
-                </button>
-            ),
-        },
-        {
             id: 'hive',
             header: 'Hive',
             accessorFn: (row) => row.hive?.hive_name ?? '—',
@@ -340,6 +198,7 @@ export default function AudioRecordings({ recordings, stats, formats, hives, fil
             enableColumnFilter: true,
             Cell: ({ row }) => {
                 const hiveShort = row.original.audio_id.substring(0, 4);
+
                 return (
                     <div>
                         <p className="font-semibold text-xs leading-tight" style={{ color: '#0d1b2a' }}>
@@ -394,6 +253,7 @@ export default function AudioRecordings({ recordings, stats, formats, hives, fil
             size: 110,
             Cell: ({ row }) => {
                 const cfg = statusCfg(row.original.status);
+
                 return (
                     <span className="inline-flex items-center gap-1 text-[11px] font-semibold px-2 py-0.5 rounded-full"
                         style={{ backgroundColor: cfg.bg, color: cfg.text }}>
@@ -422,6 +282,7 @@ export default function AudioRecordings({ recordings, stats, formats, hives, fil
 
     const renderDetailPanel = ({ row }: { row: any }) => {
         const rec = row.original;
+
         return (
             <div className="px-4 py-3 bg-gray-50 border-t border-gray-100">
                 <div className="grid grid-cols-2 gap-4">
@@ -476,37 +337,17 @@ export default function AudioRecordings({ recordings, stats, formats, hives, fil
     return (
         <>
             <Head title="Audio Recordings" />
-            {showAdd && <AddRecordingModal hives={cleanedHives} onClose={() => setShowAdd(false)} />}
 
             <div className="flex flex-col" style={{ backgroundColor: '#f8f9fa' }}>
                 <div className="flex-1 p-6 flex flex-col gap-5">
 
                     {/* ── Header ── */}
-                    <div className="flex items-start justify-between gap-4">
-                        <div>
-                            <div className="flex items-center gap-2">
-                                <Mic className="w-5 h-5 text-gray-400" />
-                                <h1 className="text-xl font-bold" style={{ color: '#0d1b2a' }}>Audio recordings</h1>
-                            </div>
-                            <p className="text-sm text-gray-400 mt-0.5">All audio sources captured from hives</p>
+                    <div>
+                        <div className="flex items-center gap-2">
+                            <Mic className="w-5 h-5 text-gray-400" />
+                            <h1 className="text-xl font-bold" style={{ color: '#0d1b2a' }}>Audio recordings</h1>
                         </div>
-                        <div className="flex items-center gap-2 shrink-0">
-                            <button
-                                onClick={handleRefresh}
-                                disabled={isRefreshing}
-                                className="flex items-center gap-2 px-4 py-2 border border-gray-200 rounded-xl text-sm font-semibold text-gray-400 bg-white hover:bg-gray-50 transition-colors shadow-sm disabled:opacity-60 disabled:cursor-not-allowed">
-                                <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
-                                Refresh
-                            </button>
-                            <button
-                                onClick={() => setShowAdd(true)}
-                                className="flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold text-white transition-opacity hover:opacity-90 shadow-sm"
-                                style={{ backgroundColor: '#0d1b2a' }}>
-                                <span className="text-lg leading-none">+</span>
-                                Add recording
-                                <ExternalLink className="w-3.5 h-3.5 opacity-60" />
-                            </button>
-                        </div>
+                        <p className="text-sm text-gray-400 mt-0.5">All audio sources captured from hives</p>
                     </div>
 
                     {/* ── Stat cards ── */}
@@ -529,9 +370,23 @@ export default function AudioRecordings({ recordings, stats, formats, hives, fil
 
                     {/* ── Filters ── */}
                     <div className="flex flex-wrap gap-3 items-center">
+                        <div className="relative">
+                            <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                            <input
+                                type="text"
+                                placeholder="Search hive, file or format…"
+                                value={search}
+                                onChange={(e) => setSearch(e.target.value)}
+                                className="bg-white border border-gray-200 rounded-xl pl-10 pr-4 py-2 text-sm shadow-sm focus:outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-100"
+                                style={{ color: '#0d1b2a' }}
+                            />
+                        </div>
+
                         <select
                             value={status}
-                            onChange={(e) => { setStatus(e.target.value); applyFilters({ status: e.target.value }); }}
+                            onChange={(e) => {
+ setStatus(e.target.value); applyFilters({ status: e.target.value }); 
+}}
                             className="bg-white border border-gray-200 rounded-xl px-3 py-2 text-sm shadow-sm focus:outline-none focus:border-amber-400" style={{ color: '#0d1b2a' }}>
                             <option value="">All statuses</option>
                             <option value="processed">Processed</option>
@@ -541,7 +396,9 @@ export default function AudioRecordings({ recordings, stats, formats, hives, fil
 
                         <select
                             value={format}
-                            onChange={(e) => { setFormat(e.target.value); applyFilters({ format: e.target.value }); }}
+                            onChange={(e) => {
+ setFormat(e.target.value); applyFilters({ format: e.target.value }); 
+}}
                             className="bg-white border border-gray-200 rounded-xl px-3 py-2 text-sm shadow-sm focus:outline-none focus:border-amber-400" style={{ color: '#0d1b2a' }}>
                             <option value="">All formats</option>
                             {formats.map((f) => <option key={f} value={f}>{f}</option>)}
@@ -549,7 +406,9 @@ export default function AudioRecordings({ recordings, stats, formats, hives, fil
 
                         <select
                             value={hive}
-                            onChange={(e) => { setHive(e.target.value); applyFilters({ hive: e.target.value }); }}
+                            onChange={(e) => {
+ setHive(e.target.value); applyFilters({ hive: e.target.value }); 
+}}
                             className="bg-white border border-gray-200 rounded-xl px-3 py-2 text-sm shadow-sm focus:outline-none focus:border-amber-400" style={{ color: '#0d1b2a' }}>
                             <option value="">All hives</option>
                             {cleanedHives.map((h) => (
@@ -564,6 +423,14 @@ export default function AudioRecordings({ recordings, stats, formats, hives, fil
                                 Clear
                             </button>
                         )}
+
+                        <button
+                            onClick={handleRefresh}
+                            disabled={isRefreshing}
+                            className="flex items-center gap-2 px-3 py-2 border border-gray-200 rounded-xl text-sm font-semibold text-gray-400 bg-white hover:bg-gray-50 transition-colors shadow-sm disabled:opacity-60 disabled:cursor-not-allowed ml-auto">
+                            <RefreshCw className={`w-4 h-4 ${isRefreshing ? 'animate-spin' : ''}`} />
+                            Refresh
+                        </button>
                     </div>
 
                     {/* ── Material React Table ── */}
@@ -578,10 +445,14 @@ export default function AudioRecordings({ recordings, stats, formats, hives, fil
                                 state={{ pagination }}
                                 onPaginationChange={(updater: MRT_PaginationState | ((prev: MRT_PaginationState) => MRT_PaginationState)) => {
                                     const newPagination = typeof updater === 'function' ? updater(pagination) : updater;
-                                    setPagination(newPagination);
+                                    const pageSizeChanged = newPagination.pageSize !== pagination.pageSize;
+                                    const pageIndex = pageSizeChanged ? 0 : newPagination.pageIndex;
+                                    setPagination({ pageIndex, pageSize: newPagination.pageSize });
                                     // Update the page in the router (convert to 1-based index)
                                     router.get('/audio-recordings', {
-                                        search, status, format, hive, page: String(newPagination.pageIndex + 1),
+                                        search, status, format, hive,
+                                        page: String(pageIndex + 1),
+                                        per_page: String(newPagination.pageSize),
                                     }, { preserveState: true });
                                 }}
                             />

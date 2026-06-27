@@ -1,12 +1,12 @@
 import { Form, Head } from '@inertiajs/react';
+import { Mail, Lock, Eye, EyeOff, Loader2 } from 'lucide-react';
+import { useState } from 'react';
 import InputError from '@/components/input-error';
 import TextLink from '@/components/text-link';
-import { useState } from 'react';
-import { Mail, Lock, Eye, EyeOff, Loader2 } from 'lucide-react';
+import { cn } from '@/lib/utils';
 import { register } from '@/routes';
 import { store } from '@/routes/login';
 import { request } from '@/routes/password';
-import { cn } from '@/lib/utils';
 
 type Props = {
     status?: string;

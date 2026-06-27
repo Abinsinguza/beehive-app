@@ -16,7 +16,13 @@ class SystemLogsController extends Controller
         $logs = SystemLog::with(['hive:hive_id,hive_name', 'user:user_id,full_name'])
             ->when($level,     fn($q) => $q->where('level', $level))
             ->when($eventType, fn($q) => $q->where('event_type', $eventType))
-            ->when($search,    fn($q) => $q->where('message', 'ilike', "%{$search}%"))
+            ->when($search,    fn($q) => $q->where(function ($sq) use ($search) {
+                $sq->where('message', 'ilike', "%{$search}%")
+                   ->orWhere('event_type', 'ilike', "%{$search}%")
+                   ->orWhere('level', 'ilike', "%{$search}%")
+                   ->orWhereHas('hive', fn($hq) => $hq->where('hive_name', 'ilike', "%{$search}%"))
+                   ->orWhereHas('user', fn($uq) => $uq->where('full_name', 'ilike', "%{$search}%"));
+            }))
             ->latest('created_at')
             ->paginate(50)
             ->through(fn($l) => [

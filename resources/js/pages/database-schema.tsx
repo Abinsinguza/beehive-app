@@ -1,7 +1,7 @@
 import { Head } from '@inertiajs/react';
-import AppLayout from '@/layouts/app-layout';
-import React from 'react';
 import { Database, Key, Link2, Lock, Table2 } from 'lucide-react';
+import React from 'react';
+import AppLayout from '@/layouts/app-layout';
 
 // ── Types ─────────────────────────────────────────────────────────
 type ColFlag = 'PK' | 'FK' | 'UK' | 'IDX';
@@ -195,7 +195,7 @@ const SCHEMA: Group[] = [
                     { name: 'alert_id',          type: 'uuid',        nullable: false, flags: ['PK'] },
                     { name: 'hive_id',           type: 'uuid',        nullable: false, flags: ['FK'], ref: 'hives.hive_id' },
                     { name: 'inference_id',      type: 'uuid',        nullable: false, flags: ['FK'], ref: 'inference_results.inference_id' },
-                    { name: 'severity_level',    type: 'varchar(20)', nullable: false, notes: 'high | medium | low' },
+                    { name: 'severity_level',    type: 'varchar(20)', nullable: false, notes: 'critical | warning | info' },
                     { name: 'recommended_action',type: 'text',        nullable: true },
                     { name: 'action_status',     type: 'varchar(20)', nullable: false, notes: 'pending | acknowledged | resolved' },
                     { name: 'alert_timestamp',   type: 'timestamp',   nullable: true },
@@ -242,6 +242,7 @@ const FLAG_CFG: Record<ColFlag, { label: string; bg: string; text: string; icon?
 
 function FlagBadge({ flag }: { flag: ColFlag }) {
     const cfg = FLAG_CFG[flag];
+
     return (
         <span className="inline-flex items-center gap-0.5 text-[10px] font-bold px-1.5 py-0.5 rounded"
             style={{ backgroundColor: cfg.bg, color: cfg.text }}>
@@ -279,6 +280,7 @@ function TableCard({ table, groupColor }: { table: Table; groupColor: string }) 
                     <tbody className="divide-y divide-gray-50">
                         {table.columns.map((col, i) => {
                             const isPK = col.flags?.includes('PK');
+
                             return (
                                 <tr key={col.name}
                                     className="hover:bg-gray-50 transition-colors"

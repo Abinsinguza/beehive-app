@@ -10,10 +10,12 @@ class AudioSourceController extends Controller
 {
     public function index(Request $request)
     {
-        $search  = $request->input('search', '');
-        $status  = $request->input('status', '');
-        $format  = $request->input('format', '');
-        $hive    = $request->input('hive', '');
+        $search   = $request->input('search', '');
+        $status   = $request->input('status', '');
+        $format   = $request->input('format', '');
+        $hive     = $request->input('hive', '');
+        $perPage  = (int) $request->input('per_page', 8);
+        $perPage  = in_array($perPage, [10, 20, 50, 100]) ? $perPage : 8;
 
         $query = AudioSource::with(['hive:hive_id,hive_name,hive_location', 'inferenceResults' => function ($q) {
                 $q->latest('analyzed_at')->limit(1);
@@ -29,7 +31,7 @@ class AudioSourceController extends Controller
             ->when($hive,   fn($q) => $q->where('hive_id', $hive))
             ->latest('created_at');
 
-        $recordings = $query->paginate(8)->withQueryString()->through(function ($audio) {
+        $recordings = $query->paginate($perPage)->withQueryString()->through(function ($audio) {
             $inference = $audio->inferenceResults->first();
             return [
                 'audio_id'             => $audio->audio_id,
