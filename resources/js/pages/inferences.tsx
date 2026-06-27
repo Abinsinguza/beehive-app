@@ -537,7 +537,7 @@ export default function Inferences({
                         <form onSubmit={handleSubmit} className="p-6 flex flex-col gap-4">
                             {/* Hive */}
                             <div>
-                                <label className="text-xs font-semibold uppercase tracking-widest text-gray-400 block mb-1.5">Hive *</label>
+                                <label className="text-xs font-semibold uppercase tracking-widest block mb-1.5" style={{ color: '#f97316' }}>Hive *</label>
                                 <select
                                     value={data.hive_id}
                                     onChange={(e) => setData('hive_id', e.target.value)}
@@ -557,7 +557,7 @@ export default function Inferences({
 
                             {/* Audio ID */}
                             <div>
-                                <label className="text-xs font-semibold uppercase tracking-widest text-gray-400 block mb-1.5">Audio ID (optional)</label>
+                                <label className="text-xs font-semibold uppercase tracking-widest block mb-1.5" style={{ color: '#f97316' }}>Audio ID (optional)</label>
                                 <input
                                     type="text"
                                     value={data.audio_id}
@@ -570,7 +570,7 @@ export default function Inferences({
 
                             {/* Hive State */}
                             <div>
-                                <label className="text-xs font-semibold uppercase tracking-widest text-gray-400 block mb-1.5">Hive State *</label>
+                                <label className="text-xs font-semibold uppercase tracking-widest block mb-1.5" style={{ color: '#f97316' }}>Hive State *</label>
                                 <select
                                     value={data.hive_state}
                                     onChange={(e) => setData('hive_state', e.target.value)}
@@ -595,7 +595,7 @@ export default function Inferences({
 
                             {/* Confidence Score */}
                             <div>
-                                <label className="text-xs font-semibold uppercase tracking-widest text-gray-400 block mb-1.5">Confidence Score (0–1) *</label>
+                                <label className="text-xs font-semibold uppercase tracking-widest block mb-1.5" style={{ color: '#f97316' }}>Confidence Score (0–1) *</label>
                                 <input
                                     type="number"
                                     min="0" max="1" step="0.0001"
@@ -611,7 +611,7 @@ export default function Inferences({
 
                             {/* Latency */}
                             <div>
-                                <label className="text-xs font-semibold uppercase tracking-widest text-gray-400 block mb-1.5">Inference Latency (ms)</label>
+                                <label className="text-xs font-semibold uppercase tracking-widest block mb-1.5" style={{ color: '#f97316' }}>Inference Latency (ms)</label>
                                 <input
                                     type="number"
                                     min="0" step="0.01"
@@ -625,7 +625,7 @@ export default function Inferences({
 
                             {/* Analyzed At */}
                             <div>
-                                <label className="text-xs font-semibold uppercase tracking-widest text-gray-400 block mb-1.5">Analyzed At *</label>
+                                <label className="text-xs font-semibold uppercase tracking-widest block mb-1.5" style={{ color: '#f97316' }}>Analyzed At *</label>
                                 <input
                                     type="datetime-local"
                                     value={data.analyzed_at}

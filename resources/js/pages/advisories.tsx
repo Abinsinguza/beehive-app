@@ -566,28 +566,28 @@ return;
                         </div>
                         <form onSubmit={submit} className="p-6 flex flex-col gap-4 overflow-y-auto max-h-[80vh]">
                             <div>
-                                <label className="text-xs font-semibold uppercase tracking-widest text-gray-400 block mb-1.5">Prediction Code</label>
+                                <label className="text-xs font-semibold uppercase tracking-widest block mb-1.5" style={{ color: '#f97316' }}>Prediction Code</label>
                                 <input type="number" step="any" value={data.prediction_code} onChange={(e) => setData('prediction_code', e.target.value)}
                                     placeholder="e.g. 2"
                                     className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm outline-none placeholder-gray-300 transition-all focus:border-[#f5a623] focus:ring-2 focus:ring-[#f5a623]/20" required style={{ color: '#0d1b2a' }} />
                                 {errors.prediction_code && <p className="text-xs text-red-500 mt-1">{errors.prediction_code}</p>}
                             </div>
                             <div>
-                                <label className="text-xs font-semibold uppercase tracking-widest text-gray-400 block mb-1.5">Hive State</label>
+                                <label className="text-xs font-semibold uppercase tracking-widest block mb-1.5" style={{ color: '#f97316' }}>Hive State</label>
                                 <input type="text" value={data.hive_state} onChange={(e) => setData('hive_state', e.target.value)}
                                     placeholder="e.g. swarm"
                                     className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm outline-none placeholder-gray-300 transition-all focus:border-[#f5a623] focus:ring-2 focus:ring-[#f5a623]/20" required style={{ color: '#0d1b2a' }} />
                                 {errors.hive_state && <p className="text-xs text-red-500 mt-1">{errors.hive_state}</p>}
                             </div>
                             <div>
-                                <label className="text-xs font-semibold uppercase tracking-widest text-gray-400 block mb-1.5">Advisory Type</label>
+                                <label className="text-xs font-semibold uppercase tracking-widest block mb-1.5" style={{ color: '#f97316' }}>Advisory Type</label>
                                 <input type="text" value={data.advisory_type} onChange={(e) => setData('advisory_type', e.target.value)}
                                     placeholder="e.g. Reactive"
                                     className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm outline-none placeholder-gray-300 transition-all focus:border-[#f5a623] focus:ring-2 focus:ring-[#f5a623]/20" required style={{ color: '#0d1b2a' }} />
                                 {errors.advisory_type && <p className="text-xs text-red-500 mt-1">{errors.advisory_type}</p>}
                             </div>
                             <div>
-                                <label className="text-xs font-semibold uppercase tracking-widest text-gray-400 block mb-1.5">Severity</label>
+                                <label className="text-xs font-semibold uppercase tracking-widest block mb-1.5" style={{ color: '#f97316' }}>Severity</label>
                                 <select value={data.severity} onChange={(e) => setData('severity', e.target.value)}
                                     className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm outline-none bg-white transition-all focus:border-[#f5a623] focus:ring-2 focus:ring-[#f5a623]/20 required" style={{ color: '#0d1b2a' }}>
                                     <option value="">Select severity</option>
@@ -598,14 +598,14 @@ return;
                                 {errors.severity && <p className="text-xs text-red-500 mt-1">{errors.severity}</p>}
                             </div>
                             <div>
-                                <label className="text-xs font-semibold uppercase tracking-widest text-gray-400 block mb-1.5">Min Confidence Threshold (0–1)</label>
+                                <label className="text-xs font-semibold uppercase tracking-widest block mb-1.5" style={{ color: '#f97316' }}>Min Confidence Threshold (0–1)</label>
                                 <input type="number" min="0" max="1" step="0.01" value={data.min_confidence_threshold} onChange={(e) => setData('min_confidence_threshold', e.target.value)}
                                     placeholder="e.g. 0.70"
                                     className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm outline-none placeholder-gray-300 transition-all focus:border-[#f5a623] focus:ring-2 focus:ring-[#f5a623]/20" style={{ color: '#0d1b2a' }} />
                                 {errors.min_confidence_threshold && <p className="text-xs text-red-500 mt-1">{errors.min_confidence_threshold}</p>}
                             </div>
                             <div>
-                                <label className="text-xs font-semibold uppercase tracking-widest text-gray-400 block mb-1.5">Description</label>
+                                <label className="text-xs font-semibold uppercase tracking-widest block mb-1.5" style={{ color: '#f97316' }}>Description</label>
                                 <textarea value={data.description} onChange={(e) => setData('description', e.target.value)}
                                     placeholder="Describe this advisory condition..."
                                     rows={3}
@@ -693,25 +693,25 @@ function EditTemplateModal({ template, onClose }: { template: Template; onClose:
                 </div>
                 <form onSubmit={submit} className="p-6 flex flex-col gap-4 overflow-y-auto max-h-[80vh]">
                     <div>
-                        <label className="text-xs font-semibold uppercase tracking-widest text-gray-400 block mb-1.5">Prediction Code</label>
+                        <label className="text-xs font-semibold uppercase tracking-widest block mb-1.5" style={{ color: '#f97316' }}>Prediction Code</label>
                         <input type="number" step="any" value={data.prediction_code} onChange={(e) => setData('prediction_code', e.target.value)}
                             className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm outline-none text-gray-700 transition-all focus:border-[#f5a623] focus:ring-2 focus:ring-[#f5a623]/20" required />
                         {errors.prediction_code && <p className="text-xs text-red-500 mt-1">{errors.prediction_code}</p>}
                     </div>
                     <div>
-                        <label className="text-xs font-semibold uppercase tracking-widest text-gray-400 block mb-1.5">Hive State</label>
+                        <label className="text-xs font-semibold uppercase tracking-widest block mb-1.5" style={{ color: '#f97316' }}>Hive State</label>
                         <input type="text" value={data.hive_state} onChange={(e) => setData('hive_state', e.target.value)}
                             className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm outline-none text-gray-700 transition-all focus:border-[#f5a623] focus:ring-2 focus:ring-[#f5a623]/20" required />
                         {errors.hive_state && <p className="text-xs text-red-500 mt-1">{errors.hive_state}</p>}
                     </div>
                     <div>
-                        <label className="text-xs font-semibold uppercase tracking-widest text-gray-400 block mb-1.5">Advisory Type</label>
+                        <label className="text-xs font-semibold uppercase tracking-widest block mb-1.5" style={{ color: '#f97316' }}>Advisory Type</label>
                         <input type="text" value={data.advisory_type} onChange={(e) => setData('advisory_type', e.target.value)}
                             className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm outline-none text-gray-700 transition-all focus:border-[#f5a623] focus:ring-2 focus:ring-[#f5a623]/20" required />
                         {errors.advisory_type && <p className="text-xs text-red-500 mt-1">{errors.advisory_type}</p>}
                     </div>
                     <div>
-                        <label className="text-xs font-semibold uppercase tracking-widest text-gray-400 block mb-1.5">Severity</label>
+                        <label className="text-xs font-semibold uppercase tracking-widest block mb-1.5" style={{ color: '#f97316' }}>Severity</label>
                         <select value={data.severity} onChange={(e) => setData('severity', e.target.value)}
                             className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-700 outline-none bg-white transition-all focus:border-[#f5a623] focus:ring-2 focus:ring-[#f5a623]/20" required>
                             <option value="critical">Critical</option>
@@ -721,13 +721,13 @@ function EditTemplateModal({ template, onClose }: { template: Template; onClose:
                         {errors.severity && <p className="text-xs text-red-500 mt-1">{errors.severity}</p>}
                     </div>
                     <div>
-                        <label className="text-xs font-semibold uppercase tracking-widest text-gray-400 block mb-1.5">Min Confidence Threshold (0–1)</label>
+                        <label className="text-xs font-semibold uppercase tracking-widest block mb-1.5" style={{ color: '#f97316' }}>Min Confidence Threshold (0–1)</label>
                         <input type="number" min="0" max="1" step="0.01" value={data.min_confidence_threshold} onChange={(e) => setData('min_confidence_threshold', e.target.value)}
                             className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm outline-none text-gray-700 transition-all focus:border-[#f5a623] focus:ring-2 focus:ring-[#f5a623]/20" />
                         {errors.min_confidence_threshold && <p className="text-xs text-red-500 mt-1">{errors.min_confidence_threshold}</p>}
                     </div>
                     <div>
-                        <label className="text-xs font-semibold uppercase tracking-widest text-gray-400 block mb-1.5">Description</label>
+                        <label className="text-xs font-semibold uppercase tracking-widest block mb-1.5" style={{ color: '#f97316' }}>Description</label>
                         <textarea value={data.description} onChange={(e) => setData('description', e.target.value)}
                             rows={3}
                             className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm outline-none text-gray-700 resize-none transition-all focus:border-[#f5a623] focus:ring-2 focus:ring-[#f5a623]/20" />
@@ -782,7 +782,7 @@ function AdvisoryItemModal({ templates, item, onClose }: { templates: Template[]
                 </div>
                 <form onSubmit={submit} className="p-6 flex flex-col gap-4 overflow-y-auto max-h-[80vh]">
                     <div>
-                        <label className="text-xs font-semibold uppercase tracking-widest text-gray-400 block mb-1.5">Hive State Label</label>
+                        <label className="text-xs font-semibold uppercase tracking-widest block mb-1.5" style={{ color: '#f97316' }}>Hive State Label</label>
                         <select value={data.template_id} onChange={(e) => setData('template_id', e.target.value)}
                             className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-700 outline-none bg-white transition-all focus:border-[#f5a623] focus:ring-2 focus:ring-[#f5a623]/20" required>
                             <option value="">Select template…</option>
@@ -793,21 +793,21 @@ function AdvisoryItemModal({ templates, item, onClose }: { templates: Template[]
                         {errors.template_id && <p className="text-xs text-red-500 mt-1">{errors.template_id}</p>}
                     </div>
                     <div>
-                        <label className="text-xs font-semibold uppercase tracking-widest text-gray-400 block mb-1.5">Action Title</label>
+                        <label className="text-xs font-semibold uppercase tracking-widest block mb-1.5" style={{ color: '#f97316' }}>Action Title</label>
                         <input type="text" value={data.action_title} onChange={(e) => setData('action_title', e.target.value)}
                             placeholder="e.g. Inspect for Overcrowding"
                             className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm outline-none text-gray-700 placeholder-gray-300 transition-all focus:border-[#f5a623] focus:ring-2 focus:ring-[#f5a623]/20" required />
                         {errors.action_title && <p className="text-xs text-red-500 mt-1">{errors.action_title}</p>}
                     </div>
                     <div>
-                        <label className="text-xs font-semibold uppercase tracking-widest text-gray-400 block mb-1.5">Action Description</label>
+                        <label className="text-xs font-semibold uppercase tracking-widest block mb-1.5" style={{ color: '#f97316' }}>Action Description</label>
                         <textarea value={data.action_description} onChange={(e) => setData('action_description', e.target.value)}
                             rows={3}
                             className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm outline-none text-gray-700 resize-none transition-all focus:border-[#f5a623] focus:ring-2 focus:ring-[#f5a623]/20" required />
                         {errors.action_description && <p className="text-xs text-red-500 mt-1">{errors.action_description}</p>}
                     </div>
                     <div>
-                        <label className="text-xs font-semibold uppercase tracking-widest text-gray-400 block mb-1.5">Priority</label>
+                        <label className="text-xs font-semibold uppercase tracking-widest block mb-1.5" style={{ color: '#f97316' }}>Priority</label>
                         <select value={data.priority_level} onChange={(e) => setData('priority_level', e.target.value)}
                             className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm text-gray-700 outline-none bg-white transition-all focus:border-[#f5a623] focus:ring-2 focus:ring-[#f5a623]/20" required>
                             <option value="low">Low</option>
@@ -818,14 +818,14 @@ function AdvisoryItemModal({ templates, item, onClose }: { templates: Template[]
                     </div>
                     <div className="grid grid-cols-2 gap-3">
                         <div>
-                            <label className="text-xs font-semibold uppercase tracking-widest text-gray-400 block mb-1.5">Min Confidence</label>
+                            <label className="text-xs font-semibold uppercase tracking-widest block mb-1.5" style={{ color: '#f97316' }}>Min Confidence</label>
                             <input type="number" min="0" max="1" step="0.01" value={data.confidence_threshold_min} onChange={(e) => setData('confidence_threshold_min', e.target.value)}
                                 placeholder="0.70"
                                 className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm outline-none text-gray-700 placeholder-gray-300 transition-all focus:border-[#f5a623] focus:ring-2 focus:ring-[#f5a623]/20" required />
                             {errors.confidence_threshold_min && <p className="text-xs text-red-500 mt-1">{errors.confidence_threshold_min}</p>}
                         </div>
                         <div>
-                            <label className="text-xs font-semibold uppercase tracking-widest text-gray-400 block mb-1.5">Max Confidence</label>
+                            <label className="text-xs font-semibold uppercase tracking-widest block mb-1.5" style={{ color: '#f97316' }}>Max Confidence</label>
                             <input type="number" min="0" max="1" step="0.01" value={data.confidence_threshold_max} onChange={(e) => setData('confidence_threshold_max', e.target.value)}
                                 placeholder="1.00"
                                 className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm outline-none text-gray-700 placeholder-gray-300 transition-all focus:border-[#f5a623] focus:ring-2 focus:ring-[#f5a623]/20" required />
@@ -833,7 +833,7 @@ function AdvisoryItemModal({ templates, item, onClose }: { templates: Template[]
                         </div>
                     </div>
                     <div>
-                        <label className="text-xs font-semibold uppercase tracking-widest text-gray-400 block mb-1.5">Order</label>
+                        <label className="text-xs font-semibold uppercase tracking-widest block mb-1.5" style={{ color: '#f97316' }}>Order</label>
                         <input type="number" min="1" step="1" value={data.action_order} onChange={(e) => setData('action_order', e.target.value)}
                             className="w-full border border-gray-200 rounded-lg px-3 py-2.5 text-sm outline-none text-gray-700 transition-all focus:border-[#f5a623] focus:ring-2 focus:ring-[#f5a623]/20" required />
                         {errors.action_order && <p className="text-xs text-red-500 mt-1">{errors.action_order}</p>}

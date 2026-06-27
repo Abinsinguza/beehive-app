@@ -13,43 +13,12 @@ class SystemConfigController extends Controller
     public function index()
     {
         $settings = [
-            'ml_server_name' => null,
+            'ml_server_name' => Session::get('ml_server_name'),
             'ml_server_url'  => Session::get('ml_server_url'),
             'ml_admin_key'   => Session::get('ml_admin_key'),
-            'ml_description' => null,
-            'ml_is_active'   => true,
-            'ml_admin_key_id' => Session::get('ml_admin_key_id'),
+            'ml_description' => Session::get('ml_description'),
+            'ml_is_active'   => Session::get('ml_is_active', true),
         ];
-
-        // If we have ML server URL and admin key ID, try to retrieve the admin key
-        if (!empty($settings['ml_server_url']) && !empty($settings['ml_admin_key_id']) && !empty($settings['ml_admin_key'])) {
-            try {
-                $response = Http::withHeaders(['x-admin-key' => $settings['ml_admin_key']])
-                    ->timeout(15)
-                    ->get(rtrim($settings['ml_server_url'], '/') . '/admin/keys/' . $settings['ml_admin_key_id']);
-                
-                if ($response->successful()) {
-                    $adminKeyData = $response->json();
-                    if (isset($adminKeyData['server_name'])) {
-                        $settings['ml_server_name'] = $adminKeyData['server_name'];
-                    }
-                    if (isset($adminKeyData['description'])) {
-                        $settings['ml_description'] = $adminKeyData['description'];
-                    }
-                    if (isset($adminKeyData['is_active'])) {
-                        $settings['ml_is_active'] = $adminKeyData['is_active'];
-                    }
-                    if (isset($adminKeyData['server_url'])) {
-                        $settings['ml_server_url'] = $adminKeyData['server_url'];
-                    }
-                    if (isset($adminKeyData['admin_key'])) {
-                        $settings['ml_admin_key'] = $adminKeyData['admin_key'];
-                    }
-                }
-            } catch (ConnectionException $e) {
-                // Don't block loading settings if ML server is down
-            }
-        }
 
         return Inertia::render('system-config', [
             'settings' => $settings,
@@ -58,50 +27,72 @@ class SystemConfigController extends Controller
 
     public function updateMl(Request $request)
     {
+        $token = $request->bearerToken();
+
+        if (!$token || $token !== $request->user()->device_token) {
+            return redirect()->back()->with('error', 'Unauthorized: missing or invalid bearer token.');
+        }
+
         $validated = $request->validate([
             'ml_server_name' => ['nullable', 'string', 'max:255'],
-            'ml_server_url'  => ['nullable', 'url'],
-            'ml_admin_key'   => ['nullable', 'string', 'max:255'],
             'ml_description' => ['nullable', 'string'],
             'ml_is_active'   => ['nullable', 'boolean'],
-            'ml_admin_key_id' => ['nullable', 'string', 'max:255'],
         ]);
 
-        // Store ML server details temporarily in session
-        if (!empty($validated['ml_server_url'])) {
-            Session::put('ml_server_url', $validated['ml_server_url']);
-        }
-        if (!empty($validated['ml_admin_key_id'])) {
-            Session::put('ml_admin_key_id', $validated['ml_admin_key_id']);
-        }
+        $baseUrl = rtrim((string) config('services.ml_auth.base_url'), '/');
+        $apiBase = $baseUrl . '/bsads-api-db';
+        $accessToken = Session::get('ml_access_token');
 
-        // If ML server URL and admin key are present, try to call POST /admin/keys
-        if (!empty($validated['ml_server_url']) && !empty($validated['ml_admin_key'])) {
-            try {
-                $response = Http::timeout(15)
-                    ->post(rtrim($validated['ml_server_url'], '/') . '/admin/keys', [
-                        'server_name' => $validated['ml_server_name'] ?? '',
-                        'server_url'  => $validated['ml_server_url'],
-                        'admin_key'   => $validated['ml_admin_key'],
-                        'description' => $validated['ml_description'] ?? '',
-                        'is_active'   => $validated['ml_is_active'] ?? true,
-                    ]);
-
-                if ($response->successful()) {
-                    $responseData = $response->json();
-                    // Store the admin key ID in session if returned from ML server
-                    if (isset($responseData['admin_key_id'])) {
-                        Session::put('ml_admin_key_id', $responseData['admin_key_id']);
-                    } elseif (isset($responseData['id'])) {
-                        Session::put('ml_admin_key_id', $responseData['id']);
-                    }
-                    Session::put('ml_admin_key', $validated['ml_admin_key']);
-                }
-            } catch (ConnectionException $e) {
-                return redirect()->back()->with('error', 'Failed to connect to ML server.');
-            }
+        if (!$baseUrl) {
+            return redirect()->back()->with('error', 'ML_AUTH_BASE_URL is not configured.');
         }
 
-        return redirect()->route('system-config')->with('success', 'ML server settings saved.');
+        if (!$accessToken) {
+            return redirect()->back()->with('error', 'Not logged into the ML server. Log out and back in with an account that also exists on the ML server.');
+        }
+
+        // The admin_key is a value we register with the ML server (not server-generated) —
+        // always mint a fresh one since this submission creates a new admin key.
+        $adminKeyValue = bin2hex(random_bytes(32));
+
+        try {
+            $response = Http::withToken($accessToken)
+                ->timeout(15)
+                ->post("{$apiBase}/admin/keys", [
+                    'server_name' => $validated['ml_server_name'] ?? '',
+                    'server_url'  => $baseUrl,
+                    'admin_key'   => $adminKeyValue,
+                    'description' => $validated['ml_description'] ?? '',
+                    'is_active'   => $validated['ml_is_active'] ?? true,
+                ]);
+        } catch (ConnectionException $e) {
+            return redirect()->back()->with('error', 'The ML server did not respond in time. It may be down — please try again shortly.');
+        }
+
+        if (!$response->successful()) {
+            $detail = $response->json('detail.0.msg') ?? $response->body() ?? 'no response body';
+
+            return redirect()->back()->with('error', "Failed to create admin key on the ML server (HTTP {$response->status()}): {$detail}");
+        }
+
+        // Retrieve the current admin keys so the admin can then generate/assign beekeeper tokens.
+        try {
+            $listResponse = Http::withToken($accessToken)->timeout(15)->get("{$apiBase}/admin/keys");
+        } catch (ConnectionException $e) {
+            return redirect()->back()->with('error', 'Admin key created, but failed to retrieve it back from the ML server.');
+        }
+
+        $keys = $listResponse->successful() ? ($listResponse->json() ?? []) : [];
+        $latestKey = is_array($keys) ? ($keys[0] ?? null) : null;
+
+        // Session is just a local cache of the ML server's response, not the source of truth.
+        Session::put('ml_server_name', $validated['ml_server_name'] ?? null);
+        Session::put('ml_server_url', $baseUrl);
+        Session::put('ml_description', $validated['ml_description'] ?? null);
+        Session::put('ml_is_active', $validated['ml_is_active'] ?? true);
+        Session::put('ml_admin_key', $latestKey['admin_key'] ?? $latestKey['key'] ?? null);
+        Session::put('ml_admin_key_id', $latestKey['admin_key_id'] ?? $latestKey['id'] ?? null);
+
+        return redirect()->route('system-config')->with('success', 'Admin key created on the ML server.');
     }
 }

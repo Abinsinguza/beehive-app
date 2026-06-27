@@ -34,6 +34,7 @@ class User extends Authenticatable
         'two_factor_secret',
         'two_factor_recovery_codes',
         'remember_token',
+        'device_token',
     ];
 
     protected $appends = ['name', 'status', 'id'];
