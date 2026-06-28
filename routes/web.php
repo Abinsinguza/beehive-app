@@ -21,6 +21,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('alerts', [AlertsController::class, 'index'])->name('alerts.index');
    // Route::inertia('beekeepers', 'beekeepers')->name('beekeepers');
     //Route::inertia('beehives', 'beehives')->name('beehives');
+    Route::get('beekeepers/admin-keys', [BeekeeperController::class, 'fetchAdminKeys'])->name('beekeepers.admin-keys');
     Route::resource('beekeepers', BeekeeperController::class);
     Route::patch('beekeepers/{beekeeper}/revoke',   [BeekeeperController::class, 'revoke'])->name('beekeepers.revoke');
     Route::patch('beekeepers/{beekeeper}/restore',  [BeekeeperController::class, 'restore'])->name('beekeepers.restore');

@@ -186,14 +186,40 @@ class BeekeeperController extends Controller
         return redirect()->back()->with('success', 'Beekeeper access restored.');
     }
 
-    public function assignToken(User $beekeeper)
+    public function fetchAdminKeys()
     {
-        $mlServerUrl = \Illuminate\Support\Facades\Session::get('ml_server_url');
-        $mlAdminKey = \Illuminate\Support\Facades\Session::get('ml_admin_key');
+        $apiUrl = 'http://196.43.168.57:8085/bsads-api-db/admin/keys';
 
-        if (!$mlServerUrl || !$mlAdminKey) {
-            return redirect()->back()->with('error', 'ML server not configured. Please set ML server URL and admin key in System Settings.');
+        try {
+            // Use the Authorization Bearer token from your curl example
+            $authToken = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJzdWIiOiI0OTI0ODM3OS0wOTU1LTQ4NzEtODZjNS0yNmU0YzIwNjQyNDMiLCJleHAiOjE3ODI2Nzc0MTl9.z03W6yPIk-xl_rRJTiE0FehOREVLkz8KZZf72bFIfVA';
+
+            $response = Http::withHeaders([
+                'accept' => 'application/json',
+                'Authorization' => 'Bearer ' . $authToken,
+            ])
+                ->timeout(15)
+                ->get($apiUrl);
+
+            if ($response->successful()) {
+                return response()->json($response->json());
+            }
+
+            return response()->json(['error' => 'Failed to fetch admin keys'], 500);
+        } catch (ConnectionException $e) {
+            return response()->json(['error' => 'Connection failed'], 500);
         }
+    }
+
+    public function assignToken(Request $request, User $beekeeper)
+    {
+        $request->validate([
+            'server_url' => ['required', 'string'],
+            'admin_key' => ['required', 'string'],
+        ]);
+
+        $mlServerUrl = $request->server_url;
+        $mlAdminKey = $request->admin_key;
 
         try {
             $response = Http::withHeaders(['x-admin-key' => $mlAdminKey])
@@ -209,7 +235,8 @@ class BeekeeperController extends Controller
             return redirect()->back()->with('error', $response->json('detail.0.msg') ?? 'Failed to generate API key on ML server.');
         }
 
-        $apiKey = $response->body();
+        $responseData = $response->json();
+        $apiKey = $responseData['api_key'] ?? $response->body();
         $beekeeper->update([
             'server_url' => $mlServerUrl,
             'api_key' => $apiKey,

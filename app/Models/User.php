@@ -84,4 +84,18 @@ class User extends Authenticatable
             default             => 'active',
         };
     }
+
+    public function getApiKeyAttribute($value): ?string
+    {
+        if (!$value) {
+            return null;
+        }
+
+        try {
+            $parsed = json_decode($value, true);
+            return $parsed['api_key'] ?? $value;
+        } catch (\Exception) {
+            return $value;
+        }
+    }
 }
