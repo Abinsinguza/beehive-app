@@ -56,11 +56,12 @@ function AddBeekeeperModal({ onClose }: { onClose: () => void }) {
         full_name: '', email: '', phone: '', password: '', address: '', server_url: '', api_key: '',
     });
     const [generating, setGenerating] = useState(false);
+    const [genError, setGenError] = useState<string | null>(null);
 
     const submit = (e: React.FormEvent) => {
         e.preventDefault();
         post('/beekeepers', { onSuccess: () => {
- reset(); onClose(); 
+ reset(); onClose();
 } });
     };
 
@@ -70,15 +71,18 @@ return;
 }
 
         setGenerating(true);
+        setGenError(null);
         router.post('/api-keys/generate', { client_name: data.full_name }, {
             preserveState: true,
             preserveScroll: true,
             onSuccess: (page) => {
-                const key = (page.props.flash as { generated_api_key?: string } | undefined)?.generated_api_key;
+                const flash = page.props.flash as { generated_api_key?: string; error?: string } | undefined;
 
-                if (key) {
-setData('api_key', key);
-}
+                if (flash?.generated_api_key) {
+                    setData('api_key', flash.generated_api_key);
+                } else if (flash?.error) {
+                    setGenError(flash.error);
+                }
             },
             onFinish: () => setGenerating(false),
         });
@@ -171,6 +175,11 @@ setData('api_key', key);
                     {!data.full_name.trim() && (
                         <p className="text-xs text-gray-400">Enter the full name first — it's used to label the key.</p>
                     )}
+                    {genError && (
+                        <p className="text-xs text-red-500 flex items-center gap-1">
+                            <span>⚠</span> {genError}
+                        </p>
+                    )}
                     {errors.api_key && (
                         <p className="text-xs text-red-500 flex items-center gap-1">
                             <span>⚠</span> {errors.api_key}
@@ -210,7 +219,7 @@ function EditBeekeeperModal({ beekeeper, onClose }: { beekeeper: Beekeeper; onCl
                     { label: 'New Password',  key: 'password',  type: 'password', placeholder: 'Leave blank to keep current', required: false },
                 ].map((f) => (
                     <div key={f.key}>
-                        <label className="text-xs font-semibold uppercase tracking-widest text-gray-400 block mb-1.5">{f.label}</label>
+                        <label className="text-xs font-semibold uppercase tracking-widest block mb-1.5" style={{ color: '#f97316' }}>{f.label}</label>
                         <input
                             type={f.type}
                             value={data[f.key as keyof typeof data]}

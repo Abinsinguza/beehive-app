@@ -38,6 +38,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::resource('inferences', InferenceController::class)->only(['index', 'store']);
     Route::get('system-config',  [SystemConfigController::class, 'index'])->name('system-config');
     Route::post('system-config/ml', [SystemConfigController::class, 'updateMl'])->name('system-config.ml.update');
+    Route::get('system-config/ml', fn () => redirect()->route('system-config'));
     Route::get('audio-recordings', [AudioSourceController::class, 'index'])->name('audio-recordings.index');
     Route::post('audio-recordings', [AudioSourceController::class, 'store'])->name('audio-recordings.store');
     Route::inertia('database-schema', 'database-schema')->name('database-schema');
